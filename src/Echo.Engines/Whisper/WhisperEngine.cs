@@ -14,6 +14,7 @@ public sealed class WhisperEngine : ITranscriptionEngine, IDisposable
     private WhisperProcessor? _processor;
     private string _resolvedDevice = "cpu";
     private string _loadedLanguage = string.Empty;
+    private string _loadedModelPath = string.Empty;
 
     public WhisperEngine(ILogger<WhisperEngine> logger)
     {
@@ -30,7 +31,10 @@ public sealed class WhisperEngine : ITranscriptionEngine, IDisposable
         _resolvedDevice = _config.Device;
         var modelPath = await EnsureGgmlModelAsync(cancellationToken);
 
-        if (_factory is not null && _loadedLanguage == _config.Language && _processor is not null)
+        if (_factory is not null
+            && _loadedLanguage == _config.Language
+            && _loadedModelPath == modelPath
+            && _processor is not null)
         {
             return;
         }
@@ -44,6 +48,7 @@ public sealed class WhisperEngine : ITranscriptionEngine, IDisposable
             .WithLanguage(_config.Language)
             .Build();
         _loadedLanguage = _config.Language;
+        _loadedModelPath = modelPath;
     }
 
     public async Task<string> TranscribeAsync(float[] samples, int sampleRate, CancellationToken cancellationToken = default)
@@ -74,6 +79,7 @@ public sealed class WhisperEngine : ITranscriptionEngine, IDisposable
         _factory?.Dispose();
         _factory = null;
         _loadedLanguage = string.Empty;
+        _loadedModelPath = string.Empty;
     }
 
     public void Dispose() => Unload();

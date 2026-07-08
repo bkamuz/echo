@@ -12,6 +12,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IHotkeyService _hotkeyService;
     private readonly HomeViewModel _home;
     private string _savedHotkey = string.Empty;
+    private bool _isLoadingConfig;
 
     [ObservableProperty] private string _hotkey = string.Empty;
     [ObservableProperty] private string _engine = string.Empty;
@@ -84,6 +85,7 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(HotkeyCaptureButtonText));
         _hotkeyService.Configure(Hotkey);
         _hotkeyService.Start();
+        PersistSettings();
     }
 
     public void CancelHotkeyCapture()
@@ -103,8 +105,27 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(HotkeyDisplay));
     }
 
-    [RelayCommand]
-    private void Save()
+    partial void OnEngineChanged(string value) => TryPersistSettings();
+
+    partial void OnWhisperModelSizeChanged(string value) => TryPersistSettings();
+
+    partial void OnDeviceChanged(string value) => TryPersistSettings();
+
+    partial void OnInputMethodChanged(string value) => TryPersistSettings();
+
+    partial void OnAddTrailingSpaceChanged(bool value) => TryPersistSettings();
+
+    partial void OnInputDeviceChanged(AudioDeviceInfo? value) => TryPersistSettings();
+
+    private void TryPersistSettings()
+    {
+        if (!_isLoadingConfig)
+        {
+            PersistSettings();
+        }
+    }
+
+    private void PersistSettings()
     {
         if (IsCapturingHotkey)
         {
@@ -125,15 +146,23 @@ public partial class SettingsViewModel : ObservableObject
 
     private void LoadFromConfig()
     {
-        var config = _coordinator.Config;
-        Hotkey = config.Hotkey;
-        _savedHotkey = Hotkey;
-        Engine = config.Engine;
-        WhisperModelSize = config.WhisperModelSize;
-        Device = config.Device;
-        InputMethod = config.InputMethod;
-        AddTrailingSpace = config.AddTrailingSpace;
-        InputDevice = InputDevices.FirstOrDefault(d => d.Name == config.InputDevice)
-            ?? InputDevices.FirstOrDefault();
+        _isLoadingConfig = true;
+        try
+        {
+            var config = _coordinator.Config;
+            Hotkey = config.Hotkey;
+            _savedHotkey = Hotkey;
+            Engine = config.Engine;
+            WhisperModelSize = config.WhisperModelSize;
+            Device = config.Device;
+            InputMethod = config.InputMethod;
+            AddTrailingSpace = config.AddTrailingSpace;
+            InputDevice = InputDevices.FirstOrDefault(d => d.Name == config.InputDevice)
+                ?? InputDevices.FirstOrDefault();
+        }
+        finally
+        {
+            _isLoadingConfig = false;
+        }
     }
 }

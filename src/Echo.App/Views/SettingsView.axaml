@@ -7,10 +7,10 @@
              HorizontalAlignment="Stretch"
              Focusable="True">
 
-  <Grid RowDefinitions="Auto,*,Auto" VerticalAlignment="Stretch">
+  <Grid RowDefinitions="Auto,*" VerticalAlignment="Stretch">
     <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
       <TextBlock Classes="page-title" Text="Настройки"/>
-      <TextBlock Classes="page-subtitle" Text="Хоткей, движок, микрофон и способ ввода текста"/>
+      <TextBlock Classes="page-subtitle" Text="Изменения применяются сразу"/>
     </StackPanel>
 
     <ScrollViewer Grid.Row="1"
@@ -94,13 +94,5 @@
         </Border>
       </Grid>
     </ScrollViewer>
-
-    <Button Grid.Row="2"
-            Classes="primary"
-            Content="Сохранить"
-            Command="{Binding SaveCommand}"
-            HorizontalAlignment="Left"
-            MinWidth="160"
-            Margin="0,16,0,0"/>
   </Grid>
 </UserControl>
