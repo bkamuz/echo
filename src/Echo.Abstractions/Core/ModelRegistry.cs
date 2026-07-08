@@ -20,10 +20,10 @@ public static class ModelRegistry
 
     public static IReadOnlyList<string> GigaAmAllowPatterns { get; } =
     [
-        "gigaam_v3_rnnt_encoder.onnx",
-        "gigaam_v3_rnnt_decoder.onnx",
-        "gigaam_v3_rnnt_joint.onnx",
-        "gigaam_v3_rnnt_tokens.txt",
+        "gigaam_v3_e2e_rnnt_encoder.onnx",
+        "gigaam_v3_e2e_rnnt_decoder.onnx",
+        "gigaam_v3_e2e_rnnt_joint.onnx",
+        "gigaam_v3_e2e_rnnt_tokens.txt",
         "config.json",
     ];
 

@@ -17,8 +17,8 @@ public sealed record ModelSpec(
 
         return Engine switch
         {
-            "gigaam" => File.Exists(Path.Combine(LocalDir, "gigaam_v3_rnnt_encoder.onnx"))
-                || File.Exists(Path.Combine(LocalDir, "v3_rnnt_encoder.onnx")),
+            "gigaam" => File.Exists(Path.Combine(LocalDir, "gigaam_v3_e2e_rnnt_encoder.onnx"))
+                || File.Exists(Path.Combine(LocalDir, "gigaam_v3_rnnt_encoder.onnx")),
             "whisper" => File.Exists(Path.Combine(LocalDir, "model.bin"))
                 || Directory.EnumerateFiles(LocalDir, "*.bin").Any(),
             _ => Directory.EnumerateFiles(LocalDir).Any(),
