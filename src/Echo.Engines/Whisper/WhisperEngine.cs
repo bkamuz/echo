@@ -1,8 +1,6 @@
-using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
 using Microsoft.Extensions.Logging;
 using Whisper.net;
-using Whisper.net.Ggml;
 
 namespace echo.Engines.Whisper;
 
@@ -15,6 +13,7 @@ public sealed class WhisperEngine : ITranscriptionEngine, IDisposable
     private string _resolvedDevice = "cpu";
     private string _loadedLanguage = string.Empty;
     private string _loadedModelPath = string.Empty;
+    private int _boundThreadId = -1;
 
     public WhisperEngine(ILogger<WhisperEngine> logger)
     {
@@ -28,8 +27,10 @@ public sealed class WhisperEngine : ITranscriptionEngine, IDisposable
 
     public async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
     {
+        ReleaseIfWrongThread();
+
         _resolvedDevice = _config.Device;
-        var modelPath = await EnsureGgmlModelAsync(cancellationToken);
+        var modelPath = WhisperGgmlHelper.ResolveGgmlModelPath(_config.WhisperModelSize);
 
         if (_factory is not null
             && _loadedLanguage == _config.Language
@@ -44,11 +45,15 @@ public sealed class WhisperEngine : ITranscriptionEngine, IDisposable
 
         _logger.LogInformation("Loading Whisper {Size} from {Path}", _config.WhisperModelSize, modelPath);
         _factory = WhisperFactory.FromPath(modelPath);
-        _processor = _factory.CreateBuilder()
-            .WithLanguage(_config.Language)
-            .Build();
+        var builder = _factory.CreateBuilder();
+        if (!string.IsNullOrEmpty(_config.Language) && _config.Language != "auto")
+        {
+            builder = builder.WithLanguage(_config.Language);
+        }
+        _processor = builder.Build();
         _loadedLanguage = _config.Language;
         _loadedModelPath = modelPath;
+        _boundThreadId = Environment.CurrentManagedThreadId;
     }
 
     public async Task<string> TranscribeAsync(float[] samples, int sampleRate, CancellationToken cancellationToken = default)
@@ -80,37 +85,21 @@ public sealed class WhisperEngine : ITranscriptionEngine, IDisposable
         _factory = null;
         _loadedLanguage = string.Empty;
         _loadedModelPath = string.Empty;
+        _boundThreadId = -1;
+    }
+
+    private void ReleaseIfWrongThread()
+    {
+        if (_processor is null || _boundThreadId == Environment.CurrentManagedThreadId)
+        {
+            return;
+        }
+
+        _logger.LogDebug("Whisper processor loaded on another thread; reloading on current thread");
+        Unload();
     }
 
     public void Dispose() => Unload();
-
-    private async Task<string> EnsureGgmlModelAsync(CancellationToken cancellationToken)
-    {
-        var whisperDir = AppPaths.WhisperDir(_config.WhisperModelSize);
-        Directory.CreateDirectory(whisperDir);
-
-        var ggmlPath = Path.Combine(whisperDir, $"ggml-{_config.WhisperModelSize}.bin");
-        if (File.Exists(ggmlPath))
-        {
-            return ggmlPath;
-        }
-
-        var ggmlType = GgmlType.Base;
-        if (_config.WhisperModelSize.Contains("large", StringComparison.OrdinalIgnoreCase))
-        {
-            ggmlType = GgmlType.LargeV3;
-        }
-        else if (Enum.TryParse<GgmlType>(_config.WhisperModelSize, true, out var parsed))
-        {
-            ggmlType = parsed;
-        }
-
-        _logger.LogInformation("Downloading ggml Whisper model {Type}", ggmlType);
-        using var modelStream = await WhisperGgmlDownloader.Default.GetGgmlModelAsync(ggmlType, cancellationToken: cancellationToken);
-        await using var file = File.Create(ggmlPath);
-        await modelStream.CopyToAsync(file, cancellationToken);
-        return ggmlPath;
-    }
 
     private static void WriteWav(Stream stream, float[] samples, int sampleRate)
     {

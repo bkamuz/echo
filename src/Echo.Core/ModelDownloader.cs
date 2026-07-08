@@ -1,4 +1,5 @@
 using echo.Abstractions.Core;
+using echo.Engines.Whisper;
 using Microsoft.Extensions.Logging;
 
 namespace echo.Core;
@@ -16,25 +17,41 @@ public sealed class ModelDownloader
 
     public async Task DownloadAsync(ModelSpec spec, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
+        if (spec.Engine == "whisper")
+        {
+            var size = ModelRegistry.WhisperSizeFromSpecId(spec.Id);
+            progress?.Report($"Скачивание Whisper {size}…");
+            _logger.LogInformation("Downloading Whisper ggml model {Size}", size);
+            await WhisperGgmlHelper.DownloadGgmlModelAsync(size, _logger, cancellationToken);
+            progress?.Report($"Готово: Whisper {size}");
+            return;
+        }
+
         progress?.Report($"Скачивание {spec.Title}…");
         _logger.LogInformation("Downloading {Title} from {Repo}", spec.Title, spec.RepoId);
 
         Directory.CreateDirectory(spec.LocalDir);
-
-        if (spec.Engine == "whisper")
-        {
-            await DownloadHuggingFaceFolderAsync(spec.RepoId, spec.LocalDir, null, progress, cancellationToken);
-        }
-        else
-        {
-            await DownloadHuggingFaceFolderAsync(spec.RepoId, spec.LocalDir, spec.AllowPatterns, progress, cancellationToken);
-        }
+        await DownloadHuggingFaceFolderAsync(spec.RepoId, spec.LocalDir, spec.AllowPatterns, progress, cancellationToken);
 
         progress?.Report($"Готово: {spec.Title}");
     }
 
     public void Delete(ModelSpec spec)
     {
+        if (spec.Engine == "whisper")
+        {
+            var size = ModelRegistry.WhisperSizeFromSpecId(spec.Id);
+            var dir = AppPaths.WhisperDir(size);
+            if (!Directory.Exists(dir))
+            {
+                return;
+            }
+
+            Directory.Delete(dir, recursive: true);
+            _logger.LogInformation("Deleted Whisper model weights: {Size}", size);
+            return;
+        }
+
         if (!Directory.Exists(spec.LocalDir))
         {
             return;

@@ -13,6 +13,17 @@
 
     <Border Grid.Row="1" Classes="tile" ClipToBounds="True">
       <Grid>
+        <StackPanel IsVisible="{Binding IsLoadingInitial}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Spacing="8"
+                    Margin="24">
+          <TextBlock Text="Загрузка истории…"
+                     FontSize="14"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     HorizontalAlignment="Center"/>
+        </StackPanel>
+
         <StackPanel IsVisible="{Binding IsEmpty}"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Center"
@@ -33,11 +44,29 @@
                      TextAlignment="Center"/>
         </StackPanel>
 
-        <ScrollViewer IsVisible="{Binding HasEntries}"
-                      VerticalScrollBarVisibility="Hidden"
-                      HorizontalScrollBarVisibility="Disabled">
-          <ItemsControl ItemsSource="{Binding Entries}">
-            <ItemsControl.ItemTemplate>
+        <Grid IsVisible="{Binding HasEntries}" RowDefinitions="*,Auto">
+          <ListBox x:Name="HistoryList"
+                   Grid.Row="0"
+                   ItemsSource="{Binding Entries}"
+                   Background="Transparent"
+                   BorderThickness="0"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   ScrollViewer.VerticalScrollBarVisibility="Hidden">
+            <ListBox.Styles>
+              <Style Selector="ListBoxItem">
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Margin" Value="0"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+              </Style>
+              <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                <Setter Property="Background" Value="Transparent"/>
+              </Style>
+              <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                <Setter Property="Background" Value="Transparent"/>
+              </Style>
+            </ListBox.Styles>
+            <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:HistoryItemView">
                 <Border Classes="history-item">
                   <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
@@ -73,9 +102,17 @@
                   </Grid>
                 </Border>
               </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <TextBlock Grid.Row="1"
+                     IsVisible="{Binding IsLoadingMore}"
+                     Text="Загрузка…"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     HorizontalAlignment="Center"
+                     Margin="0,8,0,4"/>
+        </Grid>
       </Grid>
     </Border>
   </Grid>

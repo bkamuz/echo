@@ -15,28 +15,81 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="56">
 
-  <Grid RowDefinitions="Auto,*">
-    <Border Grid.Row="0"
+  <Grid RowDefinitions="Auto,*,Auto">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="{StaticResource ShellChromeGridLength}"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+    <Border Grid.Column="0"
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            Classes="shell-rail">
+      <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0"
+                Classes="shell-brand-cell">
+          <Image Source="avares://echo.App/Resources/main.png"
+                 Width="{StaticResource ShellBrandIconSize}"
+                 Height="{StaticResource ShellBrandIconSize}"
+                 Stretch="Uniform"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"/>
+        </Border>
+
+        <Border Grid.Row="1"
+                x:Name="SidebarHost"
+                Classes="sidebar">
+          <StackPanel Spacing="0"
+                      Margin="0,8,0,0"
+                      HorizontalAlignment="Stretch">
+            <Button Classes="sidebar-nav-item"
+                    Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Home}}"
+                    Command="{Binding NavigateCommand}"
+                    CommandParameter="{x:Static vm:AppPage.Home}"
+                    ToolTip.Tip="Главная">
+              <PathIcon Data="{StaticResource IconHome}"
+                        Width="16"
+                        Height="16"/>
+            </Button>
+
+            <Button Classes="sidebar-nav-item"
+                    Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Settings}}"
+                    Command="{Binding NavigateCommand}"
+                    CommandParameter="{x:Static vm:AppPage.Settings}"
+                    ToolTip.Tip="Настройки">
+              <PathIcon Data="{StaticResource IconSettings}"
+                        Width="16"
+                        Height="16"/>
+            </Button>
+
+            <Button Classes="sidebar-nav-item"
+                    Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.History}}"
+                    Command="{Binding NavigateCommand}"
+                    CommandParameter="{x:Static vm:AppPage.History}"
+                    ToolTip.Tip="История">
+              <PathIcon Data="{StaticResource IconHistory}"
+                        Width="16"
+                        Height="16"/>
+            </Button>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Grid.Column="1"
+            Grid.Row="0"
             x:Name="TitleBarHost"
-            Classes="shell-header"
-            chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.TitleBar}"
-            PointerPressed="TitleBar_PointerPressed">
-      <Grid ColumnDefinitions="*,140">
-        <StackPanel Grid.Column="0"
-                    Orientation="Horizontal"
-                    Spacing="12"
-                    VerticalAlignment="Center">
-          <Border Width="32" Height="32"
-                  Background="{DynamicResource AccentBrush}"
-                  CornerRadius="0">
-            <TextBlock Text="E"
-                       FontSize="16"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextOnAccentBrush}"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
-          </Border>
-          <StackPanel VerticalAlignment="Center" Spacing="0">
+            Classes="shell-header-main"
+            Cursor="Arrow">
+      <Grid ColumnDefinitions="*,144">
+        <Border Grid.Column="0"
+                Background="Transparent"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Cursor="Arrow"
+                chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.TitleBar}">
+          <StackPanel VerticalAlignment="Center"
+                      Spacing="0"
+                      Margin="12,0,0,0">
             <TextBlock Text="Echo"
                        FontSize="14"
                        FontWeight="SemiBold"
@@ -46,63 +99,52 @@
                        Classes="page-subtitle"
                        FontSize="11"/>
           </StackPanel>
-        </StackPanel>
-        <Panel Grid.Column="1"/>
+        </Border>
+        <Panel Grid.Column="1"
+               Background="Transparent"
+               Cursor="Arrow"/>
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="256,*">
-      <Border Grid.Column="0" Classes="sidebar">
-        <StackPanel Spacing="0" Margin="0,8,0,0">
-          <Button Classes="nav-item"
-                  Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Home}}"
-                  Command="{Binding NavigateCommand}"
-                  CommandParameter="{x:Static vm:AppPage.Home}">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-              <PathIcon Data="{StaticResource IconHome}" Width="16" Height="16"/>
-              <TextBlock Text="Главная" VerticalAlignment="Center" FontSize="14"/>
-            </StackPanel>
-          </Button>
+    <Border Grid.Column="1"
+            Grid.Row="1"
+            x:Name="ContentHost"
+            Classes="content-host"
+            ClipToBounds="True">
+      <ContentControl Content="{Binding CurrentPage}"
+                      HorizontalContentAlignment="Stretch"
+                      VerticalContentAlignment="Stretch">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="vm:HomeViewModel">
+            <views:HomeView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:SettingsViewModel">
+            <views:SettingsView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:HistoryViewModel">
+            <views:HistoryView />
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
+    </Border>
 
-          <Button Classes="nav-item"
-                  Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Settings}}"
-                  Command="{Binding NavigateCommand}"
-                  CommandParameter="{x:Static vm:AppPage.Settings}">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-              <PathIcon Data="{StaticResource IconSettings}" Width="16" Height="16"/>
-              <TextBlock Text="Настройки" VerticalAlignment="Center" FontSize="14"/>
-            </StackPanel>
-          </Button>
-
-          <Button Classes="nav-item"
-                  Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.History}}"
-                  Command="{Binding NavigateCommand}"
-                  CommandParameter="{x:Static vm:AppPage.History}">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-              <PathIcon Data="{StaticResource IconHistory}" Width="16" Height="16"/>
-              <TextBlock Text="История" VerticalAlignment="Center" FontSize="14"/>
-            </StackPanel>
-          </Button>
-        </StackPanel>
-      </Border>
-
-      <Border Grid.Column="1" Classes="content-host" ClipToBounds="True">
-        <ContentControl Content="{Binding CurrentPage}"
-                        HorizontalContentAlignment="Stretch"
-                        VerticalContentAlignment="Stretch">
-          <ContentControl.DataTemplates>
-            <DataTemplate DataType="vm:HomeViewModel">
-              <views:HomeView />
-            </DataTemplate>
-            <DataTemplate DataType="vm:SettingsViewModel">
-              <views:SettingsView />
-            </DataTemplate>
-            <DataTemplate DataType="vm:HistoryViewModel">
-              <views:HistoryView />
-            </DataTemplate>
-          </ContentControl.DataTemplates>
-        </ContentControl>
-      </Border>
-    </Grid>
+    <Border Grid.Column="0"
+            Grid.ColumnSpan="2"
+            Grid.Row="2"
+            Classes="status-bar">
+      <DockPanel LastChildFill="True" VerticalAlignment="Center">
+        <ProgressBar DockPanel.Dock="Left"
+                     IsIndeterminate="True"
+                     IsVisible="{Binding StatusBar.IsBusy}"
+                     Width="72"
+                     Height="3"
+                     Margin="0,0,10,0"
+                     VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding StatusBar.StatusText}"
+                   FontSize="12"
+                   VerticalAlignment="Center"
+                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+      </DockPanel>
+    </Border>
   </Grid>
 </Window>

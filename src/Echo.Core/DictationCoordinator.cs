@@ -1,3 +1,4 @@
+using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 using Microsoft.Extensions.Logging;
 
@@ -16,6 +17,7 @@ public sealed class DictationCoordinator : IDisposable
     private readonly ILogger<DictationCoordinator> _logger;
 
     private AppConfig _config;
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
     private DateTimeOffset _pressStarted;
     private bool _isRecording;
     private nint _targetWindow;
@@ -51,13 +53,40 @@ public sealed class DictationCoordinator : IDisposable
         _hotkey.Configure(_config.Hotkey);
     }
 
-    public void SaveConfig(AppConfig config)
+    public async Task SaveConfigAsync(
+        AppConfig config,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
     {
-        _config = config;
-        _config.Normalize();
-        _configStore.Save(_config);
-        _hotkey.Configure(_config.Hotkey);
-        _ = WarmupModelAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        await _saveLock.WaitAsync(cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report("Сохранение…");
+            _config = config;
+            _config.Normalize();
+            _configStore.Save(_config);
+            _hotkey.Configure(_config.Hotkey);
+
+            try
+            {
+                await WarmupIfDownloadedAsync(_config, progress, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Model warmup failed");
+                throw;
+            }
+        }
+        finally
+        {
+            _saveLock.Release();
+        }
     }
 
     public void Start()
@@ -75,14 +104,50 @@ public sealed class DictationCoordinator : IDisposable
     {
         try
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            await _transcription.WarmupAsync(_config);
-            _logger.LogInformation("Model warmup completed in {Ms} ms", sw.ElapsedMilliseconds);
+            if (!await WarmupIfDownloadedAsync(_config))
+            {
+                _logger.LogInformation("Model not downloaded — skipping startup warmup");
+            }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Model warmup failed — first dictation may be slower");
         }
+    }
+
+    public async Task TryWarmupCurrentModelAsync(
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await _saveLock.WaitAsync(cancellationToken);
+        try
+        {
+            await WarmupIfDownloadedAsync(_config, progress, cancellationToken);
+        }
+        finally
+        {
+            _saveLock.Release();
+        }
+    }
+
+    private async Task<bool> WarmupIfDownloadedAsync(
+        AppConfig config,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelRegistry.IsEngineModelDownloaded(config.Engine, config.WhisperModelSize, config.GigaAmModelSize))
+        {
+            return false;
+        }
+
+        progress?.Report("Загрузка модели…");
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await _transcription.WarmupAsync(config, cancellationToken);
+        _logger.LogInformation("Model warmup completed in {Ms} ms", sw.ElapsedMilliseconds);
+        return true;
     }
 
     public void Stop()
@@ -152,7 +217,7 @@ public sealed class DictationCoordinator : IDisposable
             sw.Restart();
             _tray.SetState(DictationOverlayState.Hidden);
             RestoreInjectionTarget();
-            await _injector.InjectAsync(text, _config.InputMethod);
+            await _injector.InjectAsync(text, _config.InputMethod, _config.TypeDelayMs);
             var injectMs = sw.ElapsedMilliseconds;
 
             var engine = _transcription.Resolve(_config);

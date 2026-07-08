@@ -16,8 +16,19 @@ public class AppConfigTests
     [Fact]
     public void ModelRegistry_GigaAmSpec_PointsToAppData()
     {
-        var spec = ModelRegistry.GigaAmSpec();
-        Assert.Equal("Smirnov75/GigaAM-v3-sherpa-onnx", spec.RepoId);
+        var spec = ModelRegistry.GigaAmSpecFor("e2e");
+        Assert.NotNull(spec);
+        Assert.Equal("Smirnov75/GigaAM-v3-sherpa-onnx", spec!.RepoId);
         Assert.Contains("gigaam-v3", spec.LocalDir);
+    }
+
+    [Theory]
+    [InlineData("v3", "e2e")]
+    [InlineData("v3-punct", "e2e")]
+    public void Normalize_MigratesLegacyGigaAmModelSize(string legacy, string expected)
+    {
+        var config = new AppConfig { GigaAmModelSize = legacy };
+        config.Normalize();
+        Assert.Equal(expected, config.GigaAmModelSize);
     }
 }

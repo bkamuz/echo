@@ -12,13 +12,7 @@ public sealed class WindowsTextInjector : ITextInjector
     private const uint CfUnicode = 13;
     private const uint GmemMoveable = 0x0002;
 
-    /// <summary>
-    /// Small pause between keystrokes — prevents target apps from dropping spaces/letters
-    /// when SendInput is flooded (original Python supported optional delay; 0 was default).
-    /// </summary>
-    private const int InterKeyDelayMs = 1;
-
-    public Task InjectAsync(string text, string method, CancellationToken cancellationToken = default)
+    public Task InjectAsync(string text, string method, int typeDelayMs = 0, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -30,83 +24,135 @@ public sealed class WindowsTextInjector : ITextInjector
             return Task.CompletedTask;
         }
 
-        TypeText(text);
+        TypeText(text, typeDelayMs);
         return Task.CompletedTask;
     }
 
-    private static void TypeText(string text)
+    private static void TypeText(string text, int typeDelayMs)
     {
-        foreach (var ch in text)
+        for (var i = 0; i < text.Length; i++)
         {
-            if (ch == '\n')
+            var ch = text[i];
+            if (ch == '\r')
             {
-                SendVk(0x0D);
-            }
-            else if (ch != '\r')
-            {
-                foreach (var code in Utf16CodeUnits(ch))
-                {
-                    SendUnicodeCodeUnit(code);
-                }
+                continue;
             }
 
-            if (InterKeyDelayMs > 0)
+            if (ch == '\n')
             {
-                Thread.Sleep(InterKeyDelayMs);
+                SendEnter();
+            }
+            else if (char.IsHighSurrogate(ch) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
+            {
+                SendUnicodeCodeUnit((ushort)ch);
+                SendUnicodeCodeUnit((ushort)text[i + 1]);
+                i++;
+            }
+            else
+            {
+                SendUnicodeCodeUnit((ushort)ch);
+            }
+
+            if (typeDelayMs > 0 && HasMoreChars(text, i))
+            {
+                Thread.Sleep(typeDelayMs);
             }
         }
     }
 
+    private static bool HasMoreChars(string text, int index)
+    {
+        for (var j = index + 1; j < text.Length; j++)
+        {
+            if (text[j] != '\r')
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void SendUnicodeCodeUnit(ushort code)
+    {
+        Input[] inputs =
+        [
+            new()
+            {
+                Type = InputKeyboard,
+                U = new InputUnion { Ki = new KeyboardInput { WScan = code, DwFlags = KeyeventfUnicode } },
+            },
+            new()
+            {
+                Type = InputKeyboard,
+                U = new InputUnion
+                {
+                    Ki = new KeyboardInput { WScan = code, DwFlags = KeyeventfUnicode | KeyeventfKeyup },
+                },
+            },
+        ];
+        _ = SendInput(2, inputs, InputSize);
+    }
+
+    private static void SendEnter()
+    {
+        const ushort vkReturn = 0x0D;
+        Input[] inputs =
+        [
+            new() { Type = InputKeyboard, U = new InputUnion { Ki = new KeyboardInput { WVk = vkReturn } } },
+            new()
+            {
+                Type = InputKeyboard,
+                U = new InputUnion { Ki = new KeyboardInput { WVk = vkReturn, DwFlags = KeyeventfKeyup } },
+            },
+        ];
+        _ = SendInput(2, inputs, InputSize);
+    }
+
+    /// <summary>
+    /// Saves text clipboard (CF_UNICODETEXT only), pastes dictation text, then restores the saved content.
+    /// Images and other formats are not preserved.
+    /// </summary>
     private static bool TryInjectViaClipboard(string text)
     {
+        string? savedText = null;
+        var hadText = false;
+
+        if (!OpenClipboard(IntPtr.Zero))
+        {
+            return false;
+        }
+
         try
         {
-            if (!OpenClipboard(IntPtr.Zero))
+            if (IsClipboardFormatAvailable(CfUnicode))
             {
-                return false;
+                savedText = ReadClipboardUnicodeText();
+                hadText = savedText is not null;
             }
+        }
+        finally
+        {
+            CloseClipboard();
+        }
 
-            try
-            {
-                EmptyClipboard();
+        if (!TrySetClipboardText(text))
+        {
+            return false;
+        }
 
-                var bytes = Encoding.Unicode.GetBytes(text + '\0');
-                var hGlobal = GlobalAlloc(GmemMoveable, (UIntPtr)bytes.Length);
-                if (hGlobal == IntPtr.Zero)
-                {
-                    return false;
-                }
-
-                var target = GlobalLock(hGlobal);
-                if (target == IntPtr.Zero)
-                {
-                    return false;
-                }
-
-                try
-                {
-                    Marshal.Copy(bytes, 0, target, bytes.Length);
-                }
-                finally
-                {
-                    GlobalUnlock(hGlobal);
-                }
-
-                if (SetClipboardData(CfUnicode, hGlobal) == IntPtr.Zero)
-                {
-                    return false;
-                }
-
-                hGlobal = IntPtr.Zero;
-            }
-            finally
-            {
-                CloseClipboard();
-            }
-
+        try
+        {
             Thread.Sleep(30);
             SendCtrlV();
-            return true;
+            Thread.Sleep(50);
+
+            if (hadText)
+            {
+                return TrySetClipboardText(savedText!);
+            }
+
+            return TryClearClipboard();
         }
         catch
         {
@@ -114,35 +160,94 @@ public sealed class WindowsTextInjector : ITextInjector
         }
     }
 
-    private static IEnumerable<ushort> Utf16CodeUnits(char ch)
+    private static string? ReadClipboardUnicodeText()
     {
-        var encoded = Encoding.Unicode.GetBytes([ch]);
-        for (var i = 0; i < encoded.Length; i += 2)
+        var handle = GetClipboardData(CfUnicode);
+        if (handle == IntPtr.Zero)
         {
-            yield return (ushort)(encoded[i] | (encoded[i + 1] << 8));
+            return null;
+        }
+
+        var source = GlobalLock(handle);
+        if (source == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        try
+        {
+            return Marshal.PtrToStringUni(source);
+        }
+        finally
+        {
+            GlobalUnlock(handle);
         }
     }
 
-    private static void SendUnicodeCodeUnit(ushort code)
+    private static bool TrySetClipboardText(string text)
     {
-        var down = new Input
+        if (!OpenClipboard(IntPtr.Zero))
         {
-            Type = InputKeyboard,
-            U = new InputUnion { Ki = new KeyboardInput { WScan = code, DwFlags = KeyeventfUnicode } },
-        };
-        var up = new Input
+            return false;
+        }
+
+        try
         {
-            Type = InputKeyboard,
-            U = new InputUnion { Ki = new KeyboardInput { WScan = code, DwFlags = KeyeventfUnicode | KeyeventfKeyup } },
-        };
-        _ = SendInput(2, [down, up], InputSize);
+            if (!EmptyClipboard())
+            {
+                return false;
+            }
+
+            var bytes = Encoding.Unicode.GetBytes(text + '\0');
+            var hGlobal = GlobalAlloc(GmemMoveable, (UIntPtr)bytes.Length);
+            if (hGlobal == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            var target = GlobalLock(hGlobal);
+            if (target == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            try
+            {
+                Marshal.Copy(bytes, 0, target, bytes.Length);
+            }
+            finally
+            {
+                GlobalUnlock(hGlobal);
+            }
+
+            if (SetClipboardData(CfUnicode, hGlobal) == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            return true;
+        }
+        finally
+        {
+            CloseClipboard();
+        }
     }
 
-    private static void SendVk(ushort vk)
+    private static bool TryClearClipboard()
     {
-        var down = new Input { Type = InputKeyboard, U = new InputUnion { Ki = new KeyboardInput { WVk = vk } } };
-        var up = new Input { Type = InputKeyboard, U = new InputUnion { Ki = new KeyboardInput { WVk = vk, DwFlags = KeyeventfKeyup } } };
-        _ = SendInput(2, [down, up], InputSize);
+        if (!OpenClipboard(IntPtr.Zero))
+        {
+            return false;
+        }
+
+        try
+        {
+            return EmptyClipboard();
+        }
+        finally
+        {
+            CloseClipboard();
+        }
     }
 
     private static void SendCtrlV()
@@ -173,6 +278,12 @@ public sealed class WindowsTextInjector : ITextInjector
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr GetClipboardData(uint uFormat);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool IsClipboardFormatAvailable(uint format);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);

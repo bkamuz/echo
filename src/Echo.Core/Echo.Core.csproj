@@ -11,5 +11,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Echo.Abstractions\Echo.Abstractions.csproj" />
+    <ProjectReference Include="..\Echo.Engines\Echo.Engines.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Echo.Core.Tests" />
   </ItemGroup>
 </Project>

@@ -7,8 +7,9 @@ namespace echo.Core;
 public sealed class AppConfig
 {
     public static IReadOnlyList<string> WhisperSizes => ModelRegistry.WhisperSizes;
+    public static IReadOnlyList<string> GigaAmSizes => ModelRegistry.GigaAmSizes;
 
-    public static IReadOnlyList<string> Engines { get; } = ["gigaam", "whisper"];
+    public static IReadOnlyList<string> Engines { get; } = ["gigaam", "whisper", "omnilingual"];
     public static IReadOnlyList<string> Devices { get; } = ["cpu", "cuda"];
 
     [JsonPropertyName("hotkey")]
@@ -20,6 +21,9 @@ public sealed class AppConfig
     [JsonPropertyName("whisper_model_size")]
     public string WhisperModelSize { get; set; } = "small";
 
+    [JsonPropertyName("gigaam_model_size")]
+    public string GigaAmModelSize { get; set; } = "e2e";
+
     [JsonPropertyName("language")]
     public string Language { get; set; } = "ru";
 
@@ -30,7 +34,10 @@ public sealed class AppConfig
     public string InputDevice { get; set; } = string.Empty;
 
     [JsonPropertyName("input_method")]
-    public string InputMethod { get; set; } = "type";
+    public string InputMethod { get; set; } = "clipboard";
+
+    [JsonPropertyName("type_delay_ms")]
+    public int TypeDelayMs { get; set; } = 1;
 
     [JsonPropertyName("min_press_ms")]
     public int MinPressMs { get; set; } = 300;
@@ -44,8 +51,6 @@ public sealed class AppConfig
     [JsonPropertyName("extra")]
     public Dictionary<string, JsonElement> Extra { get; set; } = new();
 
-    public string ComputeType => Device == "cuda" ? "float16" : "int8";
-
     public void Normalize()
     {
         if (!Engines.Contains(Engine))
@@ -58,9 +63,20 @@ public sealed class AppConfig
             WhisperModelSize = "small";
         }
 
+        if (GigaAmModelSize is "v3" or "v3-punct")
+        {
+            GigaAmModelSize = "e2e";
+        }
+        else if (!GigaAmSizes.Contains(GigaAmModelSize))
+        {
+            GigaAmModelSize = "e2e";
+        }
+
         if (!Devices.Contains(Device))
         {
             Device = "cpu";
         }
+
+        TypeDelayMs = Math.Clamp(TypeDelayMs, 0, 50);
     }
 }

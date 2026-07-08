@@ -30,13 +30,12 @@ public partial class App : Application
                 services.AddLogging();
                 services.UseEcho();
                 services.UsePlatform();
-                services.UseWhisper();
-                services.UseGigaAm();
+                services.UseEchoEngines();
+                services.AddSingleton<AppStatusViewModel>();
                 services.AddSingleton<HomeViewModel>();
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<ShellViewModel>();
-                services.AddSingleton<IAppClipboard, AvaloniaClipboardService>();
                 services.AddSingleton<ITrayStateService, AvaloniaTrayService>();
             })
             .Build();
@@ -52,6 +51,10 @@ public partial class App : Application
             {
                 DataContext = Services.GetRequiredService<ShellViewModel>(),
             };
+            if (Services.GetRequiredService<ITrayStateService>() is AvaloniaTrayService tray)
+            {
+                tray.AttachMainWindow(desktop.MainWindow);
+            }
             desktop.Exit += (_, _) =>
             {
                 coordinator.Stop();

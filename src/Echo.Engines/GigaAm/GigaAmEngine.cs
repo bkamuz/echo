@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
 using Microsoft.Extensions.Logging;
@@ -11,7 +12,7 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
     private EngineOptions _config = new();
     private OfflineRecognizer? _recognizer;
     private string _resolvedDevice = "cpu";
-    private bool _usesE2e;
+    private string _loadedVariant = string.Empty;
 
     public GigaAmEngine(ILogger<GigaAmEngine> logger)
     {
@@ -19,29 +20,41 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
     }
 
     public string EngineId => "gigaam";
-    public string DisplayName => _usesE2e
-        ? $"GigaAM v3 e2e ({_resolvedDevice.ToUpperInvariant()})"
-        : $"GigaAM v3 ({_resolvedDevice.ToUpperInvariant()})";
+    public string DisplayName
+    {
+        get
+        {
+            var device = _resolvedDevice.ToUpperInvariant();
+            return _config.GigaAmModelSize switch
+            {
+                "rnnt" => $"GigaAM v3 rnnt ({device})",
+                _ => $"GigaAM v3 e2e ({device})",
+            };
+        }
+    }
 
     public void Configure(EngineOptions options) => _config = options;
 
     public Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
     {
-        if (_recognizer is not null)
+        var variant = _config.GigaAmModelSize;
+        var device = _config.Device == "cuda" ? "cuda" : "cpu";
+        if (_recognizer is not null && _loadedVariant == variant && _resolvedDevice == device)
         {
             return Task.CompletedTask;
         }
 
-        var paths = ResolveModelPaths(AppPaths.GigaAmDir);
-        if (paths is null)
+        Unload();
+        var bundle = ModelRegistry.ResolveGigaAmBundle(AppPaths.GigaAmDir, variant);
+        _loadedVariant = variant;
+
+        if (bundle is null)
         {
             throw new InvalidOperationException(
-                "GigaAM модели не найдены. Скачайте GigaAM v3 через меню приложения " +
-                "(для .NET нужны sherpa-совместимые ONNX из Smirnov75/GigaAM-v3-sherpa-onnx).");
+                $"GigaAM {variant} модель не найдена. Скачайте через настройки приложения.");
         }
 
-        _resolvedDevice = _config.Device == "cuda" ? "cuda" : "cpu";
-        _usesE2e = paths.Encoder.Contains("e2e_rnnt", StringComparison.Ordinal);
+        _resolvedDevice = device;
         var config = new OfflineRecognizerConfig
         {
             FeatConfig = new FeatureConfig
@@ -51,30 +64,27 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
             },
             ModelConfig = new OfflineModelConfig
             {
-                Tokens = paths.Tokens,
+                Tokens = bundle.Tokens,
                 NumThreads = Math.Max(1, Environment.ProcessorCount),
                 Provider = _resolvedDevice,
                 Transducer = new OfflineTransducerModelConfig
                 {
-                    Encoder = paths.Encoder,
-                    Decoder = paths.Decoder,
-                    Joiner = paths.Joiner,
+                    Encoder = bundle.Encoder,
+                    Decoder = bundle.Decoder,
+                    Joiner = bundle.Joiner,
                 },
             },
         };
 
         try
         {
-            _logger.LogInformation(
-                "Loading GigaAM v3{Variant} (device={Device})",
-                _usesE2e ? " e2e" : string.Empty,
-                _resolvedDevice);
+            _logger.LogInformation("Loading GigaAM {Variant} (device={Device})", variant, _resolvedDevice);
             _recognizer = new OfflineRecognizer(config);
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException(
-                "Не удалось загрузить GigaAM. Скачайте sherpa-совместимые модели через «Скачать GigaAM».", ex);
+                "Не удалось загрузить GigaAM. Проверьте целостность модели.", ex);
         }
 
         return Task.CompletedTask;
@@ -90,18 +100,61 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
         using var stream = _recognizer.CreateStream();
         stream.AcceptWaveform(sampleRate, samples);
         _recognizer.Decode(stream);
-        return Task.FromResult(stream.Result.Text.Trim());
+        var text = stream.Result.Text.Trim();
+        return Task.FromResult(PostProcess(text));
     }
+
+    private static string PostProcess(string text)
+    {
+        // Словарь: русское звучание -> английское слово.
+        // GigaAM — чисто русская модель, английские токены в ней отсутствуют.
+        // Этот пост-процессинг исправляет часто используемые английские термины.
+        if (string.IsNullOrEmpty(text)) return text;
+
+        foreach (var (ru, en) in _replacements)
+        {
+            text = Regex.Replace(text, $@"\b{ru}\b", en, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        }
+        return text;
+    }
+
+    private static readonly (string Ru, string En)[] _replacements =
+    [
+        ("девайс", "device"),
+        ("билд", "build"),
+        ("интерфейс", "interface"),
+        ("апдейт", "update"),
+        ("релиз", "release"),
+        ("деплой", "deploy"),
+        ("сервер", "server"),
+        ("клиент", "client"),
+        ("конфиг", "config"),
+        ("баг", "bug"),
+        ("фикс", "fix"),
+        ("фича", "feature"),
+        ("коммит", "commit"),
+        ("пулл", "pull"),
+        ("бранч", "branch"),
+        ("репозиторий", "repository"),
+        ("лонг", "long"),
+        ("шорт", "short"),
+        ("инт", "int"),
+        ("стринг", "string"),
+        ("бул", "bool"),
+        ("класс", "class"),
+        ("метод", "method"),
+        ("функция", "function"),
+        ("переменная", "variable"),
+        ("массив", "array"),
+        ("список", "list"),
+        ("словарь", "dictionary"),
+    ];
 
     public void Unload()
     {
         _recognizer?.Dispose();
         _recognizer = null;
-        _usesE2e = false;
     }
 
     public void Dispose() => Unload();
-
-    public static GigaAmBundlePaths? ResolveModelPaths(string modelDir) =>
-        ModelRegistry.ResolveGigaAmBundle(modelDir);
 }

@@ -9,6 +9,8 @@ public partial class ShellViewModel : ObservableObject
     private readonly SettingsViewModel _settings;
     private readonly HistoryViewModel _history;
 
+    public AppStatusViewModel StatusBar { get; }
+
     [ObservableProperty]
     private object _currentPage;
 
@@ -18,11 +20,13 @@ public partial class ShellViewModel : ObservableObject
     public ShellViewModel(
         HomeViewModel home,
         SettingsViewModel settings,
-        HistoryViewModel history)
+        HistoryViewModel history,
+        AppStatusViewModel statusBar)
     {
         _home = home;
         _settings = settings;
         _history = history;
+        StatusBar = statusBar;
         _currentPage = home;
     }
 
@@ -47,7 +51,7 @@ public partial class ShellViewModel : ObservableObject
 
     private HistoryViewModel ActivateHistory()
     {
-        _history.Refresh();
+        _ = _history.LoadInitialAsync();
         return _history;
     }
 }

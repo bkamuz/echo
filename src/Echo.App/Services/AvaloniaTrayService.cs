@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using echo.Abstractions.Platform;
 
 namespace echo.App.Services;
@@ -10,6 +11,7 @@ public sealed class AvaloniaTrayService : ITrayStateService
     private readonly WindowIcon _idleIcon;
     private readonly WindowIcon _recordingIcon;
     private readonly WindowIcon _processingIcon;
+    private Window? _mainWindow;
 
     public AvaloniaTrayService()
     {
@@ -25,22 +27,37 @@ public sealed class AvaloniaTrayService : ITrayStateService
         };
     }
 
+    public void AttachMainWindow(Window window)
+    {
+        _mainWindow = window;
+        window.Icon = _idleIcon;
+    }
+
     public void SetState(DictationOverlayState state)
     {
-        switch (state)
+        var (icon, tooltip) = state switch
         {
-            case DictationOverlayState.Hidden:
-                _tray.Icon = _idleIcon;
-                _tray.ToolTipText = "Echo — готов";
-                break;
-            case DictationOverlayState.Recording:
-                _tray.Icon = _recordingIcon;
-                _tray.ToolTipText = "Echo — слушаю";
-                break;
-            case DictationOverlayState.Processing:
-                _tray.Icon = _processingIcon;
-                _tray.ToolTipText = "Echo — обработка...";
-                break;
+            DictationOverlayState.Hidden => (_idleIcon, "Echo — готов"),
+            DictationOverlayState.Recording => (_recordingIcon, "Echo — слушаю"),
+            DictationOverlayState.Processing => (_processingIcon, "Echo — обработка..."),
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+        };
+
+        _tray.Icon = icon;
+        _tray.ToolTipText = tooltip;
+
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            _mainWindow.Icon = icon;
+        }
+        else
+        {
+            Dispatcher.UIThread.Post(() => _mainWindow.Icon = icon);
         }
     }
 

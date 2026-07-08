@@ -4,6 +4,7 @@ public sealed class EngineOptions
 {
     public string Engine { get; init; } = "gigaam";
     public string WhisperModelSize { get; init; } = "small";
+    public string GigaAmModelSize { get; init; } = "e2e";
     public string Language { get; init; } = "ru";
     public string Device { get; init; } = "cpu";
     public int SampleRate { get; init; } = 16000;

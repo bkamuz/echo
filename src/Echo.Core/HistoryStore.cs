@@ -20,45 +20,100 @@ public sealed class HistoryStore
         File.AppendAllText(AppPaths.HistoryPath, line + Environment.NewLine);
     }
 
-    public IReadOnlyList<HistoryEntry> ReadAll(int limit = 500)
+    public int CountEntries() => CountEntries(AppPaths.HistoryPath);
+
+    public IReadOnlyList<HistoryEntry> ReadPage(int skipFromNewest, int take) =>
+        ReadPage(AppPaths.HistoryPath, skipFromNewest, take);
+
+    internal static int CountEntries(string historyPath)
     {
-        if (!File.Exists(AppPaths.HistoryPath))
+        if (!File.Exists(historyPath))
+        {
+            return 0;
+        }
+
+        var count = 0;
+        foreach (var line in File.ReadLines(historyPath))
+        {
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    internal static IReadOnlyList<HistoryEntry> ReadPage(string historyPath, int skipFromNewest, int take)
+    {
+        if (!File.Exists(historyPath) || take <= 0)
         {
             return [];
         }
 
-        var entries = new List<HistoryEntry>();
-        var pending = new Stack<string>();
+        var window = skipFromNewest + take;
+        var buffer = new Queue<string>(window);
 
-        foreach (var line in File.ReadLines(AppPaths.HistoryPath))
+        foreach (var line in File.ReadLines(historyPath))
         {
-            if (!string.IsNullOrWhiteSpace(line))
+            if (string.IsNullOrWhiteSpace(line))
             {
-                pending.Push(line);
+                continue;
+            }
+
+            buffer.Enqueue(line);
+            while (buffer.Count > window)
+            {
+                buffer.Dequeue();
             }
         }
 
-        foreach (var line in pending.Take(limit))
+        if (buffer.Count == 0)
         {
-            try
-            {
-                using var doc = JsonDocument.Parse(line);
-                var root = doc.RootElement;
-                var ts = root.GetProperty("ts").GetString() ?? DateTimeOffset.UtcNow.ToString("O");
-                var engine = root.GetProperty("engine").GetString() ?? string.Empty;
-                var text = root.GetProperty("text").GetString() ?? string.Empty;
-                if (!DateTimeOffset.TryParse(ts, out var timestamp))
-                {
-                    timestamp = DateTimeOffset.UtcNow;
-                }
+            return [];
+        }
 
-                entries.Add(new HistoryEntry(timestamp, engine, text));
-            }
-            catch
+        var lines = buffer.ToArray();
+        var end = lines.Length - skipFromNewest;
+        if (end <= 0)
+        {
+            return [];
+        }
+
+        var start = Math.Max(0, end - take);
+        var result = new List<HistoryEntry>(end - start);
+        for (var i = end - 1; i >= start; i--)
+        {
+            if (TryParseLine(lines[i], out var entry))
             {
+                result.Add(entry);
             }
         }
 
-        return entries;
+        return result;
+    }
+
+    internal static bool TryParseLine(string line, out HistoryEntry entry)
+    {
+        entry = default!;
+        try
+        {
+            using var doc = JsonDocument.Parse(line);
+            var root = doc.RootElement;
+            var ts = root.GetProperty("ts").GetString() ?? DateTimeOffset.UtcNow.ToString("O");
+            var engine = root.GetProperty("engine").GetString() ?? string.Empty;
+            var text = root.GetProperty("text").GetString() ?? string.Empty;
+            if (!DateTimeOffset.TryParse(ts, out var timestamp))
+            {
+                timestamp = DateTimeOffset.UtcNow;
+            }
+
+            entry = new HistoryEntry(timestamp, engine, text);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

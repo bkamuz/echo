@@ -10,79 +10,190 @@
   <Grid RowDefinitions="Auto,*" VerticalAlignment="Stretch">
     <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
       <TextBlock Classes="page-title" Text="Настройки"/>
-      <TextBlock Classes="page-subtitle" Text="Изменения применяются сразу"/>
+      <TextBlock Classes="page-subtitle" Text="Хоткей, движок, микрофон и способ ввода текста"/>
     </StackPanel>
 
     <ScrollViewer Grid.Row="1"
-                  VerticalScrollBarVisibility="Hidden"
-                  HorizontalScrollBarVisibility="Disabled">
-      <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
-        <Border Grid.Column="0" Classes="tile">
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  IsEnabled="{Binding IsSettingsEnabled}">
+      <StackPanel Spacing="12">
+
+        <Border Classes="tile">
           <DockPanel>
             <Border DockPanel.Dock="Top" Classes="tile-header">
               <TextBlock Classes="section-title" Text="УПРАВЛЕНИЕ"/>
             </Border>
-            <StackPanel Classes="tile-body" Spacing="12">
-              <StackPanel Spacing="8">
+            <Grid Classes="tile-body" ColumnDefinitions="*,*,*,Auto" ColumnSpacing="12">
+              <StackPanel Grid.Column="0" Classes="settings-field">
                 <TextBlock Classes="field-label" Text="Хоткей"/>
-                <Button Classes="secondary"
-                        Content="{Binding HotkeyCaptureButtonText}"
+                <Button Classes="hotkey-field"
+                        Classes.capturing="{Binding IsCapturingHotkey}"
+                        Content="{Binding HotkeyDisplay}"
                         Command="{Binding ToggleHotkeyCaptureCommand}"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center"/>
-                <TextBox Text="{Binding HotkeyDisplay}"
-                         IsReadOnly="True"
-                         TextWrapping="Wrap"
-                         MinHeight="32"
-                         HorizontalAlignment="Stretch"
-                         PlaceholderText="Ctrl + Win"/>
-                <TextBlock Text="{Binding HotkeyCaptureHint}"
-                           IsVisible="{Binding IsCapturingHotkey}"
-                           FontSize="12"
-                           Foreground="{DynamicResource LinkBrush}"/>
-                <TextBlock Classes="page-subtitle"
-                           Text="Удерживайте все клавиши комбинации, затем отпустите"/>
+                        HorizontalAlignment="Stretch"/>
               </StackPanel>
-              <StackPanel Spacing="0">
+              <StackPanel Grid.Column="1" Classes="settings-field">
                 <TextBlock Classes="field-label" Text="Метод ввода"/>
-                <ComboBox ItemsSource="{Binding InputMethods}" SelectedItem="{Binding InputMethod}"/>
+                <ComboBox ItemsSource="{Binding InputMethodOptions}"
+                          SelectedItem="{Binding SelectedInputMethod}"
+                          HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:InputMethodOption">
+                      <TextBlock Text="{Binding DisplayName}"
+                                 ToolTip.Tip="{Binding Tooltip}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
               </StackPanel>
-              <CheckBox Content="Пробел в конце фразы"
-                        IsChecked="{Binding AddTrailingSpace}"/>
-            </StackPanel>
+              <StackPanel Grid.Column="2"
+                          Classes="settings-field"
+                          IsVisible="{Binding IsTypeInput}">
+                <TextBlock Classes="field-label" Text="Скорость печати"
+                           ToolTip.Tip="Задержка между символами при методе «Печать»"/>
+                <ComboBox ItemsSource="{Binding TypeSpeedOptions}"
+                          SelectedItem="{Binding SelectedTypeSpeed}"
+                          HorizontalAlignment="Stretch"/>
+              </StackPanel>
+              <CheckBox Grid.Column="3"
+                        Content="Пробел в конце фразы"
+                        IsChecked="{Binding AddTrailingSpace}"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,2"/>
+            </Grid>
           </DockPanel>
         </Border>
 
-        <Border Grid.Column="1" Classes="tile">
+        <Border Classes="tile">
           <DockPanel>
             <Border DockPanel.Dock="Top" Classes="tile-header">
               <TextBlock Classes="section-title" Text="РАСПОЗНАВАНИЕ"/>
             </Border>
-            <StackPanel Classes="tile-body" Spacing="12">
-              <StackPanel Spacing="0">
-                <TextBlock Classes="field-label" Text="Движок"/>
-                <ComboBox ItemsSource="{Binding Engines}" SelectedItem="{Binding Engine}"/>
-              </StackPanel>
-              <StackPanel Spacing="0">
-                <TextBlock Classes="field-label" Text="Whisper модель"/>
-                <ComboBox ItemsSource="{Binding WhisperSizes}" SelectedItem="{Binding WhisperModelSize}"/>
-              </StackPanel>
-              <StackPanel Spacing="0">
-                <TextBlock Classes="field-label" Text="Устройство"/>
-                <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding Device}"/>
-              </StackPanel>
+            <StackPanel Classes="tile-body" Spacing="10">
+              <Grid ColumnDefinitions="*,*,*,Auto,Auto" ColumnSpacing="8">
+                <StackPanel Grid.Column="0"
+                            Classes="settings-field"
+                            IsVisible="{Binding IsDeviceVisible}">
+                  <TextBlock Classes="field-label" Text="Устройство"/>
+                  <ComboBox ItemsSource="{Binding Devices}"
+                            SelectedItem="{Binding Device}"
+                            HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="0"
+                            Classes="settings-field"
+                            IsVisible="{Binding IsWhisper}">
+                  <TextBlock Classes="field-label" Text="Язык"/>
+                  <ComboBox ItemsSource="{Binding Languages}"
+                            SelectedItem="{Binding Language}"
+                            HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Classes="settings-field">
+                  <TextBlock Classes="field-label" Text="Движок"/>
+                  <ComboBox ItemsSource="{Binding EngineOptions}"
+                            SelectedItem="{Binding SelectedEngine}"
+                            HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Classes="settings-field"
+                            IsVisible="{Binding IsGigaAm}">
+                  <TextBlock Classes="field-label" Text="Модель"/>
+                  <ComboBox ItemsSource="{Binding GigaAmSizes}"
+                            SelectedItem="{Binding GigaAmModelSize}"
+                            HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Classes="settings-field"
+                            IsVisible="{Binding IsWhisper}">
+                  <TextBlock Classes="field-label" Text="Модель"/>
+                  <ComboBox ItemsSource="{Binding WhisperSizes}"
+                            SelectedItem="{Binding WhisperModelSize}"
+                            HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Classes="settings-field"
+                            IsVisible="{Binding IsOmnilingual}">
+                  <TextBlock Classes="field-label" Text="Модель"/>
+                  <TextBlock Text="Omnilingual ASR 300M"
+                             FontSize="13"
+                             MinHeight="32"
+                             VerticalAlignment="Center"
+                             Foreground="{DynamicResource TextPrimaryBrush}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Classes="settings-field" Width="32">
+                  <TextBlock Classes="field-label" Text=" "/>
+                  <Button Classes="icon-action"
+                          IsEnabled="False"
+                          IsVisible="{Binding IsModelDownloaded}"
+                          ToolTip.Tip="{Binding ModelLoadedTooltip}"
+                          Focusable="False">
+                    <PathIcon Data="{StaticResource IconCheck}"
+                              Width="16"
+                              Height="16"
+                              Foreground="{DynamicResource SuccessTextBrush}"/>
+                  </Button>
+                  <Button Classes="icon-action"
+                          IsVisible="{Binding ShowModelDownloadButton}"
+                          Command="{Binding DownloadModelCommand}"
+                          ToolTip.Tip="{Binding ModelDownloadTooltip}"
+                          IsEnabled="{Binding IsSettingsEnabled}">
+                    <PathIcon Data="{StaticResource IconDownload}"
+                              Width="16"
+                              Height="16"
+                              Foreground="{DynamicResource TextSecondaryBrush}"/>
+                  </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="4" Classes="settings-field" Width="32">
+                  <TextBlock Classes="field-label" Text=" "/>
+                  <Button Classes="icon-action"
+                          IsVisible="{Binding IsModelDownloaded}"
+                          Command="{Binding DeleteModelCommand}"
+                          ToolTip.Tip="{Binding ModelDeleteTooltip}"
+                          IsEnabled="{Binding IsSettingsEnabled}">
+                    <PathIcon Data="{StaticResource IconTrash}"
+                              Width="16"
+                              Height="16"
+                              Foreground="{DynamicResource TextSecondaryBrush}"/>
+                  </Button>
+                </StackPanel>
+              </Grid>
+
+              <TextBlock Text="e2e — с пунктуацией и нормализацией, rnnt — только текст"
+                         IsVisible="{Binding IsGigaAm}"
+                         FontSize="11"
+                         TextTrimming="CharacterEllipsis"
+                         Foreground="{DynamicResource TextSecondaryBrush}"/>
+              <TextBlock Text="auto — автовыбор (рекомендуется для англ. слов). Whisper работает на CPU."
+                         IsVisible="{Binding IsWhisper}"
+                         FontSize="11"
+                         TextTrimming="CharacterEllipsis"
+                         Foreground="{DynamicResource TextSecondaryBrush}"/>
             </StackPanel>
           </DockPanel>
         </Border>
 
-        <Border Grid.Column="2" Classes="tile">
+        <Border Classes="tile">
           <DockPanel>
             <Border DockPanel.Dock="Top" Classes="tile-header">
               <TextBlock Classes="section-title" Text="АУДИО"/>
             </Border>
-            <StackPanel Classes="tile-body" Spacing="0">
+            <StackPanel Classes="tile-body settings-field">
               <TextBlock Classes="field-label" Text="Микрофон"/>
-              <ComboBox ItemsSource="{Binding InputDevices}" SelectedItem="{Binding InputDevice}">
+              <ComboBox ItemsSource="{Binding InputDevices}"
+                        SelectedItem="{Binding InputDevice}"
+                        HorizontalAlignment="Stretch">
                 <ComboBox.ItemTemplate>
                   <DataTemplate>
                     <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
@@ -92,7 +203,8 @@
             </StackPanel>
           </DockPanel>
         </Border>
-      </Grid>
+
+      </StackPanel>
     </ScrollViewer>
   </Grid>
 </UserControl>
