@@ -11,6 +11,7 @@ public static class MacOsServiceCollectionExtensions
         services.AddSingleton<IHotkeyService, MacOsHotkeyService>();
         services.AddSingleton<ITextInjector, MacOsTextInjector>();
         services.AddSingleton<IFocusTarget, MacOsFocusTarget>();
+        services.AddSingleton<IDirectMlAvailability, UnsupportedDirectMlAvailability>();
         return services;
     }
 }

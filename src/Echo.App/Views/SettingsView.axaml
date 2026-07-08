@@ -75,9 +75,16 @@
                             Classes="settings-field"
                             IsVisible="{Binding IsDeviceVisible}">
                   <TextBlock Classes="field-label" Text="Устройство"/>
-                  <ComboBox ItemsSource="{Binding Devices}"
-                            SelectedItem="{Binding Device}"
-                            HorizontalAlignment="Stretch"/>
+                  <ComboBox ItemsSource="{Binding ComputeDeviceOptions}"
+                            SelectedItem="{Binding SelectedComputeDevice}"
+                            HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ComputeDeviceOption">
+                        <TextBlock Text="{Binding DisplayName}"
+                                   ToolTip.Tip="{Binding Tooltip}"/>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
                 </StackPanel>
 
                 <StackPanel Grid.Column="0"

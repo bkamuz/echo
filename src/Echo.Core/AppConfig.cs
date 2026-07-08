@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using echo.Abstractions.Core;
+using echo.Abstractions.Engines;
 
 namespace echo.Core;
 
@@ -10,7 +11,7 @@ public sealed class AppConfig
     public static IReadOnlyList<string> GigaAmSizes => ModelRegistry.GigaAmSizes;
 
     public static IReadOnlyList<string> Engines { get; } = ["gigaam", "whisper", "omnilingual"];
-    public static IReadOnlyList<string> Devices { get; } = ["cpu", "cuda"];
+    public static IReadOnlyList<string> Devices => ExecutionProviderResolver.AllDeviceIds;
 
     [JsonPropertyName("hotkey")]
     public string Hotkey { get; set; } = "ctrl+cmd";
@@ -72,9 +73,14 @@ public sealed class AppConfig
             GigaAmModelSize = "e2e";
         }
 
+        if (Device == "cuda")
+        {
+            Device = ExecutionProviderResolver.CpuDevice;
+        }
+
         if (!Devices.Contains(Device))
         {
-            Device = "cpu";
+            Device = ExecutionProviderResolver.CpuDevice;
         }
 
         TypeDelayMs = Math.Clamp(TypeDelayMs, 0, 50);

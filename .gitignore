@@ -65,6 +65,8 @@ Desktop.ini
 *.metal
 *.metallib
 .cache/
+native/win-x64/directml/*.dll
+native/win-x64/directml/directml.enabled
 
 ## Legacy local data + cached models
 backup/

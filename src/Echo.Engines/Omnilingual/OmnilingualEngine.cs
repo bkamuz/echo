@@ -29,7 +29,7 @@ public sealed class OmnilingualEngine : ITranscriptionEngine, IDisposable
         var modelDir = AppPaths.OmnilingualDir;
         var modelPath = Path.Combine(modelDir, "model.int8.onnx");
         var tokensPath = Path.Combine(modelDir, "tokens.txt");
-        var device = _config.Device == "cuda" ? "cuda" : "cpu";
+        var requestedProvider = SherpaProviderHelper.ResolveSherpaProvider(_config.Device);
 
         if (!File.Exists(modelPath) || !File.Exists(tokensPath))
         {
@@ -37,17 +37,47 @@ public sealed class OmnilingualEngine : ITranscriptionEngine, IDisposable
                 "Omnilingual ASR модель не найдена. Скачайте модель через настройки приложения.");
         }
 
-        if (_recognizer is not null && _loadedModelPath == modelPath && _loadedDevice == device)
+        if (_recognizer is not null
+            && _loadedModelPath == modelPath
+            && _loadedDevice == requestedProvider)
         {
             return Task.CompletedTask;
         }
 
         Unload();
-
-        _resolvedDevice = device;
         _loadedModelPath = modelPath;
-        _loadedDevice = device;
 
+        if (TryCreateRecognizer(modelPath, tokensPath, requestedProvider, out var recognizer))
+        {
+            _resolvedDevice = requestedProvider;
+            _loadedDevice = requestedProvider;
+            _recognizer = recognizer;
+            return Task.CompletedTask;
+        }
+
+        if (requestedProvider == "directml")
+        {
+            _logger.LogWarning("DirectML load failed for Omnilingual; falling back to CPU");
+            if (TryCreateRecognizer(modelPath, tokensPath, "cpu", out recognizer))
+            {
+                _resolvedDevice = "cpu";
+                _loadedDevice = "cpu";
+                _recognizer = recognizer;
+                return Task.CompletedTask;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Не удалось загрузить Omnilingual ASR модель. Проверьте целостность файлов.");
+    }
+
+    private bool TryCreateRecognizer(
+        string modelPath,
+        string tokensPath,
+        string provider,
+        out OfflineRecognizer? recognizer)
+    {
+        recognizer = null;
         var config = new OfflineRecognizerConfig
         {
             FeatConfig = new FeatureConfig
@@ -59,7 +89,7 @@ public sealed class OmnilingualEngine : ITranscriptionEngine, IDisposable
             {
                 Tokens = tokensPath,
                 NumThreads = Math.Max(1, Environment.ProcessorCount),
-                Provider = _resolvedDevice,
+                Provider = provider,
                 Omnilingual = new OfflineOmnilingualAsrCtcModelConfig
                 {
                     Model = modelPath,
@@ -69,16 +99,15 @@ public sealed class OmnilingualEngine : ITranscriptionEngine, IDisposable
 
         try
         {
-            _logger.LogInformation("Loading Omnilingual ASR 300M (device={Device})", _resolvedDevice);
-            _recognizer = new OfflineRecognizer(config);
+            _logger.LogInformation("Loading Omnilingual ASR 300M (provider={Provider})", provider);
+            recognizer = new OfflineRecognizer(config);
+            return true;
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException(
-                "Не удалось загрузить Omnilingual ASR модель. Проверьте целостность файлов.", ex);
+            _logger.LogWarning(ex, "Failed to load Omnilingual with provider {Provider}", provider);
+            return false;
         }
-
-        return Task.CompletedTask;
     }
 
     public Task<string> TranscribeAsync(float[] samples, int sampleRate, CancellationToken cancellationToken = default)

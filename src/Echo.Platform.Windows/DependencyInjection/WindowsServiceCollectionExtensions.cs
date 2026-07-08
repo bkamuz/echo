@@ -11,6 +11,7 @@ public static class WindowsServiceCollectionExtensions
         services.AddSingleton<IHotkeyService, WindowsHotkeyService>();
         services.AddSingleton<ITextInjector, WindowsTextInjector>();
         services.AddSingleton<IFocusTarget, WindowsFocusTarget>();
+        services.AddSingleton<IDirectMlAvailability, WindowsDirectMlAvailability>();
         return services;
     }
 }

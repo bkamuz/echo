@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using echo.App.Services;
 using echo.Core;
 using echo.Abstractions.Core;
+using echo.Abstractions.Engines;
 using echo.Abstractions.Platform;
 
 namespace echo.App.ViewModels;
@@ -24,6 +25,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly HomeViewModel _home;
     private readonly AppStatusViewModel _status;
     private readonly SettingsApplyService _applyService;
+    private readonly IDirectMlAvailability _directMlAvailability;
     private string _savedHotkey = string.Empty;
     private bool _isLoadingFromConfig;
 
@@ -32,7 +34,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _whisperModelSize = string.Empty;
     [ObservableProperty] private string _gigaAmModelSize = string.Empty;
     [ObservableProperty] private string _language = string.Empty;
-    [ObservableProperty] private string _device = string.Empty;
+    [ObservableProperty] private ComputeDeviceOption? _selectedComputeDevice;
     [ObservableProperty] private AudioDeviceInfo? _inputDevice;
     [ObservableProperty] private InputMethodOption? _selectedInputMethod;
     [ObservableProperty] private TypeSpeedOption? _selectedTypeSpeed;
@@ -76,7 +78,8 @@ public partial class SettingsViewModel : ObservableObject
         IHotkeyService hotkey,
         HomeViewModel home,
         AppStatusViewModel status,
-        SettingsApplyService applyService)
+        SettingsApplyService applyService,
+        IDirectMlAvailability directMlAvailability)
     {
         _coordinator = coordinator;
         _downloader = downloader;
@@ -85,8 +88,19 @@ public partial class SettingsViewModel : ObservableObject
         _home = home;
         _status = status;
         _applyService = applyService;
+        _directMlAvailability = directMlAvailability;
         LoadFromConfig();
     }
+
+    private static readonly ComputeDeviceOption CpuDeviceOption = new(
+        ExecutionProviderResolver.CpuDevice,
+        "Процессор",
+        "Универсальный режим. Работает на любом ПК.");
+
+    private static readonly ComputeDeviceOption DirectMlDeviceOption = new(
+        ExecutionProviderResolver.DirectMlDevice,
+        "GPU (DirectML)",
+        "Ускорение через DirectML на Windows (AMD Radeon, Intel, NVIDIA).");
 
     public IReadOnlyList<EngineOption> EngineOptions { get; } =
     [
@@ -94,7 +108,22 @@ public partial class SettingsViewModel : ObservableObject
         new("whisper", "Whisper (мультиязычный)"),
         new("omnilingual", "Omnilingual (1600 языков)"),
     ];
-    public IReadOnlyList<string> Devices => AppConfig.Devices;
+    public IReadOnlyList<ComputeDeviceOption> ComputeDeviceOptions => BuildComputeDeviceOptions();
+
+    private IReadOnlyList<ComputeDeviceOption> BuildComputeDeviceOptions()
+    {
+        if (IsWhisper)
+        {
+            return [CpuDeviceOption];
+        }
+
+        if (_directMlAvailability.IsAvailable)
+        {
+            return [CpuDeviceOption, DirectMlDeviceOption];
+        }
+
+        return [CpuDeviceOption];
+    }
     public IReadOnlyList<string> WhisperSizes => AppConfig.WhisperSizes;
     public IReadOnlyList<string> GigaAmSizes => AppConfig.GigaAmSizes;
     public IReadOnlyList<InputMethodOption> InputMethodOptions { get; } =
@@ -147,6 +176,8 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsOmnilingual));
         OnPropertyChanged(nameof(IsDeviceVisible));
         OnPropertyChanged(nameof(SelectedEngine));
+        OnPropertyChanged(nameof(ComputeDeviceOptions));
+        EnsureValidComputeDevice();
         if (value == "whisper" && Language == "ru")
         {
             _isLoadingFromConfig = true;
@@ -177,7 +208,7 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnLanguageChanged(string value) => ScheduleApply();
 
-    partial void OnDeviceChanged(string value) => ScheduleApply();
+    partial void OnSelectedComputeDeviceChanged(ComputeDeviceOption? value) => ScheduleApply();
 
     partial void OnSelectedInputMethodChanged(InputMethodOption? value)
     {
@@ -369,7 +400,7 @@ public partial class SettingsViewModel : ObservableObject
         config.WhisperModelSize = WhisperModelSize;
         config.GigaAmModelSize = GigaAmModelSize;
         config.Language = Language;
-        config.Device = Device;
+        config.Device = SelectedComputeDevice?.Id ?? ExecutionProviderResolver.CpuDevice;
         config.InputDevice = InputDevice?.Name ?? string.Empty;
         config.InputMethod = SelectedInputMethod?.Id ?? "clipboard";
         config.TypeDelayMs = SelectedTypeSpeed?.DelayMs ?? 1;
@@ -389,7 +420,7 @@ public partial class SettingsViewModel : ObservableObject
             WhisperModelSize = config.WhisperModelSize;
             GigaAmModelSize = config.GigaAmModelSize;
             Language = config.Language;
-            Device = config.Device;
+            SelectedComputeDevice = ResolveComputeDeviceOption(config.Device);
             SelectedInputMethod = InputMethodOptions.FirstOrDefault(o => o.Id == config.InputMethod)
                 ?? InputMethodOptions[0];
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == config.TypeDelayMs)
@@ -398,12 +429,30 @@ public partial class SettingsViewModel : ObservableObject
             InputDevice = InputDevices.FirstOrDefault(d => d.Name == config.InputDevice)
                 ?? InputDevices.FirstOrDefault();
             UpdateModelStatus();
+            OnPropertyChanged(nameof(ComputeDeviceOptions));
+            EnsureValidComputeDevice();
             OnPropertyChanged(nameof(SelectedEngine));
             OnPropertyChanged(nameof(IsTypeInput));
         }
         finally
         {
             _isLoadingFromConfig = false;
+        }
+    }
+
+    private ComputeDeviceOption ResolveComputeDeviceOption(string deviceId)
+    {
+        var normalized = ExecutionProviderResolver.FromConfigDevice(deviceId);
+        var id = ExecutionProviderResolver.ToConfigDevice(normalized);
+        return BuildComputeDeviceOptions().FirstOrDefault(o => o.Id == id) ?? CpuDeviceOption;
+    }
+
+    private void EnsureValidComputeDevice()
+    {
+        var options = BuildComputeDeviceOptions();
+        if (SelectedComputeDevice is null || options.All(o => o.Id != SelectedComputeDevice.Id))
+        {
+            SelectedComputeDevice = options[0];
         }
     }
 }

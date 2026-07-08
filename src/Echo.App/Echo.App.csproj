@@ -33,4 +33,33 @@
     <ProjectReference Include="..\Echo.Platform.MacOS\Echo.Platform.MacOS.csproj" />
     <ProjectReference Include="..\Echo.Platform.Linux\Echo.Platform.Linux.csproj" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <DirectMlNativeDir>$(MSBuildThisFileDirectory)..\..\native\win-x64\directml\</DirectMlNativeDir>
+    <DirectMlNativeReady>false</DirectMlNativeReady>
+    <DirectMlNativeReady Condition="Exists('$(DirectMlNativeDir)sherpa-onnx-c-api.dll')">true</DirectMlNativeReady>
+  </PropertyGroup>
+
+  <Target Name="CopyDirectMlNative" AfterTargets="Build"
+          Condition="'$(DirectMlNativeReady)' == 'true' and $([MSBuild]::IsOSPlatform('Windows'))">
+    <ItemGroup>
+      <DirectMlNativeDlls Include="$(DirectMlNativeDir)*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DirectMlNativeDlls)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+    <WriteLinesToFile File="$(OutputPath)directml.enabled"
+                      Lines="DirectML runtime deployed from native/win-x64/directml"
+                      Overwrite="true" />
+    <Message Importance="high" Text="Echo: copied DirectML native runtime to $(OutputPath)" />
+  </Target>
+
+  <Target Name="CopyDirectMlNativePublish" AfterTargets="Publish"
+          Condition="'$(DirectMlNativeReady)' == 'true' and $([MSBuild]::IsOSPlatform('Windows'))">
+    <ItemGroup>
+      <DirectMlNativeDlls Include="$(DirectMlNativeDir)*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DirectMlNativeDlls)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <WriteLinesToFile File="$(PublishDir)directml.enabled"
+                      Lines="DirectML runtime deployed from native/win-x64/directml"
+                      Overwrite="true" />
+  </Target>
 </Project>

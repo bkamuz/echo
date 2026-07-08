@@ -38,8 +38,8 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
     public Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
     {
         var variant = _config.GigaAmModelSize;
-        var device = _config.Device == "cuda" ? "cuda" : "cpu";
-        if (_recognizer is not null && _loadedVariant == variant && _resolvedDevice == device)
+        var requestedProvider = SherpaProviderHelper.ResolveSherpaProvider(_config.Device);
+        if (_recognizer is not null && _loadedVariant == variant && _resolvedDevice == requestedProvider)
         {
             return Task.CompletedTask;
         }
@@ -54,7 +54,31 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
                 $"GigaAM {variant} модель не найдена. Скачайте через настройки приложения.");
         }
 
-        _resolvedDevice = device;
+        if (TryCreateRecognizer(bundle, requestedProvider, out var recognizer))
+        {
+            _resolvedDevice = requestedProvider;
+            _recognizer = recognizer;
+            return Task.CompletedTask;
+        }
+
+        if (requestedProvider == "directml")
+        {
+            _logger.LogWarning("DirectML load failed for GigaAM; falling back to CPU");
+            if (TryCreateRecognizer(bundle, "cpu", out recognizer))
+            {
+                _resolvedDevice = "cpu";
+                _recognizer = recognizer;
+                return Task.CompletedTask;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Не удалось загрузить GigaAM. Проверьте целостность модели.");
+    }
+
+    private bool TryCreateRecognizer(GigaAmBundlePaths bundle, string provider, out OfflineRecognizer? recognizer)
+    {
+        recognizer = null;
         var config = new OfflineRecognizerConfig
         {
             FeatConfig = new FeatureConfig
@@ -66,7 +90,7 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
             {
                 Tokens = bundle.Tokens,
                 NumThreads = Math.Max(1, Environment.ProcessorCount),
-                Provider = _resolvedDevice,
+                Provider = provider,
                 Transducer = new OfflineTransducerModelConfig
                 {
                     Encoder = bundle.Encoder,
@@ -78,16 +102,18 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
 
         try
         {
-            _logger.LogInformation("Loading GigaAM {Variant} (device={Device})", variant, _resolvedDevice);
-            _recognizer = new OfflineRecognizer(config);
+            _logger.LogInformation(
+                "Loading GigaAM {Variant} (provider={Provider})",
+                _loadedVariant,
+                provider);
+            recognizer = new OfflineRecognizer(config);
+            return true;
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException(
-                "Не удалось загрузить GigaAM. Проверьте целостность модели.", ex);
+            _logger.LogWarning(ex, "Failed to load GigaAM with provider {Provider}", provider);
+            return false;
         }
-
-        return Task.CompletedTask;
     }
 
     public Task<string> TranscribeAsync(float[] samples, int sampleRate, CancellationToken cancellationToken = default)
