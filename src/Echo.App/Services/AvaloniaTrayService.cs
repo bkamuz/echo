@@ -70,12 +70,9 @@ public sealed class AvaloniaTrayService : ITrayStateService
             throw new InvalidOperationException($"Failed to rasterize tray icon: {name}.svg");
         }
 
-        using (bitmap)
-        {
-            using var image = SKImage.FromBitmap(bitmap);
-            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-            png.Write(data.ToArray());
-        }
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        data.SaveTo(png);
 
         png.Position = 0;
         return new WindowIcon(png);

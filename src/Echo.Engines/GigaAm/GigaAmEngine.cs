@@ -125,7 +125,7 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
             Path.Combine(modelDir, "gigaam_v3_e2e_rnnt_joint.onnx"),
             Path.Combine(modelDir, "gigaam_v3_e2e_rnnt_tokens.txt"));
 
-        if (File.Exists(e2e.Encoder))
+        if (IsCompleteBundle(e2e))
         {
             return e2e;
         }
@@ -136,7 +136,13 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
             Path.Combine(modelDir, "gigaam_v3_rnnt_joint.onnx"),
             Path.Combine(modelDir, "gigaam_v3_rnnt_tokens.txt"));
 
-        return File.Exists(rnnt.Encoder) ? rnnt : null;
+        return IsCompleteBundle(rnnt) ? rnnt : null;
+
+        static bool IsCompleteBundle(GigaAmModelPaths paths) =>
+            File.Exists(paths.Encoder)
+            && File.Exists(paths.Decoder)
+            && File.Exists(paths.Joiner)
+            && File.Exists(paths.Tokens);
     }
 
     public sealed record GigaAmModelPaths(string Encoder, string Decoder, string Joiner, string Tokens);
