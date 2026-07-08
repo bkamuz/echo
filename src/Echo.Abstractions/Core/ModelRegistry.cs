@@ -116,21 +116,6 @@ public static class ModelRegistry
         return IsCompleteBundle(fp32) ? fp32 : null;
     }
 
-    public static IReadOnlyList<ModelSpec> AllModels()
-    {
-        var models = new List<ModelSpec>
-        {
-            GigaAmSpecFor("e2e")!,
-            GigaAmSpecFor("rnnt")!,
-            OmnilingualSpec(),
-        };
-        models.AddRange(WhisperSizes.Select(WhisperSpec));
-        return models;
-    }
-
-    public static ModelSpec? GetModel(string id) =>
-        AllModels().FirstOrDefault(m => m.Id == id);
-
     public static ModelSpec? SpecForEngine(string engine, string whisperModelSize, string gigaAmModelSize) =>
         engine switch
         {
