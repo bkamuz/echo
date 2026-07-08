@@ -32,6 +32,7 @@ public partial class App : Application
                 services.UsePlatform();
                 services.UseEchoEngines();
                 services.AddSingleton<AppStatusViewModel>();
+                services.AddSingleton<SettingsApplyService>();
                 services.AddSingleton<HomeViewModel>();
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<HistoryViewModel>();

@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using echo.App.Services;
 using echo.Core;
 using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
@@ -14,8 +15,6 @@ public sealed record TypeSpeedOption(string Label, int DelayMs)
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private const int ApplyDebounceMs = 300;
-    private const int StatusClearMs = 2500;
     private const string HotkeyCaptureStatus = "Удерживайте комбинацию и отпустите все клавиши…";
 
     private readonly DictationCoordinator _coordinator;
@@ -24,11 +23,9 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IHotkeyService _hotkeyService;
     private readonly HomeViewModel _home;
     private readonly AppStatusViewModel _status;
+    private readonly SettingsApplyService _applyService;
     private string _savedHotkey = string.Empty;
     private bool _isLoadingFromConfig;
-    private int _applyGeneration;
-    private CancellationTokenSource? _debounceCts;
-    private CancellationTokenSource? _applyCts;
 
     [ObservableProperty] private string _hotkey = string.Empty;
     [ObservableProperty] private string _engine = string.Empty;
@@ -47,14 +44,30 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowModelDownloadButton))]
     private bool _isModelDownloaded;
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowModelDownloadButton))]
+    [NotifyPropertyChangedFor(
+        nameof(ShowModelDownloadButton),
+        nameof(ModelLoadedTooltip),
+        nameof(ModelDownloadTooltip),
+        nameof(ModelDeleteTooltip))]
     private bool _hasCurrentModel;
-    [ObservableProperty] private string _modelLoadedTooltip = string.Empty;
-    [ObservableProperty] private string _modelDownloadTooltip = string.Empty;
-    [ObservableProperty] private string _modelDeleteTooltip = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(ModelLoadedTooltip),
+        nameof(ModelDownloadTooltip),
+        nameof(ModelDeleteTooltip))]
+    private string _modelTitle = string.Empty;
     [ObservableProperty] private bool _isApplying;
 
     public bool ShowModelDownloadButton => HasCurrentModel && !IsModelDownloaded;
+
+    public string ModelLoadedTooltip =>
+        HasCurrentModel ? $"{ModelTitle} скачана и готова к распознаванию" : string.Empty;
+
+    public string ModelDownloadTooltip =>
+        HasCurrentModel ? $"Скачать {ModelTitle} на устройство" : string.Empty;
+
+    public string ModelDeleteTooltip =>
+        HasCurrentModel ? $"Удалить файлы {ModelTitle} с устройства" : string.Empty;
 
     public SettingsViewModel(
         DictationCoordinator coordinator,
@@ -62,7 +75,8 @@ public partial class SettingsViewModel : ObservableObject
         IAudioCapture audio,
         IHotkeyService hotkey,
         HomeViewModel home,
-        AppStatusViewModel status)
+        AppStatusViewModel status,
+        SettingsApplyService applyService)
     {
         _coordinator = coordinator;
         _downloader = downloader;
@@ -70,10 +84,10 @@ public partial class SettingsViewModel : ObservableObject
         _hotkeyService = hotkey;
         _home = home;
         _status = status;
+        _applyService = applyService;
         LoadFromConfig();
     }
 
-    public IReadOnlyList<string> Engines => AppConfig.Engines;
     public IReadOnlyList<EngineOption> EngineOptions { get; } =
     [
         new("gigaam", "GigaAM (русский)"),
@@ -182,21 +196,17 @@ public partial class SettingsViewModel : ObservableObject
         var spec = CurrentModelSpec();
         if (spec is null)
         {
-            ModelStatus = "Неизвестная модель";
+            ModelTitle = string.Empty;
             IsModelDownloaded = false;
             HasCurrentModel = false;
-            ModelLoadedTooltip = string.Empty;
-            ModelDownloadTooltip = string.Empty;
-            ModelDeleteTooltip = string.Empty;
+            ModelStatus = "Неизвестная модель";
             return;
         }
 
         var downloaded = spec.IsDownloaded();
+        ModelTitle = spec.Title;
         IsModelDownloaded = downloaded;
         HasCurrentModel = true;
-        ModelLoadedTooltip = $"{spec.Title} скачана и готова к распознаванию";
-        ModelDownloadTooltip = $"Скачать {spec.Title} на устройство";
-        ModelDeleteTooltip = $"Удалить файлы {spec.Title} с устройства";
         ModelStatus = downloaded
             ? $"{spec.Title} ✓ загружена"
             : $"{spec.Title} — не загружена";
@@ -220,7 +230,7 @@ public partial class SettingsViewModel : ObservableObject
         _status.SetStatus(downloadLabel, busy: true);
         try
         {
-            var progress = CreateProgressReporter(null, ApplyDownloadProgress);
+            var progress = _applyService.CreateProgressReporter(null, ApplyDownloadProgress);
             await _downloader.DownloadAsync(spec, progress).ConfigureAwait(false);
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -228,13 +238,13 @@ public partial class SettingsViewModel : ObservableObject
                 UpdateModelStatus();
             });
 
-            var warmupProgress = CreateApplyProgress(_applyGeneration);
+            var warmupProgress = _applyService.CreateStatusProgress(_applyService.ApplyGeneration);
             await _coordinator.TryWarmupCurrentModelAsync(warmupProgress).ConfigureAwait(false);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 _home.NotifyConfigChanged();
-                _status.SetStatusTemporary($"{spec.Title} ✓ загружена", StatusClearMs);
+                _status.SetStatusTemporary($"{spec.Title} ✓ загружена", SettingsApplyService.StatusClearMs);
             });
         }
         finally
@@ -255,7 +265,7 @@ public partial class SettingsViewModel : ObservableObject
         _downloader.Delete(spec);
         ModelStatus = $"{spec.Title} удалена";
         UpdateModelStatus();
-        _status.SetStatusTemporary($"{spec.Title} удалена", StatusClearMs);
+        _status.SetStatusTemporary($"{spec.Title} удалена", SettingsApplyService.StatusClearMs);
     }
 
     [RelayCommand]
@@ -315,34 +325,12 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        _debounceCts?.Cancel();
-        _debounceCts?.Dispose();
-        _debounceCts = new CancellationTokenSource();
-        var debounceToken = _debounceCts.Token;
-        _ = DebouncedApplyAsync(debounceToken);
+        _applyService.ScheduleApply(PrepareConfigForApplyAsync, OnApplySucceeded, OnApplyFinished);
     }
 
-    private async Task DebouncedApplyAsync(CancellationToken debounceToken)
+    private async Task<AppConfig> PrepareConfigForApplyAsync()
     {
-        try
-        {
-            await Task.Delay(ApplyDebounceMs, debounceToken).ConfigureAwait(false);
-            await ApplyChangesAsync().ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
-
-    private async Task ApplyChangesAsync()
-    {
-        var generation = ++_applyGeneration;
-        _applyCts?.Cancel();
-        _applyCts?.Dispose();
-        _applyCts = new CancellationTokenSource();
-        var ct = _applyCts.Token;
-
-        var config = await Dispatcher.UIThread.InvokeAsync(() =>
+        return await Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (IsCapturingHotkey)
             {
@@ -353,102 +341,16 @@ public partial class SettingsViewModel : ObservableObject
             _status.SetStatus("Сохранение…", busy: true);
             return BuildConfigFromViewModel();
         });
-
-        try
-        {
-            var progress = CreateApplyProgress(generation);
-            await _coordinator.SaveConfigAsync(config, progress, ct).ConfigureAwait(false);
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (generation != _applyGeneration)
-                {
-                    return;
-                }
-
-                _home.NotifyConfigChanged();
-                _status.SetStatusTemporary("Готово", StatusClearMs);
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-        catch (InvalidOperationException)
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (generation != _applyGeneration)
-                {
-                    return;
-                }
-
-                _status.SetStatusTemporary("Модель не загружена — скачайте в настройках", StatusClearMs);
-            });
-        }
-        catch (Exception)
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (generation != _applyGeneration)
-                {
-                    return;
-                }
-
-                _status.SetStatusTemporary("Ошибка применения настроек", StatusClearMs);
-            });
-        }
-        finally
-        {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (generation == _applyGeneration)
-                {
-                    IsApplying = false;
-                }
-            });
-        }
     }
 
-    private IProgress<string> CreateApplyProgress(int generation) =>
-        CreateProgressReporter(generation, ApplyProgressStatus);
+    private void OnApplySucceeded() => _home.NotifyConfigChanged();
 
-    private IProgress<string> CreateProgressReporter(int? generation, Action<string> apply) =>
-        new Progress<string>(status =>
-        {
-            if (generation.HasValue && generation.Value != _applyGeneration)
-            {
-                return;
-            }
-
-            void Run() => apply(status);
-            if (Dispatcher.UIThread.CheckAccess())
-            {
-                Run();
-            }
-            else
-            {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    if (generation.HasValue && generation.Value != _applyGeneration)
-                    {
-                        return;
-                    }
-
-                    Run();
-                });
-            }
-        });
-
-    private void ApplyProgressStatus(string status)
+    private void OnApplyFinished(int generation)
     {
-        var normalized = status.Trim();
-        if (normalized.StartsWith("Готово", StringComparison.Ordinal))
+        if (generation == _applyService.ApplyGeneration)
         {
-            return;
+            IsApplying = false;
         }
-
-        _status.SetStatus(normalized, busy: true);
     }
 
     private void ApplyDownloadProgress(string status)
