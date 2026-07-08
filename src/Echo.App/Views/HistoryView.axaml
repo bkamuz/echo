@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:echo.App.ViewModels"
+             x:Class="echo.App.Views.HistoryView"
+             x:DataType="vm:HistoryViewModel"
+             VerticalAlignment="Stretch">
+
+  <Grid RowDefinitions="Auto,*" VerticalAlignment="Stretch">
+    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+      <TextBlock Classes="page-title" Text="История"/>
+      <TextBlock Classes="page-subtitle" Text="{Binding EntryCountLabel}"/>
+    </StackPanel>
+
+    <Border Grid.Row="1" Classes="tile" ClipToBounds="True">
+      <Grid>
+        <StackPanel IsVisible="{Binding IsEmpty}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Spacing="8"
+                    Margin="24">
+          <PathIcon Data="{StaticResource IconHistory}"
+                    Width="32" Height="32"
+                    Foreground="{DynamicResource TextMutedBrush}"
+                    HorizontalAlignment="Center"/>
+          <TextBlock Text="Пока нет диктовок"
+                     FontSize="14"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     HorizontalAlignment="Center"/>
+          <TextBlock Classes="page-subtitle"
+                     Text="Записи появятся здесь после первой диктовки"
+                     HorizontalAlignment="Center"
+                     TextAlignment="Center"/>
+        </StackPanel>
+
+        <ScrollViewer IsVisible="{Binding HasEntries}"
+                      VerticalScrollBarVisibility="Hidden"
+                      HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Entries}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:HistoryItemView">
+                <Border Classes="history-item">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Engine}"
+                               Classes="mono"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource LinkBrush}"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Text}"
+                               TextWrapping="Wrap"
+                               FontSize="14"
+                               LineHeight="20"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="2"
+                            Classes="ghost"
+                            Command="{Binding $parent[UserControl].((vm:HistoryViewModel)DataContext).CopyTextCommand}"
+                            CommandParameter="{Binding Text}"
+                            ToolTip.Tip="Скопировать"
+                            Width="32"
+                            Height="32"
+                            Padding="4"
+                            VerticalAlignment="Center">
+                      <PathIcon Data="{StaticResource IconCopy}"
+                                Width="16"
+                                Height="16"/>
+                    </Button>
+                    <TextBlock Grid.Column="3"
+                               Text="{Binding Timestamp}"
+                               Classes="mono"
+                               VerticalAlignment="Center"/>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

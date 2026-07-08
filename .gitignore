@@ -1,0 +1,79 @@
+## Build / publish
+[Bb]in/
+[Oo]bj/
+[Dd]ist/
+[Rr]elease/
+[Dd]ebug/
+publish/
+artifacts/
+_internal/
+
+## .NET
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+project.lock.json
+project.fragment.lock.json
+*.nupkg
+*.snupkg
+
+## Test / coverage
+[Tt]est[Rr]esults/
+[Cc]overage/
+*.coverage
+*.coveragexml
+*.trx
+BenchmarkDotNet.Artifacts/
+
+## NuGet (legacy restore layout)
+packages/
+
+## IDE
+.vs/
+.vscode/
+.idea/
+.cursor/
+*.rsuser
+*.DotSettings.user
+
+## Logs / temp
+*.log
+debug-*.log
+*.tmp
+*.temp
+null
+
+## OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+## Compiled binaries
+*.exe
+*.dll
+*.pdb
+*.dylib
+*.so
+*.dat
+
+## Native / ML runtime artifacts (downloaded at runtime, not source)
+*.onnx
+*.bin
+*.metal
+*.metallib
+.cache/
+
+## Legacy local data + cached models
+backup/
+
+## Installer leftovers
+unins*.exe
+unins*.dat
+
+## Python (legacy scripts, if any reappear)
+__pycache__/
+*.py[cod]
+.venv/
+venv/

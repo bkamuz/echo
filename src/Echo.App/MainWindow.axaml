@@ -1,0 +1,108 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:echo.App.ViewModels"
+        xmlns:views="using:echo.App.Views"
+        xmlns:conv="using:echo.App.Converters"
+        xmlns:chrome="using:Avalonia.Controls.Chrome"
+        xmlns:input="using:Avalonia.Input"
+        x:Class="echo.App.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="Echo"
+        Width="960" Height="640"
+        MinWidth="880" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="Full"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="56">
+
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0"
+            x:Name="TitleBarHost"
+            Classes="shell-header"
+            chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.TitleBar}"
+            PointerPressed="TitleBar_PointerPressed">
+      <Grid ColumnDefinitions="*,140">
+        <StackPanel Grid.Column="0"
+                    Orientation="Horizontal"
+                    Spacing="12"
+                    VerticalAlignment="Center">
+          <Border Width="32" Height="32"
+                  Background="{DynamicResource AccentBrush}"
+                  CornerRadius="0">
+            <TextBlock Text="E"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextOnAccentBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+          </Border>
+          <StackPanel VerticalAlignment="Center" Spacing="0">
+            <TextBlock Text="Echo"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       LetterSpacing="0.32"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Speech to text"
+                       Classes="page-subtitle"
+                       FontSize="11"/>
+          </StackPanel>
+        </StackPanel>
+        <Panel Grid.Column="1"/>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="256,*">
+      <Border Grid.Column="0" Classes="sidebar">
+        <StackPanel Spacing="0" Margin="0,8,0,0">
+          <Button Classes="nav-item"
+                  Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Home}}"
+                  Command="{Binding NavigateCommand}"
+                  CommandParameter="{x:Static vm:AppPage.Home}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource IconHome}" Width="16" Height="16"/>
+              <TextBlock Text="Главная" VerticalAlignment="Center" FontSize="14"/>
+            </StackPanel>
+          </Button>
+
+          <Button Classes="nav-item"
+                  Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Settings}}"
+                  Command="{Binding NavigateCommand}"
+                  CommandParameter="{x:Static vm:AppPage.Settings}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource IconSettings}" Width="16" Height="16"/>
+              <TextBlock Text="Настройки" VerticalAlignment="Center" FontSize="14"/>
+            </StackPanel>
+          </Button>
+
+          <Button Classes="nav-item"
+                  Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.History}}"
+                  Command="{Binding NavigateCommand}"
+                  CommandParameter="{x:Static vm:AppPage.History}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{StaticResource IconHistory}" Width="16" Height="16"/>
+              <TextBlock Text="История" VerticalAlignment="Center" FontSize="14"/>
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1" Classes="content-host" ClipToBounds="True">
+        <ContentControl Content="{Binding CurrentPage}"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch">
+          <ContentControl.DataTemplates>
+            <DataTemplate DataType="vm:HomeViewModel">
+              <views:HomeView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:SettingsViewModel">
+              <views:SettingsView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:HistoryViewModel">
+              <views:HistoryView />
+            </DataTemplate>
+          </ContentControl.DataTemplates>
+        </ContentControl>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>

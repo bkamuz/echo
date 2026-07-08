@@ -1,0 +1,77 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Меняйте только этот цвет — все акценты подтянутся -->
+  <Color x:Key="AccentColor">#39FF14</Color>
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="SurfaceBackgroundBrush" Color="#161616"/>
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#262626"/>
+      <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#393939"/>
+      <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#393939"/>
+      <SolidColorBrush x:Key="FieldBrush" Color="#262626"/>
+      <SolidColorBrush x:Key="BackgroundHoverBrush" Color="#1F1F1F"/>
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F4F4F4"/>
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C6C6C6"/>
+      <SolidColorBrush x:Key="TextMutedBrush" Color="#8D8D8D"/>
+      <SolidColorBrush x:Key="TextOnAccentBrush" Color="#161616"/>
+      <SolidColorBrush x:Key="BorderBrush" Color="#393939"/>
+      <SolidColorBrush x:Key="BorderStrongBrush" Color="#6F6F6F"/>
+      <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+      <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentColor}" Opacity="0.85"/>
+      <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentColor}" Opacity="0.15"/>
+      <SolidColorBrush x:Key="LinkBrush" Color="{StaticResource AccentColor}"/>
+      <SolidColorBrush x:Key="FocusBrush" Color="{StaticResource AccentColor}"/>
+      <SolidColorBrush x:Key="SuccessBrush" Color="#42BE65"/>
+      <SolidColorBrush x:Key="SuccessBgBrush" Color="#044317"/>
+      <SolidColorBrush x:Key="SuccessTextBrush" Color="#A7F0BA"/>
+      <SolidColorBrush x:Key="OverlayBrush" Color="#262626"/>
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="SurfaceBackgroundBrush" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#F4F4F4"/>
+      <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="FieldBrush" Color="#F4F4F4"/>
+      <SolidColorBrush x:Key="BackgroundHoverBrush" Color="#E8E8E8"/>
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#161616"/>
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#525252"/>
+      <SolidColorBrush x:Key="TextMutedBrush" Color="#6F6F6F"/>
+      <SolidColorBrush x:Key="TextOnAccentBrush" Color="#161616"/>
+      <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
+      <SolidColorBrush x:Key="BorderStrongBrush" Color="#8D8D8D"/>
+      <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+      <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentColor}" Opacity="0.85"/>
+      <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentColor}" Opacity="0.15"/>
+      <SolidColorBrush x:Key="LinkBrush" Color="{StaticResource AccentColor}"/>
+      <SolidColorBrush x:Key="FocusBrush" Color="{StaticResource AccentColor}"/>
+      <SolidColorBrush x:Key="SuccessBrush" Color="#24A148"/>
+      <SolidColorBrush x:Key="SuccessBgBrush" Color="#DEFBE6"/>
+      <SolidColorBrush x:Key="SuccessTextBrush" Color="#044317"/>
+      <SolidColorBrush x:Key="OverlayBrush" Color="#393939"/>
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <CornerRadius x:Key="RadiusNone">0</CornerRadius>
+  <CornerRadius x:Key="RadiusSm">0</CornerRadius>
+  <CornerRadius x:Key="RadiusMd">0</CornerRadius>
+  <CornerRadius x:Key="RadiusLg">0</CornerRadius>
+  <CornerRadius x:Key="RadiusXl">0</CornerRadius>
+
+  <Thickness x:Key="Space02">2</Thickness>
+  <Thickness x:Key="Space03">4</Thickness>
+  <Thickness x:Key="Space04">8</Thickness>
+  <Thickness x:Key="Space05">12</Thickness>
+  <Thickness x:Key="Space06">16</Thickness>
+  <Thickness x:Key="Space07">24</Thickness>
+  <Thickness x:Key="SpaceXs">4</Thickness>
+  <Thickness x:Key="SpaceSm">8</Thickness>
+  <Thickness x:Key="SpaceMd">16</Thickness>
+  <Thickness x:Key="SpaceLg">24</Thickness>
+  <Thickness x:Key="SpaceXl">32</Thickness>
+
+  <FontFamily x:Key="AppFont">IBM Plex Sans, Segoe UI, sans-serif</FontFamily>
+  <FontFamily x:Key="MonoFont">IBM Plex Mono, Consolas, monospace</FontFamily>
+</ResourceDictionary>

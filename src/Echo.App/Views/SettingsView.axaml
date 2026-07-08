@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:echo.App.ViewModels"
+             x:Class="echo.App.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch"
+             Focusable="True">
+
+  <Grid RowDefinitions="Auto,*,Auto" VerticalAlignment="Stretch">
+    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+      <TextBlock Classes="page-title" Text="Настройки"/>
+      <TextBlock Classes="page-subtitle" Text="Хоткей, движок, микрофон и способ ввода текста"/>
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Hidden"
+                  HorizontalScrollBarVisibility="Disabled">
+      <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+        <Border Grid.Column="0" Classes="tile">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Classes="tile-header">
+              <TextBlock Classes="section-title" Text="УПРАВЛЕНИЕ"/>
+            </Border>
+            <StackPanel Classes="tile-body" Spacing="12">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="field-label" Text="Хоткей"/>
+                <Button Classes="secondary"
+                        Content="{Binding HotkeyCaptureButtonText}"
+                        Command="{Binding ToggleHotkeyCaptureCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"/>
+                <TextBox Text="{Binding HotkeyDisplay}"
+                         IsReadOnly="True"
+                         TextWrapping="Wrap"
+                         MinHeight="32"
+                         HorizontalAlignment="Stretch"
+                         PlaceholderText="Ctrl + Win"/>
+                <TextBlock Text="{Binding HotkeyCaptureHint}"
+                           IsVisible="{Binding IsCapturingHotkey}"
+                           FontSize="12"
+                           Foreground="{DynamicResource LinkBrush}"/>
+                <TextBlock Classes="page-subtitle"
+                           Text="Удерживайте все клавиши комбинации, затем отпустите"/>
+              </StackPanel>
+              <StackPanel Spacing="0">
+                <TextBlock Classes="field-label" Text="Метод ввода"/>
+                <ComboBox ItemsSource="{Binding InputMethods}" SelectedItem="{Binding InputMethod}"/>
+              </StackPanel>
+              <CheckBox Content="Пробел в конце фразы"
+                        IsChecked="{Binding AddTrailingSpace}"/>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <Border Grid.Column="1" Classes="tile">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Classes="tile-header">
+              <TextBlock Classes="section-title" Text="РАСПОЗНАВАНИЕ"/>
+            </Border>
+            <StackPanel Classes="tile-body" Spacing="12">
+              <StackPanel Spacing="0">
+                <TextBlock Classes="field-label" Text="Движок"/>
+                <ComboBox ItemsSource="{Binding Engines}" SelectedItem="{Binding Engine}"/>
+              </StackPanel>
+              <StackPanel Spacing="0">
+                <TextBlock Classes="field-label" Text="Whisper модель"/>
+                <ComboBox ItemsSource="{Binding WhisperSizes}" SelectedItem="{Binding WhisperModelSize}"/>
+              </StackPanel>
+              <StackPanel Spacing="0">
+                <TextBlock Classes="field-label" Text="Устройство"/>
+                <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding Device}"/>
+              </StackPanel>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <Border Grid.Column="2" Classes="tile">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Classes="tile-header">
+              <TextBlock Classes="section-title" Text="АУДИО"/>
+            </Border>
+            <StackPanel Classes="tile-body" Spacing="0">
+              <TextBlock Classes="field-label" Text="Микрофон"/>
+              <ComboBox ItemsSource="{Binding InputDevices}" SelectedItem="{Binding InputDevice}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+      </Grid>
+    </ScrollViewer>
+
+    <Button Grid.Row="2"
+            Classes="primary"
+            Content="Сохранить"
+            Command="{Binding SaveCommand}"
+            HorizontalAlignment="Left"
+            MinWidth="160"
+            Margin="0,16,0,0"/>
+  </Grid>
+</UserControl>

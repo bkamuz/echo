@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:echo.App.ViewModels"
+             x:Class="echo.App.Views.HomeView"
+             x:DataType="vm:HomeViewModel"
+             VerticalAlignment="Stretch">
+
+  <Grid RowDefinitions="Auto,*" VerticalAlignment="Stretch">
+    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+      <TextBlock Classes="page-title" Text="Главная"/>
+      <TextBlock Classes="page-subtitle" Text="Диктовка с локальным распознаванием речи"/>
+    </StackPanel>
+
+    <StackPanel Grid.Row="1" Spacing="16" VerticalAlignment="Top">
+      <Border Classes="status-badge">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Ellipse Width="8" Height="8"
+                   Fill="{DynamicResource SuccessBrush}"
+                   VerticalAlignment="Center"/>
+          <TextBlock Text="READY"
+                     Classes="status-text"
+                     VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding Status}"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     TextWrapping="Wrap"
+                     VerticalAlignment="Center"
+                     Margin="8,0,0,0"/>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="tile">
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Classes="tile-header">
+            <TextBlock Classes="section-title" Text="ГОРЯЧАЯ КЛАВИША"/>
+          </Border>
+          <StackPanel Classes="tile-body" Spacing="8">
+            <TextBlock Text="{Binding HotkeyHint}"
+                       FontFamily="{StaticResource MonoFont}"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource LinkBrush}"/>
+            <TextBlock Classes="page-subtitle"
+                       Text="Удерживайте комбинацию для записи. Отпустите — текст вставится в активное поле."/>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <Border Classes="tile">
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Classes="tile-header">
+            <TextBlock Classes="section-title" Text="МОДЕЛИ"/>
+          </Border>
+          <StackPanel Classes="tile-body" Spacing="12">
+            <TextBlock Classes="page-subtitle"
+                       Text="Скачайте модели для офлайн-распознавания речи"/>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+              <Button Grid.Column="0"
+                      Classes="secondary"
+                      Content="GigaAM v3"
+                      Command="{Binding DownloadGigaAmCommand}"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"/>
+              <Button Grid.Column="1"
+                      Classes="secondary"
+                      Content="Whisper medium"
+                      Command="{Binding DownloadWhisperCommand}"
+                      CommandParameter="medium"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"/>
+            </Grid>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</UserControl>

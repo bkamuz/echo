@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Echo.App/Echo.App.csproj" />
+    <Project Path="src/Echo.Abstractions/Echo.Abstractions.csproj" />
+    <Project Path="src/Echo.Core/Echo.Core.csproj" />
+    <Project Path="src/Echo.Engines/Echo.Engines.csproj" />
+    <Project Path="src/Echo.Platform.Linux/Echo.Platform.Linux.csproj" />
+    <Project Path="src/Echo.Platform.MacOS/Echo.Platform.MacOS.csproj" />
+    <Project Path="src/Echo.Platform.Windows/Echo.Platform.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Echo.Core.Tests/Echo.Core.Tests.csproj" />
+  </Folder>
+</Solution>

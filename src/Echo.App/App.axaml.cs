@@ -1,0 +1,65 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using echo.App.Services;
+using echo.App.ViewModels;
+using echo.Core;
+using echo.Core.DependencyInjection;
+using echo.Engines.DependencyInjection;
+using echo.App.DependencyInjection;
+using echo.Abstractions.Platform;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+namespace echo.App;
+
+public partial class App : Application
+{
+    public static IServiceProvider Services { get; private set; } = null!;
+
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    public override void OnFrameworkInitializationCompleted()
+    {
+        var host = Host.CreateDefaultBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddLogging();
+                services.UseEcho();
+                services.UsePlatform();
+                services.UseWhisper();
+                services.UseGigaAm();
+                services.AddSingleton<HomeViewModel>();
+                services.AddSingleton<SettingsViewModel>();
+                services.AddSingleton<HistoryViewModel>();
+                services.AddSingleton<ShellViewModel>();
+                services.AddSingleton<IAppClipboard, AvaloniaClipboardService>();
+                services.AddSingleton<ITrayStateService, AvaloniaTrayService>();
+            })
+            .Build();
+
+        Services = host.Services;
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            var coordinator = Services.GetRequiredService<DictationCoordinator>();
+            coordinator.Start();
+
+            desktop.MainWindow = new MainWindow
+            {
+                DataContext = Services.GetRequiredService<ShellViewModel>(),
+            };
+            desktop.Exit += (_, _) =>
+            {
+                coordinator.Stop();
+                coordinator.Dispose();
+                host.Dispose();
+            };
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+}
