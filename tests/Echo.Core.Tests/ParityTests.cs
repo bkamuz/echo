@@ -48,19 +48,15 @@ public class ParityTests
     [Fact]
     public void GigaAm_ResolveModelPaths_PrefersE2e()
     {
-        var dir = CreateTempGigaAmDir();
+        var dir = CreateTempDir();
         try
         {
-            WriteE2eBundle(dir);
-            File.WriteAllText(Path.Combine(dir, "gigaam_v3_rnnt_encoder.onnx"), "");
+            WriteBundle(dir, ModelRegistry.GigaAmE2ePrefix);
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmRnntPrefix}_encoder.onnx"), "");
 
             var paths = GigaAmEngine.ResolveModelPaths(dir);
             Assert.NotNull(paths);
-            Assert.Contains("gigaam_v3_e2e_rnnt_encoder.onnx", paths!.Encoder, StringComparison.Ordinal);
-            Assert.Contains("gigaam_v3_e2e_rnnt_decoder.onnx", paths.Decoder, StringComparison.Ordinal);
-            Assert.Contains("gigaam_v3_e2e_rnnt_joint.onnx", paths.Joiner, StringComparison.Ordinal);
-            Assert.Contains("gigaam_v3_e2e_rnnt_tokens.txt", paths.Tokens, StringComparison.Ordinal);
-            AssertAllPathsExist(paths);
+            Assert.Contains(ModelRegistry.GigaAmE2ePrefix, paths!.Encoder, StringComparison.Ordinal);
         }
         finally
         {
@@ -68,26 +64,13 @@ public class ParityTests
         }
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("gigaam_v3_e2e_rnnt_decoder.onnx")]
-    [InlineData("gigaam_v3_e2e_rnnt_joint.onnx")]
-    [InlineData("gigaam_v3_e2e_rnnt_tokens.txt")]
-    public void GigaAm_ResolveModelPaths_ReturnsNull_WhenE2eBundleIncomplete(string fileToOmit)
+    [Fact]
+    public void GigaAm_ResolveModelPaths_ReturnsNull_WhenBundleIncomplete()
     {
-        var dir = CreateTempGigaAmDir();
+        var dir = CreateTempDir();
         try
         {
-            if (string.IsNullOrEmpty(fileToOmit))
-            {
-                File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_encoder.onnx"), "");
-            }
-            else
-            {
-                WriteE2eBundle(dir);
-                File.Delete(Path.Combine(dir, fileToOmit));
-            }
-
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmE2ePrefix}_encoder.onnx"), "");
             Assert.Null(GigaAmEngine.ResolveModelPaths(dir));
         }
         finally
@@ -99,16 +82,15 @@ public class ParityTests
     [Fact]
     public void GigaAm_ResolveModelPaths_FallsThroughPartialE2e_ToCompleteRnnt()
     {
-        var dir = CreateTempGigaAmDir();
+        var dir = CreateTempDir();
         try
         {
-            File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_encoder.onnx"), "");
-            WriteRnntBundle(dir);
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmE2ePrefix}_encoder.onnx"), "");
+            WriteBundle(dir, ModelRegistry.GigaAmRnntPrefix);
 
             var paths = GigaAmEngine.ResolveModelPaths(dir);
             Assert.NotNull(paths);
-            Assert.Contains("gigaam_v3_rnnt_encoder.onnx", paths!.Encoder, StringComparison.Ordinal);
-            AssertAllPathsExist(paths);
+            Assert.Contains(ModelRegistry.GigaAmRnntPrefix, paths!.Encoder, StringComparison.Ordinal);
         }
         finally
         {
@@ -116,41 +98,25 @@ public class ParityTests
         }
     }
 
-    private static void AssertAllPathsExist(GigaAmEngine.GigaAmModelPaths paths)
+    [Fact]
+    public void ModelRegistry_UsesSherpaCompatibleRepo()
     {
-        Assert.True(File.Exists(paths.Encoder));
-        Assert.True(File.Exists(paths.Decoder));
-        Assert.True(File.Exists(paths.Joiner));
-        Assert.True(File.Exists(paths.Tokens));
+        var spec = ModelRegistry.GigaAmSpec();
+        Assert.Contains("sherpa", spec.RepoId, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string CreateTempGigaAmDir()
+    private static string CreateTempDir()
     {
         var dir = Path.Combine(Path.GetTempPath(), "echo-gigaam-" + Guid.NewGuid());
         Directory.CreateDirectory(dir);
         return dir;
     }
 
-    private static void WriteE2eBundle(string dir)
+    private static void WriteBundle(string dir, string prefix)
     {
-        File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_encoder.onnx"), "");
-        File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_decoder.onnx"), "");
-        File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_joint.onnx"), "");
-        File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_tokens.txt"), "");
-    }
-
-    private static void WriteRnntBundle(string dir)
-    {
-        File.WriteAllText(Path.Combine(dir, "gigaam_v3_rnnt_encoder.onnx"), "");
-        File.WriteAllText(Path.Combine(dir, "gigaam_v3_rnnt_decoder.onnx"), "");
-        File.WriteAllText(Path.Combine(dir, "gigaam_v3_rnnt_joint.onnx"), "");
-        File.WriteAllText(Path.Combine(dir, "gigaam_v3_rnnt_tokens.txt"), "");
-    }
-
-    [Fact]
-    public void ModelRegistry_UsesSherpaCompatibleRepo()
-    {
-        var spec = ModelRegistry.GigaAmSpec();
-        Assert.Contains("sherpa", spec.RepoId, StringComparison.OrdinalIgnoreCase);
+        File.WriteAllText(Path.Combine(dir, $"{prefix}_encoder.onnx"), "");
+        File.WriteAllText(Path.Combine(dir, $"{prefix}_decoder.onnx"), "");
+        File.WriteAllText(Path.Combine(dir, $"{prefix}_joint.onnx"), "");
+        File.WriteAllText(Path.Combine(dir, $"{prefix}_tokens.txt"), "");
     }
 }

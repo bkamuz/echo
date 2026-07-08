@@ -12,7 +12,6 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
     private OfflineRecognizer? _recognizer;
     private string _resolvedDevice = "cpu";
     private bool _usesE2e;
-    private string _loadedEncoderPath = string.Empty;
 
     public GigaAmEngine(ILogger<GigaAmEngine> logger)
     {
@@ -28,18 +27,12 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
 
     public Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
     {
-        var paths = ResolveModelPaths(AppPaths.GigaAmDir);
-
         if (_recognizer is not null)
         {
-            if (paths?.Encoder == _loadedEncoderPath)
-            {
-                return Task.CompletedTask;
-            }
-
-            Unload();
+            return Task.CompletedTask;
         }
 
+        var paths = ResolveModelPaths(AppPaths.GigaAmDir);
         if (paths is null)
         {
             throw new InvalidOperationException(
@@ -49,7 +42,6 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
 
         _resolvedDevice = _config.Device == "cuda" ? "cuda" : "cpu";
         _usesE2e = paths.Encoder.Contains("e2e_rnnt", StringComparison.Ordinal);
-        _loadedEncoderPath = paths.Encoder;
         var config = new OfflineRecognizerConfig
         {
             FeatConfig = new FeatureConfig
@@ -106,44 +98,10 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
         _recognizer?.Dispose();
         _recognizer = null;
         _usesE2e = false;
-        _loadedEncoderPath = string.Empty;
     }
 
     public void Dispose() => Unload();
 
-    public static GigaAmModelPaths? ResolveModelPaths(string modelDir)
-    {
-        if (!Directory.Exists(modelDir))
-        {
-            return null;
-        }
-
-        // ponytail: e2e if downloaded, else legacy rnnt for existing installs
-        var e2e = new GigaAmModelPaths(
-            Path.Combine(modelDir, "gigaam_v3_e2e_rnnt_encoder.onnx"),
-            Path.Combine(modelDir, "gigaam_v3_e2e_rnnt_decoder.onnx"),
-            Path.Combine(modelDir, "gigaam_v3_e2e_rnnt_joint.onnx"),
-            Path.Combine(modelDir, "gigaam_v3_e2e_rnnt_tokens.txt"));
-
-        if (IsCompleteBundle(e2e))
-        {
-            return e2e;
-        }
-
-        var rnnt = new GigaAmModelPaths(
-            Path.Combine(modelDir, "gigaam_v3_rnnt_encoder.onnx"),
-            Path.Combine(modelDir, "gigaam_v3_rnnt_decoder.onnx"),
-            Path.Combine(modelDir, "gigaam_v3_rnnt_joint.onnx"),
-            Path.Combine(modelDir, "gigaam_v3_rnnt_tokens.txt"));
-
-        return IsCompleteBundle(rnnt) ? rnnt : null;
-
-        static bool IsCompleteBundle(GigaAmModelPaths paths) =>
-            File.Exists(paths.Encoder)
-            && File.Exists(paths.Decoder)
-            && File.Exists(paths.Joiner)
-            && File.Exists(paths.Tokens);
-    }
-
-    public sealed record GigaAmModelPaths(string Encoder, string Decoder, string Joiner, string Tokens);
+    public static GigaAmBundlePaths? ResolveModelPaths(string modelDir) =>
+        ModelRegistry.ResolveGigaAmBundle(modelDir);
 }

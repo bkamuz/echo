@@ -49,12 +49,12 @@ public class ModelRegistryTests
                 RepoId: ModelRegistry.GigaAmRepo,
                 LocalDir: dir);
 
-            File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_encoder.onnx"), "");
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmE2ePrefix}_encoder.onnx"), "");
             Assert.False(spec.IsDownloaded());
 
-            File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_decoder.onnx"), "");
-            File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_joint.onnx"), "");
-            File.WriteAllText(Path.Combine(dir, "gigaam_v3_e2e_rnnt_tokens.txt"), "");
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmE2ePrefix}_decoder.onnx"), "");
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmE2ePrefix}_joint.onnx"), "");
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmE2ePrefix}_tokens.txt"), "");
             Assert.True(spec.IsDownloaded());
         }
         finally

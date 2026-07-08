@@ -17,22 +17,10 @@ public sealed record ModelSpec(
 
         return Engine switch
         {
-            "gigaam" => HasCompleteGigaAmBundle(LocalDir),
+            "gigaam" => ModelRegistry.HasCompleteGigaAmBundle(LocalDir),
             "whisper" => File.Exists(Path.Combine(LocalDir, "model.bin"))
                 || Directory.EnumerateFiles(LocalDir, "*.bin").Any(),
             _ => Directory.EnumerateFiles(LocalDir).Any(),
         };
-    }
-
-    private static bool HasCompleteGigaAmBundle(string dir)
-    {
-        static bool AllExist(string baseDir, string prefix) =>
-            File.Exists(Path.Combine(baseDir, $"{prefix}_encoder.onnx"))
-            && File.Exists(Path.Combine(baseDir, $"{prefix}_decoder.onnx"))
-            && File.Exists(Path.Combine(baseDir, $"{prefix}_joint.onnx"))
-            && File.Exists(Path.Combine(baseDir, $"{prefix}_tokens.txt"));
-
-        return AllExist(dir, "gigaam_v3_e2e_rnnt")
-            || AllExist(dir, "gigaam_v3_rnnt");
     }
 }
