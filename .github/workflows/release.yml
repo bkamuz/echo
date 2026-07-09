@@ -6,6 +6,10 @@ on:
       - "v*"
   workflow_dispatch:
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -15,49 +19,35 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.rid }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - rid: win-x64
-            os: windows-latest
-            archive: zip
-          - rid: linux-x64
-            os: ubuntu-latest
-            archive: tar.gz
-          - rid: osx-arm64
-            os: macos-latest
-            archive: tar.gz
+    name: Build all platforms
+    runs-on: [self-hosted, Windows, aeza-personal]
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Resolve version
-        shell: bash
+        shell: pwsh
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-          else
-            version="$(dotnet msbuild src/Echo.App/Echo.App.csproj -nologo -getProperty:Version | tr -d '[:space:]')"
-            echo "VERSION=${version}" >> "$GITHUB_ENV"
-          fi
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $version = $env:GITHUB_REF_NAME.Substring(1)
+          } else {
+            $version = (dotnet msbuild src/Echo.App/Echo.App.csproj -nologo -getProperty:Version).Trim()
+          }
+          "VERSION=$version" >> $env:GITHUB_ENV
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
       - name: Resolve DirectML cache key
-        if: runner.os == 'Windows'
         id: directml
-        shell: bash
+        shell: pwsh
         run: |
-          version="$(tr -d '[:space:]' < .github/directml-sherpa-version)"
-          echo "key=directml-sherpa-${version}" >> "$GITHUB_OUTPUT"
+          $version = (Get-Content .github/directml-sherpa-version -Raw).Trim()
+          "key=directml-sherpa-$version" >> $env:GITHUB_OUTPUT
 
       - name: Restore DirectML runtime cache
-        if: runner.os == 'Windows'
         uses: actions/cache@v4
         id: directml-cache
         with:
@@ -66,15 +56,17 @@ jobs:
           restore-keys: |
             directml-sherpa-
 
-      - name: Build DirectML runtime if cache miss
-        if: runner.os == 'Windows' && steps.directml-cache.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: ./scripts/fetch-directml-runtime.ps1 -Build
-
       - name: Verify DirectML runtime
-        if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          if ('${{ steps.directml-cache.outputs.cache-hit }}' -ne 'true') {
+            throw @"
+          DirectML cache miss. Seed the cache first:
+            1. Upload DLLs to maintainer release directml-runtime-<version>
+            2. Run workflow: Seed DirectML cache
+          See docs/gpu-directml.md
+          "@
+          }
           $files = @('sherpa-onnx-c-api.dll', 'onnxruntime.dll', 'DirectML.dll')
           foreach ($f in $files) {
             if (-not (Test-Path "native/win-x64/directml/$f")) {
@@ -82,29 +74,35 @@ jobs:
             }
           }
 
-      - name: Publish portable (Windows)
-        if: runner.os == 'Windows'
+      - name: Publish all portable archives
         shell: pwsh
-        run: ./build/portable.ps1 -Runtime ${{ matrix.rid }} -Version $env:VERSION
+        run: ./build/portable-all.ps1 -Version $env:VERSION
 
-      - name: Publish portable (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          chmod +x build/publish.sh build/portable.sh
-          ./build/portable.sh ${{ matrix.rid }} "$VERSION"
-
-      - name: Upload artifact
+      - name: Upload win-x64 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: echo-${{ matrix.rid }}
-          path: dist/releases/Echo-${{ env.VERSION }}-${{ matrix.rid }}-portable.${{ matrix.archive }}
+          name: echo-win-x64
+          path: dist/releases/Echo-${{ env.VERSION }}-win-x64-portable.zip
+          if-no-files-found: error
+
+      - name: Upload linux-x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: echo-linux-x64
+          path: dist/releases/Echo-${{ env.VERSION }}-linux-x64-portable.tar.gz
+          if-no-files-found: error
+
+      - name: Upload osx-arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: echo-osx-arm64
+          path: dist/releases/Echo-${{ env.VERSION }}-osx-arm64-portable.tar.gz
           if-no-files-found: error
 
   release:
     name: GitHub Release
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, aeza-personal]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
@@ -113,7 +111,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Resolve version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+        shell: pwsh
+        run: |
+          "VERSION=$($env:GITHUB_REF_NAME.Substring(1))" >> $env:GITHUB_ENV
 
       - uses: actions/download-artifact@v4
         with:

@@ -55,18 +55,35 @@ Portable zip and Inno Setup include `directml/` when present.
 
 ### GitHub Releases (CI)
 
-Windows job in [`.github/workflows/release.yml`](../.github/workflows/release.yml):
+Release workflow runs on self-hosted runner **`aeza-personal`** and builds all platforms from Windows.
+
+DirectML DLLs are **not built on the server**. The release job:
 
 1. Restores `native/win-x64/directml/` from Actions cache (key from `.github/directml-sherpa-version`).
-2. On cache miss, runs `fetch-directml-runtime.ps1 -Build` (~5–10 min once).
+2. Fails fast on cache miss with a hint to run **Seed DirectML cache**.
 3. Publishes zip with `Echo.App.exe` + `directml/`.
 
-To **refresh the cache** after bumping Sherpa version:
+#### Seed cache (first time or after version bump)
 
-1. Update `.github/directml-sherpa-version` (e.g. `1.13.5`).
-2. Run Actions → **Cache DirectML runtime** → Run workflow (deletes the old entry for that key, then rebuilds).
+1. Build DLLs locally: `.\scripts\fetch-directml-runtime.ps1 -Build` (or `-SourceDir`).
+2. Create maintainer release with the three DLLs:
 
-Rerunning release with the same key does **not** overwrite an existing cache entry. Or delete manually under GitHub → Settings → Actions → Caches.
+```powershell
+$sherpa = (Get-Content .github/directml-sherpa-version -Raw).Trim()
+gh release create "directml-runtime-$sherpa" `
+  --repo bkamuz/echo `
+  --title "DirectML runtime $sherpa (maintainer)" `
+  --notes "Internal assets for Actions cache seeding. Not for end users." `
+  native/win-x64/directml/sherpa-onnx-c-api.dll `
+  native/win-x64/directml/onnxruntime.dll `
+  native/win-x64/directml/DirectML.dll
+```
+
+3. Actions → **Seed DirectML cache** → Run workflow.
+
+#### Rebuild Sherpa on GitHub (rare)
+
+When bumping Sherpa version, update `.github/directml-sherpa-version`, then run **Cache DirectML runtime** on `windows-latest` (requires CMake/VS on hosted runner). Re-upload maintainer release and re-seed if needed.
 
 DLLs are **not** stored in git (see `.gitignore`).
 

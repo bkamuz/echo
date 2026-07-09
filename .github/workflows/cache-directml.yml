@@ -1,5 +1,8 @@
 name: Cache DirectML runtime
 
+# Rebuilds Sherpa DirectML on GitHub-hosted Windows (maintainer only).
+# Self-hosted aeza-personal never runs this — use seed-directml-cache.yml instead.
+
 on:
   workflow_dispatch:
 

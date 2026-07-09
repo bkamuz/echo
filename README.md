@@ -37,14 +37,11 @@ dotnet run --project src/Echo.App
 pwsh ./scripts/new-release.ps1 -Bump patch
 ```
 
-При пуше тега `v*` (например `v1.0.0`) workflow `.github/workflows/release.yml` собирает portable-архивы для **win-x64**, **linux-x64**, **osx-arm64** и прикрепляет их к релизу.
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+При пуше тега `v*` workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) собирает portable-архивы на **self-hosted runner `aeza-personal`** (win/linux/mac с одной Windows-машины) и прикрепляет их к релизу.
 
 Ручной запуск: Actions → Release → Run workflow (GitHub Release создаётся только при push тега `v*`).
+
+Перезапуск неудавшегося релиза: Actions → Release → выбрать run для тега → **Re-run all jobs** (тег пересоздавать не нужно).
 
 | Платформа | Архив | Запуск |
 |-----------|-------|--------|
@@ -52,7 +49,7 @@ git push origin v1.0.0
 | Linux | `.tar.gz` | `./Echo.App` |
 | macOS (Apple Silicon) | `.tar.gz` | `./Echo.App` |
 
-Windows-релиз включает **GPU (DirectML)** runtime в zip. CI восстанавливает DLL из [Actions cache](.github/workflows/release.yml); при первом промахе собирает Sherpa автоматически. Повторный запуск с тем же ключом кэш **не перезапишет** — для обновления нужен новый ключ (`.github/directml-sherpa-version`) или ручное удаление в Settings → Actions → Caches; workflow [**Cache DirectML runtime**](.github/workflows/cache-directml.yml) удаляет старую запись и пересобирает. Подробнее: [`docs/gpu-directml.md`](docs/gpu-directml.md).
+Windows-релиз включает **GPU (DirectML)** runtime в zip. CI **восстанавливает DLL из Actions cache** (без сборки Sherpa на сервере). Кэш заполняется workflow [**Seed DirectML cache**](.github/workflows/seed-directml-cache.yml) из maintainer-release `directml-runtime-<версия>`. Пересборка Sherpa — только через [**Cache DirectML runtime**](.github/workflows/cache-directml.yml) на `windows-latest` при смене версии. Подробнее: [`docs/gpu-directml.md`](docs/gpu-directml.md).
 
 ### Локальная сборка portable
 

@@ -1,0 +1,54 @@
+name: Seed DirectML cache
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  seed:
+    name: Download DLLs and save cache
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve DirectML cache key
+        id: directml
+        shell: bash
+        run: |
+          version="$(tr -d '[:space:]' < .github/directml-sherpa-version)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "key=directml-sherpa-${version}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=directml-runtime-${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Download prebuilt DirectML DLLs
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.directml.outputs.release_tag }}
+        run: |
+          $dest = "native/win-x64/directml"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          gh release download $env:RELEASE_TAG --repo "${{ github.repository }}" --dir $dest --clobber
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download maintainer release '$env:RELEASE_TAG'. Upload DLLs first (see docs/gpu-directml.md)."
+          }
+
+      - name: Verify DirectML runtime
+        shell: pwsh
+        run: |
+          $files = @('sherpa-onnx-c-api.dll', 'onnxruntime.dll', 'DirectML.dll')
+          foreach ($f in $files) {
+            if (-not (Test-Path "native/win-x64/directml/$f")) {
+              throw "Missing DirectML runtime file: $f"
+            }
+          }
+
+      - name: Save DirectML runtime cache
+        uses: actions/cache/save@v4
+        with:
+          path: native/win-x64/directml
+          key: ${{ steps.directml.outputs.key }}
