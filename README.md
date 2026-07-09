@@ -37,7 +37,7 @@ dotnet run --project src/Echo.App
 pwsh ./scripts/new-release.ps1 -Bump patch
 ```
 
-При пуше тега `v*` workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) собирает portable-архивы на **self-hosted runner `aeza-personal`** (win/linux/mac с одной Windows-машины) и прикрепляет их к релизу.
+При пуше тега `v*` workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) собирает portable-архивы на **self-hosted runner `aeza-personal`** (Linux VPS, win/linux/mac с одной машины) и прикрепляет их к релизу.
 
 Ручной запуск: Actions → Release → Run workflow (GitHub Release создаётся только при push тега `v*`).
 

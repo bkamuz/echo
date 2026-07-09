@@ -55,7 +55,7 @@ Portable zip and Inno Setup include `directml/` when present.
 
 ### GitHub Releases (CI)
 
-Release workflow runs on self-hosted runner **`aeza-personal`** and builds all platforms from Windows.
+Release workflow runs on self-hosted runner **`aeza-personal`** (Linux VPS) and builds all platforms from there.
 
 DirectML DLLs are **not built on the server**. The release job:
 

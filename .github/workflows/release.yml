@@ -20,32 +20,28 @@ env:
 jobs:
   build:
     name: Build all platforms
-    runs-on: [self-hosted, Windows, aeza-personal]
+    runs-on: [self-hosted, Linux, aeza-personal]
     timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Resolve version
-        shell: pwsh
+        shell: bash
         run: |
-          if ($env:GITHUB_REF -like 'refs/tags/v*') {
-            $version = $env:GITHUB_REF_NAME.Substring(1)
-          } else {
-            $version = (dotnet msbuild src/Echo.App/Echo.App.csproj -nologo -getProperty:Version).Trim()
-          }
-          "VERSION=$version" >> $env:GITHUB_ENV
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            version="$(dotnet msbuild src/Echo.App/Echo.App.csproj -nologo -getProperty:Version | tr -d '[:space:]')"
+            echo "VERSION=${version}" >> "$GITHUB_ENV"
+          fi
 
       - name: Resolve DirectML cache key
         id: directml
-        shell: pwsh
+        shell: bash
         run: |
-          $version = (Get-Content .github/directml-sherpa-version -Raw).Trim()
-          "key=directml-sherpa-$version" >> $env:GITHUB_OUTPUT
+          version="$(tr -d '[:space:]' < .github/directml-sherpa-version)"
+          echo "key=directml-sherpa-${version}" >> "$GITHUB_OUTPUT"
 
       - name: Restore DirectML runtime cache
         uses: actions/cache@v4
@@ -57,26 +53,25 @@ jobs:
             directml-sherpa-
 
       - name: Verify DirectML runtime
-        shell: pwsh
+        shell: bash
         run: |
-          if ('${{ steps.directml-cache.outputs.cache-hit }}' -ne 'true') {
-            throw @"
-          DirectML cache miss. Seed the cache first:
-            1. Upload DLLs to maintainer release directml-runtime-<version>
-            2. Run workflow: Seed DirectML cache
-          See docs/gpu-directml.md
-          "@
-          }
-          $files = @('sherpa-onnx-c-api.dll', 'onnxruntime.dll', 'DirectML.dll')
-          foreach ($f in $files) {
-            if (-not (Test-Path "native/win-x64/directml/$f")) {
-              throw "Missing DirectML runtime file: $f"
-            }
-          }
+          if [[ "${{ steps.directml-cache.outputs.cache-hit }}" != "true" ]]; then
+            echo "DirectML cache miss. Seed the cache first (Seed DirectML cache workflow)." >&2
+            echo "See docs/gpu-directml.md" >&2
+            exit 1
+          fi
+          for f in sherpa-onnx-c-api.dll onnxruntime.dll DirectML.dll; do
+            if [[ ! -f "native/win-x64/directml/$f" ]]; then
+              echo "Missing DirectML runtime file: $f" >&2
+              exit 1
+            fi
+          done
 
       - name: Publish all portable archives
-        shell: pwsh
-        run: ./build/portable-all.ps1 -Version $env:VERSION
+        shell: bash
+        run: |
+          chmod +x build/publish.sh build/portable.sh build/portable-all.sh
+          ./build/portable-all.sh "$VERSION"
 
       - name: Upload win-x64 artifact
         uses: actions/upload-artifact@v4
@@ -102,7 +97,7 @@ jobs:
   release:
     name: GitHub Release
     needs: build
-    runs-on: [self-hosted, Windows, aeza-personal]
+    runs-on: [self-hosted, Linux, aeza-personal]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
@@ -111,9 +106,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Resolve version
-        shell: pwsh
-        run: |
-          "VERSION=$($env:GITHUB_REF_NAME.Substring(1))" >> $env:GITHUB_ENV
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
       - uses: actions/download-artifact@v4
         with:
