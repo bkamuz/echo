@@ -26,7 +26,7 @@ jobs:
           echo "key=directml-sherpa-${version}" >> "$GITHUB_OUTPUT"
 
       - name: Delete existing cache entry
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           CACHE_KEY: ${{ steps.directml.outputs.key }}
         with:
