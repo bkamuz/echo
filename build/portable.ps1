@@ -9,6 +9,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $publishScript = Join-Path $PSScriptRoot "publish.ps1"
 
 & $publishScript -Runtime $Runtime -Version $Version
+if ($LASTEXITCODE) { throw "publish.ps1 failed (exit $LASTEXITCODE)" }
 
 if ([string]::IsNullOrWhiteSpace($Version))
 {

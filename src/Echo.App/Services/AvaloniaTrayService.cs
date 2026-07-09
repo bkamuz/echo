@@ -74,11 +74,13 @@ public sealed class AvaloniaTrayService : ITrayStateService
             return;
         }
 
+        var mainWindow = _mainWindow;
+
         void Apply()
         {
-            _mainWindow.Icon = icon;
+            mainWindow.Icon = icon;
 
-            var handle = _mainWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+            var handle = mainWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
             if (handle != IntPtr.Zero)
             {
                 _taskbarIconSync?.Attach(handle);

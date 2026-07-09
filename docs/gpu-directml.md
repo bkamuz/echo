@@ -57,16 +57,16 @@ Portable zip and Inno Setup include `directml/` when present.
 
 Windows job in [`.github/workflows/release.yml`](../.github/workflows/release.yml):
 
-1. Restores `native/win-x64/directml/` from Actions cache (`directml-sherpa-1.13.4`).
+1. Restores `native/win-x64/directml/` from Actions cache (key from `.github/directml-sherpa-version`).
 2. On cache miss, runs `fetch-directml-runtime.ps1 -Build` (~5–10 min once).
 3. Publishes zip with `Echo.App.exe` + `directml/`.
 
 To **refresh the cache** after bumping Sherpa version:
 
-1. Update cache key in `release.yml` and `cache-directml.yml` (e.g. `directml-sherpa-1.13.5`).
-2. Run Actions → **Cache DirectML runtime** → Run workflow.
+1. Update `.github/directml-sherpa-version` (e.g. `1.13.5`).
+2. Run Actions → **Cache DirectML runtime** → Run workflow (deletes the old entry for that key, then rebuilds).
 
-Or delete the cache entry under GitHub → Settings → Actions → Caches.
+Rerunning release with the same key does **not** overwrite an existing cache entry. Or delete manually under GitHub → Settings → Actions → Caches.
 
 DLLs are **not** stored in git (see `.gitignore`).
 

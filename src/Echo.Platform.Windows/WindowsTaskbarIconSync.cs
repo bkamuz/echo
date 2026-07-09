@@ -144,7 +144,13 @@ public sealed class WindowsTaskbarIconSync : ITaskbarIconSync, IDisposable
         }
 
         _subclassHandle = GCHandle.Alloc(this);
-        _subclassInstalled = SetWindowSubclass(windowHandle, SubclassCallback, 1, GCHandle.ToIntPtr(_subclassHandle));
+        if (!SetWindowSubclass(windowHandle, SubclassCallback, 1, GCHandle.ToIntPtr(_subclassHandle)))
+        {
+            _subclassHandle.Free();
+            return;
+        }
+
+        _subclassInstalled = true;
     }
 
     private void DetachSubclass()

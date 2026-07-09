@@ -1,4 +1,4 @@
-; Build: .\build\installer.ps1  (requires Inno Setup 6)
+; Build: .\build\installer.ps1  (requires Inno Setup 6.3+ — x64compatible in ArchitecturesAllowed / ArchitecturesInstallIn64BitMode)
 
 #ifndef AppVersion
   #define AppVersion "1.0.0"

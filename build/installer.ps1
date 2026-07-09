@@ -8,8 +8,10 @@ $publishScript = Join-Path $PSScriptRoot "publish.ps1"
 $iss = Join-Path $PSScriptRoot "Echo.iss"
 
 & $publishScript -Runtime $Runtime
+if ($LASTEXITCODE) { throw "publish.ps1 failed (exit $LASTEXITCODE)" }
 
 $iscc = @(
+    "${env:ProgramFiles}\Inno Setup 6\ISCC.exe",
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
     "${env:LocalAppData}\Programs\Inno Setup 6\ISCC.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1

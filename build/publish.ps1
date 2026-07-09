@@ -23,6 +23,7 @@ dotnet publish "src/Echo.App/Echo.App.csproj" `
     -p:DebugSymbols=false `
     @versionArgs `
     -o $outDir
+if ($LASTEXITCODE) { throw "dotnet publish failed (exit $LASTEXITCODE)" }
 
 Get-ChildItem $outDir -File -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -ne $mainExe } |

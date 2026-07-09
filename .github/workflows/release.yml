@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   DOTNET_NOLOGO: true
@@ -48,13 +48,21 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Resolve DirectML cache key
+        if: runner.os == 'Windows'
+        id: directml
+        shell: bash
+        run: |
+          version="$(tr -d '[:space:]' < .github/directml-sherpa-version)"
+          echo "key=directml-sherpa-${version}" >> "$GITHUB_OUTPUT"
+
       - name: Restore DirectML runtime cache
         if: runner.os == 'Windows'
         uses: actions/cache@v4
         id: directml-cache
         with:
           path: native/win-x64/directml
-          key: directml-sherpa-1.13.4
+          key: ${{ steps.directml.outputs.key }}
           restore-keys: |
             directml-sherpa-
 
@@ -98,6 +106,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
