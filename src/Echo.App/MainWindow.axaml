@@ -100,9 +100,25 @@
                        FontSize="11"/>
           </StackPanel>
         </Border>
-        <Panel Grid.Column="1"
-               Background="Transparent"
-               Cursor="Arrow"/>
+        <StackPanel Grid.Column="1"
+                    x:Name="ClientCaptionButtons"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Stretch"
+                    IsVisible="False">
+          <Button Classes="shell-caption-button"
+                  Content="&#x2212;"
+                  ToolTip.Tip="Свернуть"
+                  chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.MinimizeButton}"/>
+          <Button Classes="shell-caption-button"
+                  Content="&#x25A1;"
+                  ToolTip.Tip="Развернуть"
+                  chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.MaximizeButton}"/>
+          <Button Classes="shell-caption-button shell-caption-button-close"
+                  Content="&#x00D7;"
+                  ToolTip.Tip="Закрыть"
+                  chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.CloseButton}"/>
+        </StackPanel>
       </Grid>
     </Border>
 
