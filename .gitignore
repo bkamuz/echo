@@ -75,6 +75,9 @@ backup/
 unins*.exe
 unins*.dat
 
+## Release archives
+dist/releases/
+
 ## Python (legacy scripts, if any reappear)
 __pycache__/
 *.py[cod]

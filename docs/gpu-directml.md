@@ -6,15 +6,14 @@ Whisper always runs on CPU in this release.
 
 ## Quick check
 
-1. Place DirectML-enabled Sherpa DLLs in `native/win-x64/directml/` (see below).
-2. Build the app: `dotnet build src/Echo.App`
-3. Run Echo. In **Settings → Распознавание → Устройство**, you should see **GPU (DirectML)** if the runtime probe succeeded.
-4. Select GigaAM, choose **GPU (DirectML)**, dictate a 10+ second phrase.
-5. Check logs for `Loading GigaAM ... (provider=directml)` and compare `transcribe=...ms` with CPU.
+1. Run Echo from a release zip or installer (includes `directml/` folder).
+2. In **Settings → Распознавание → Устройство**, you should see **GPU (DirectML)**.
+3. Select GigaAM, choose **GPU (DirectML)**, dictate a 10+ second phrase.
+4. Check logs for `Loading GigaAM ... (provider=directml)` and compare `transcribe=...ms` with CPU.
 
-If **GPU (DirectML)** is not shown, the app is using the stock CPU-only NuGet runtime.
+If **GPU (DirectML)** is not shown, the `directml/` folder is missing next to `Echo.App.exe`.
 
-## Obtain DirectML DLLs
+## Obtain DirectML DLLs (developers)
 
 The `org.k2fsa.sherpa.onnx` NuGet package (1.13.4) ships **CPU-only** native libraries. You need a matching **1.13.4** build with DirectML enabled.
 
@@ -48,11 +47,28 @@ Copy **all** `*.dll` from the same build output — do not mix CPU and DirectML 
 
 On build/publish (Windows only), if `native/win-x64/directml/sherpa-onnx-c-api.dll` exists:
 
-1. CPU Sherpa/ONNX DLLs from NuGet stay in the app output folder.
+1. CPU Sherpa/ONNX DLLs from NuGet are bundled inside `Echo.App.exe` (single-file).
 2. DirectML DLLs are copied to `directml/` next to `Echo.App.exe` (never mixed into the root).
 3. `WindowsDirectMlAvailability` probes `directml/onnxruntime.dll` for the DML export.
 
-Publish: `.\build\publish.ps1` → `dist/win-x64/Echo.App.exe` (managed + CPU natives inside) and `directml/` beside it for GPU.
+Portable zip and Inno Setup include `directml/` when present.
+
+### GitHub Releases (CI)
+
+Windows job in [`.github/workflows/release.yml`](../.github/workflows/release.yml):
+
+1. Restores `native/win-x64/directml/` from Actions cache (`directml-sherpa-1.13.4`).
+2. On cache miss, runs `fetch-directml-runtime.ps1 -Build` (~5–10 min once).
+3. Publishes zip with `Echo.App.exe` + `directml/`.
+
+To **refresh the cache** after bumping Sherpa version:
+
+1. Update cache key in `release.yml` and `cache-directml.yml` (e.g. `directml-sherpa-1.13.5`).
+2. Run Actions → **Cache DirectML runtime** → Run workflow.
+
+Or delete the cache entry under GitHub → Settings → Actions → Caches.
+
+DLLs are **not** stored in git (see `.gitignore`).
 
 ## Fallback behaviour
 

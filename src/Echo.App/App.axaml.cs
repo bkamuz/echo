@@ -37,7 +37,8 @@ public partial class App : Application
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<ShellViewModel>();
-                services.AddSingleton<ITrayStateService, AvaloniaTrayService>();
+                services.AddSingleton<ITrayStateService>(sp =>
+                    new AvaloniaTrayService(sp.GetService<ITaskbarIconSync>()));
             })
             .Build();
 

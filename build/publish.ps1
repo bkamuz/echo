@@ -1,12 +1,16 @@
 param(
-    [string]$Runtime = "win-x64"
+    [string]$Runtime = "win-x64",
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 Push-Location $root
 
-Write-Host "Publishing Echo for $Runtime (single-file + directml/)..."
+$mainExe = if ($Runtime.StartsWith("win-", [StringComparison]::Ordinal)) { "Echo.App.exe" } else { "Echo.App" }
+$versionArgs = if ([string]::IsNullOrWhiteSpace($Version)) { @() } else { @("-p:Version=$Version") }
+
+Write-Host "Publishing Echo for $Runtime (single-file)..."
 $outDir = "dist/$Runtime"
 dotnet publish "src/Echo.App/Echo.App.csproj" `
     -c Release `
@@ -17,11 +21,11 @@ dotnet publish "src/Echo.App/Echo.App.csproj" `
     -p:EnableCompressionInSingleFile=true `
     -p:DebugType=none `
     -p:DebugSymbols=false `
+    @versionArgs `
     -o $outDir
 
-# Managed + CPU natives are inside Echo.App.exe; these are publish leftovers.
 Get-ChildItem $outDir -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -ne 'Echo.App.exe' } |
+    Where-Object { $_.Name -ne $mainExe } |
     Remove-Item -Force
 
 Write-Host "Output: $root/$outDir"
