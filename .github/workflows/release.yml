@@ -52,17 +52,29 @@ jobs:
           restore-keys: |
             directml-sherpa-
 
+      - name: Download DirectML runtime if missing
+        if: steps.directml-cache.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(tr -d '[:space:]' < .github/directml-sherpa-version)"
+          dest="native/win-x64/directml"
+          mkdir -p "$dest"
+          if ! ls "$dest"/*.dll >/dev/null 2>&1; then
+            gh release download "directml-runtime-${version}" \
+              --repo "${{ github.repository }}" \
+              --dir "$dest" \
+              --clobber
+          fi
+
       - name: Verify DirectML runtime
         shell: bash
         run: |
-          if [[ "${{ steps.directml-cache.outputs.cache-hit }}" != "true" ]]; then
-            echo "DirectML cache miss. Seed the cache first (Seed DirectML cache workflow)." >&2
-            echo "See docs/gpu-directml.md" >&2
-            exit 1
-          fi
           for f in sherpa-onnx-c-api.dll onnxruntime.dll DirectML.dll; do
             if [[ ! -f "native/win-x64/directml/$f" ]]; then
               echo "Missing DirectML runtime file: $f" >&2
+              echo "Run Seed DirectML cache or upload directml-runtime-<version> release." >&2
               exit 1
             fi
           done
