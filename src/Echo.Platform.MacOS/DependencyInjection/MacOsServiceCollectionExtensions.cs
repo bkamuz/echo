@@ -12,6 +12,7 @@ public static class MacOsServiceCollectionExtensions
         services.AddSingleton<ITextInjector, MacOsTextInjector>();
         services.AddSingleton<IFocusTarget, MacOsFocusTarget>();
         services.AddSingleton<IDirectMlAvailability, UnsupportedDirectMlAvailability>();
+        services.AddSingleton<IAutoStartService, MacOsAutoStartService>();
         return services;
     }
 }

@@ -22,6 +22,13 @@ public class AppConfigTests
         Assert.Contains("gigaam-v3", spec.LocalDir);
     }
 
+    [Fact]
+    public void StartWithSystem_DefaultsToFalse()
+    {
+        var config = new AppConfig();
+        Assert.False(config.StartWithSystem);
+    }
+
     [Theory]
     [InlineData("v3", "e2e")]
     [InlineData("v3-punct", "e2e")]

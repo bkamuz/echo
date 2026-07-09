@@ -15,6 +15,7 @@ public static class WindowsServiceCollectionExtensions
         services.AddSingleton<IFocusTarget, WindowsFocusTarget>();
         services.AddSingleton<IDirectMlAvailability, WindowsDirectMlAvailability>();
         services.AddSingleton<ITaskbarIconSync, WindowsTaskbarIconSync>();
+        services.AddSingleton<IAutoStartService, WindowsAutoStartService>();
         return services;
     }
 }

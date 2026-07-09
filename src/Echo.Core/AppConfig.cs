@@ -49,6 +49,9 @@ public sealed class AppConfig
     [JsonPropertyName("add_trailing_space")]
     public bool AddTrailingSpace { get; set; } = true;
 
+    [JsonPropertyName("start_with_system")]
+    public bool StartWithSystem { get; set; }
+
     [JsonPropertyName("extra")]
     public Dictionary<string, JsonElement> Extra { get; set; } = new();
 

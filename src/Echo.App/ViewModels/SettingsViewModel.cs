@@ -26,6 +26,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppStatusViewModel _status;
     private readonly SettingsApplyService _applyService;
     private readonly IDirectMlAvailability _directMlAvailability;
+    private readonly IAutoStartService _autoStartService;
     private string _savedHotkey = string.Empty;
     private bool _isLoadingFromConfig;
 
@@ -39,6 +40,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private InputMethodOption? _selectedInputMethod;
     [ObservableProperty] private TypeSpeedOption? _selectedTypeSpeed;
     [ObservableProperty] private bool _addTrailingSpace;
+    [ObservableProperty] private bool _startWithSystem;
     [ObservableProperty] private bool _isCapturingHotkey;
     [ObservableProperty] private string _hotkeyPreview = string.Empty;
     [ObservableProperty] private string _modelStatus = string.Empty;
@@ -79,7 +81,8 @@ public partial class SettingsViewModel : ObservableObject
         HomeViewModel home,
         AppStatusViewModel status,
         SettingsApplyService applyService,
-        IDirectMlAvailability directMlAvailability)
+        IDirectMlAvailability directMlAvailability,
+        IAutoStartService autoStartService)
     {
         _coordinator = coordinator;
         _downloader = downloader;
@@ -89,8 +92,11 @@ public partial class SettingsViewModel : ObservableObject
         _status = status;
         _applyService = applyService;
         _directMlAvailability = directMlAvailability;
+        _autoStartService = autoStartService;
         LoadFromConfig();
     }
+
+    public bool IsAutoStartSupported => _autoStartService.IsSupported;
 
     private static readonly ComputeDeviceOption CpuDeviceOption = new(
         ExecutionProviderResolver.CpuDevice,
@@ -217,6 +223,17 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnSelectedTypeSpeedChanged(TypeSpeedOption? value) => ScheduleApply();
 
     partial void OnAddTrailingSpaceChanged(bool value) => ScheduleApply();
+
+    partial void OnStartWithSystemChanged(bool value)
+    {
+        if (_isLoadingFromConfig)
+        {
+            return;
+        }
+
+        _autoStartService.SetEnabled(value);
+        ScheduleApply();
+    }
 
     partial void OnInputDeviceChanged(AudioDeviceInfo? value) => ScheduleApply();
 
@@ -403,6 +420,7 @@ public partial class SettingsViewModel : ObservableObject
         config.InputMethod = SelectedInputMethod?.Id ?? "clipboard";
         config.TypeDelayMs = SelectedTypeSpeed?.DelayMs ?? 1;
         config.AddTrailingSpace = AddTrailingSpace;
+        config.StartWithSystem = StartWithSystem;
         return config;
     }
 
@@ -424,6 +442,7 @@ public partial class SettingsViewModel : ObservableObject
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == config.TypeDelayMs)
                 ?? TypeSpeedOptions[1];
             AddTrailingSpace = config.AddTrailingSpace;
+            StartWithSystem = config.StartWithSystem;
             InputDevice = InputDevices.FirstOrDefault(d => d.Name == config.InputDevice)
                 ?? InputDevices.FirstOrDefault();
             UpdateModelStatus();

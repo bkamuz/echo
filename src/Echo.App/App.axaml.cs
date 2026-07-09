@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using echo.App.Services;
@@ -47,12 +48,28 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var coordinator = Services.GetRequiredService<DictationCoordinator>();
+            var autoStart = Services.GetRequiredService<IAutoStartService>();
+            if (autoStart.IsSupported && autoStart.IsEnabled != coordinator.Config.StartWithSystem)
+            {
+                autoStart.SetEnabled(coordinator.Config.StartWithSystem);
+            }
+
             coordinator.Start();
+
+            var startMinimized = (desktop.Args ?? [])
+                .Any(arg => string.Equals(arg, ApplicationLauncher.MinimizedArgument, StringComparison.OrdinalIgnoreCase));
 
             desktop.MainWindow = new MainWindow
             {
                 DataContext = Services.GetRequiredService<ShellViewModel>(),
             };
+
+            if (startMinimized)
+            {
+                desktop.MainWindow.ShowInTaskbar = false;
+                desktop.MainWindow.Opened += (_, _) => desktop.MainWindow.Hide();
+            }
+
             if (Services.GetRequiredService<ITrayStateService>() is AvaloniaTrayService tray)
             {
                 tray.AttachMainWindow(desktop.MainWindow);

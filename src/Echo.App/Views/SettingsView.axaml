@@ -24,7 +24,8 @@
             <Border DockPanel.Dock="Top" Classes="tile-header">
               <TextBlock Classes="section-title" Text="УПРАВЛЕНИЕ"/>
             </Border>
-            <Grid Classes="tile-body" ColumnDefinitions="*,*,*,Auto" ColumnSpacing="12">
+            <StackPanel Classes="tile-body" Spacing="10">
+              <Grid ColumnDefinitions="*,*,*,Auto" ColumnSpacing="12">
               <StackPanel Grid.Column="0" Classes="settings-field">
                 <TextBlock Classes="field-label" Text="Хоткей"/>
                 <Button Classes="hotkey-field"
@@ -60,7 +61,12 @@
                         IsChecked="{Binding AddTrailingSpace}"
                         VerticalAlignment="Bottom"
                         Margin="0,0,0,2"/>
-            </Grid>
+              </Grid>
+              <CheckBox Content="Запускать при старте системы"
+                        IsChecked="{Binding StartWithSystem}"
+                        IsVisible="{Binding IsAutoStartSupported}"
+                        ToolTip.Tip="Echo запустится в фоне при входе в систему"/>
+            </StackPanel>
           </DockPanel>
         </Border>
 

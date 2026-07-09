@@ -12,6 +12,7 @@ public static class LinuxServiceCollectionExtensions
         services.AddSingleton<ITextInjector, LinuxTextInjector>();
         services.AddSingleton<IFocusTarget, LinuxFocusTarget>();
         services.AddSingleton<IDirectMlAvailability, UnsupportedDirectMlAvailability>();
+        services.AddSingleton<IAutoStartService, LinuxAutoStartService>();
         return services;
     }
 }
