@@ -71,6 +71,16 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
                 return Task.CompletedTask;
             }
         }
+        else if (requestedProvider == "cpu")
+        {
+            _logger.LogWarning("CPU provider failed for GigaAM; falling back to DirectML");
+            if (TryCreateRecognizer(bundle, "directml", out recognizer))
+            {
+                _resolvedDevice = "directml";
+                _recognizer = recognizer;
+                return Task.CompletedTask;
+            }
+        }
 
         throw new InvalidOperationException(
             "Не удалось загрузить GigaAM. Проверьте целостность модели.");
@@ -127,14 +137,12 @@ public sealed class GigaAmEngine : ITranscriptionEngine, IDisposable
         stream.AcceptWaveform(sampleRate, samples);
         _recognizer.Decode(stream);
         var text = stream.Result.Text.Trim();
+
         return Task.FromResult(PostProcess(text));
     }
 
     private static string PostProcess(string text)
     {
-        // Словарь: русское звучание -> английское слово.
-        // GigaAM — чисто русская модель, английские токены в ней отсутствуют.
-        // Этот пост-процессинг исправляет часто используемые английские термины.
         if (string.IsNullOrEmpty(text)) return text;
 
         foreach (var (ru, en) in _replacements)

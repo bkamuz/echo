@@ -46,11 +46,13 @@ Copy **all** `*.dll` from the same build output — do not mix CPU and DirectML 
 
 ## How deployment works
 
-On build (Windows only), if `native/win-x64/directml/sherpa-onnx-c-api.dll` exists:
+On build/publish (Windows only), if `native/win-x64/directml/sherpa-onnx-c-api.dll` exists:
 
-1. MSBuild copies every `*.dll` from that folder into the app output (overwriting CPU NuGet copies).
-2. A marker file `directml.enabled` is written.
-3. At startup, `WindowsDirectMlAvailability` checks the marker, `sherpa-onnx-c-api.dll`, and the DML export in `onnxruntime.dll`.
+1. CPU Sherpa/ONNX DLLs from NuGet stay in the app output folder.
+2. DirectML DLLs are copied to `directml/` next to `Echo.App.exe` (never mixed into the root).
+3. `WindowsDirectMlAvailability` probes `directml/onnxruntime.dll` for the DML export.
+
+Publish: `.\build\publish.ps1` → `dist/win-x64/Echo.App.exe` (managed + CPU natives inside) and `directml/` beside it for GPU.
 
 ## Fallback behaviour
 
@@ -62,7 +64,8 @@ On build (Windows only), if `native/win-x64/directml/sherpa-onnx-c-api.dll` exis
 
 | Symptom | Likely cause |
 |---------|----------------|
-| No **GPU (DirectML)** in settings | DLLs missing or `directml.enabled` not in output |
+| No **GPU (DirectML)** in settings | `directml/` folder missing next to exe after build/publish |
+| **Ordinal Not Found** in `sherpa-onnx-c-api.dll` | Mixed CPU/DirectML natives in the same folder — keep CPU in root, DirectML in `directml/` |
 | DirectML option shown but slow/errors | Wrong onnxruntime.dll (CPU build) |
 | Load fails, falls back to CPU | Model ops not supported on DirectML; use CPU for that engine |
 | `OrtSessionOptionsAppendExecutionProvider_DML` missing | onnxruntime.dll is not the DirectML build |

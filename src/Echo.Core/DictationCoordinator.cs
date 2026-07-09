@@ -194,6 +194,7 @@ public sealed class DictationCoordinator : IDisposable
         try
         {
             var samples = _audio.StopRecording();
+
             if (samples.Length == 0)
             {
                 return;

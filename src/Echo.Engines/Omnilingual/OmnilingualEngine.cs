@@ -66,6 +66,17 @@ public sealed class OmnilingualEngine : ITranscriptionEngine, IDisposable
                 return Task.CompletedTask;
             }
         }
+        else if (requestedProvider == "cpu")
+        {
+            _logger.LogWarning("CPU provider failed for Omnilingual; falling back to DirectML");
+            if (TryCreateRecognizer(modelPath, tokensPath, "directml", out recognizer))
+            {
+                _resolvedDevice = "directml";
+                _loadedDevice = "directml";
+                _recognizer = recognizer;
+                return Task.CompletedTask;
+            }
+        }
 
         throw new InvalidOperationException(
             "Не удалось загрузить Omnilingual ASR модель. Проверьте целостность файлов.");

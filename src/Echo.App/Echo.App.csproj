@@ -40,26 +40,36 @@
     <DirectMlNativeReady Condition="Exists('$(DirectMlNativeDir)sherpa-onnx-c-api.dll')">true</DirectMlNativeReady>
   </PropertyGroup>
 
-  <Target Name="CopyDirectMlNative" AfterTargets="Build"
+  <Target Name="CopyDirectMlNative" AfterTargets="Build;Publish"
           Condition="'$(DirectMlNativeReady)' == 'true' and $([MSBuild]::IsOSPlatform('Windows'))">
+    <PropertyGroup>
+      <_DirectMlOutDir Condition="'$(PublishDir)' != ''">$(PublishDir)</_DirectMlOutDir>
+      <_DirectMlOutDir Condition="'$(_DirectMlOutDir)' == ''">$(OutputPath)</_DirectMlOutDir>
+    </PropertyGroup>
     <ItemGroup>
       <DirectMlNativeDlls Include="$(DirectMlNativeDir)*.dll" />
     </ItemGroup>
-    <Copy SourceFiles="@(DirectMlNativeDlls)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
-    <WriteLinesToFile File="$(OutputPath)directml.enabled"
-                      Lines="DirectML runtime deployed from native/win-x64/directml"
-                      Overwrite="true" />
-    <Message Importance="high" Text="Echo: copied DirectML native runtime to $(OutputPath)" />
+    <MakeDir Directories="$(_DirectMlOutDir)directml\" />
+    <Copy SourceFiles="@(DirectMlNativeDlls)" DestinationFolder="$(_DirectMlOutDir)directml\" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Echo: copied DirectML runtime to $(_DirectMlOutDir)directml\" />
   </Target>
 
-  <Target Name="CopyDirectMlNativePublish" AfterTargets="Publish"
-          Condition="'$(DirectMlNativeReady)' == 'true' and $([MSBuild]::IsOSPlatform('Windows'))">
+  <Target Name="PrepareWinPublish" BeforeTargets="_ComputeFilesToBundle"
+          DependsOnTargets="ComputeResolvedFilesToPublishList"
+          Condition="'$(RuntimeIdentifier)' == 'win-x64' and '$(PublishSingleFile)' == 'true'">
     <ItemGroup>
-      <DirectMlNativeDlls Include="$(DirectMlNativeDir)*.dll" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(RelativePath)').Contains('runtimes/linux'))
+                  Or $([System.String]::Copy('%(RelativePath)').Contains('runtimes/macos'))
+                  Or $([System.String]::Copy('%(RelativePath)').EndsWith('.pdb'))
+                  Or $([System.String]::Copy('%(RelativePath)').EndsWith('.lib'))
+                  Or $([System.String]::Copy('%(RelativePath)').EndsWith('.metal'))" />
+      <DirectMlNativeForPublish Include="$(DirectMlNativeDir)*.dll" Condition="'$(DirectMlNativeReady)' == 'true'" />
+      <ResolvedFileToPublish Include="@(DirectMlNativeForPublish)" Condition="'$(DirectMlNativeReady)' == 'true'">
+        <RelativePath>directml\%(DirectMlNativeForPublish.Filename)%(DirectMlNativeForPublish.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
     </ItemGroup>
-    <Copy SourceFiles="@(DirectMlNativeDlls)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
-    <WriteLinesToFile File="$(PublishDir)directml.enabled"
-                      Lines="DirectML runtime deployed from native/win-x64/directml"
-                      Overwrite="true" />
   </Target>
 </Project>

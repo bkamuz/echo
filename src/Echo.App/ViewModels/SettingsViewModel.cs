@@ -117,12 +117,10 @@ public partial class SettingsViewModel : ObservableObject
             return [CpuDeviceOption];
         }
 
-        if (_directMlAvailability.IsAvailable)
-        {
-            return [CpuDeviceOption, DirectMlDeviceOption];
-        }
-
-        return [CpuDeviceOption];
+        var dmlAvailable = _directMlAvailability.IsAvailable;
+        return dmlAvailable
+            ? [CpuDeviceOption, DirectMlDeviceOption]
+            : [CpuDeviceOption];
     }
     public IReadOnlyList<string> WhisperSizes => AppConfig.WhisperSizes;
     public IReadOnlyList<string> GigaAmSizes => AppConfig.GigaAmSizes;
@@ -438,6 +436,12 @@ public partial class SettingsViewModel : ObservableObject
         {
             _isLoadingFromConfig = false;
         }
+    }
+
+    public void RefreshDeviceOptions()
+    {
+        OnPropertyChanged(nameof(ComputeDeviceOptions));
+        EnsureValidComputeDevice();
     }
 
     private ComputeDeviceOption ResolveComputeDeviceOption(string deviceId)

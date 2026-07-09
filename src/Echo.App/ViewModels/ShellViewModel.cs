@@ -37,7 +37,7 @@ public partial class ShellViewModel : ObservableObject
         CurrentPage = page switch
         {
             AppPage.Home => ActivateHome(),
-            AppPage.Settings => _settings,
+            AppPage.Settings => ActivateSettings(),
             AppPage.History => ActivateHistory(),
             _ => throw new ArgumentOutOfRangeException(nameof(page), page, null),
         };
@@ -47,6 +47,12 @@ public partial class ShellViewModel : ObservableObject
     {
         _home.NotifyConfigChanged();
         return _home;
+    }
+
+    private SettingsViewModel ActivateSettings()
+    {
+        _settings.RefreshDeviceOptions();
+        return _settings;
     }
 
     private HistoryViewModel ActivateHistory()
