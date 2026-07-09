@@ -47,6 +47,9 @@ pwsh ./scripts/new-release.ps1 -Bump patch
 |-----------|-------|--------|
 | Windows | `.zip` | `Echo.App.exe` + папка `directml/` (GPU) |
 | Linux | `.tar.gz` | `./Echo.App` |
+| Linux | `.deb` | `sudo apt install ./Echo-*-linux-x64.deb` → «Echo» в меню |
+| Linux | `.AppImage` | `chmod +x Echo-*.AppImage && ./Echo-*.AppImage` |
+| Linux | `.flatpak` | `flatpak install --user ./Echo-*.flatpak` |
 | macOS (Apple Silicon) | `.tar.gz` | `./Echo.App` |
 
 Windows-релиз включает **GPU (DirectML)** runtime в zip. CI **восстанавливает DLL из Actions cache** (без сборки Sherpa на сервере). Кэш заполняется workflow [**Seed DirectML cache**](.github/workflows/seed-directml-cache.yml) из maintainer-release `directml-runtime-<версия>`. Пересборка Sherpa — только через [**Cache DirectML runtime**](.github/workflows/cache-directml.yml) на `windows-latest` при смене версии. Подробнее: [`docs/gpu-directml.md`](docs/gpu-directml.md).
@@ -58,16 +61,20 @@ Windows-релиз включает **GPU (DirectML)** runtime в zip. CI **во
 ```
 
 ```bash
-chmod +x build/publish.sh build/portable.sh
+chmod +x build/publish.sh build/portable.sh build/linux-packages.sh build/linux/*.sh
 ./build/portable.sh linux-x64
+./build/linux-packages.sh
 ./build/portable.sh osx-arm64
 ```
 
-| ОС | Скрипт | Архив |
-|----|--------|-------|
+| ОС | Скрипт | Артефакты |
+|----|--------|-----------|
 | Windows | `portable.ps1` | `.zip` |
 | Linux | `portable.sh linux-x64` | `.tar.gz` |
+| Linux | `linux-packages.sh` | `.deb`, `.AppImage`, `.flatpak` (если установлены `dpkg-deb` / `flatpak-builder`) |
 | macOS | `portable.sh osx-arm64` | `.tar.gz` |
+
+На Linux portable-архив и пакеты требуют `chmod +x Echo.App` только если права потерялись при копировании; скрипты сборки выставляют `+x` автоматически.
 
 ## Установщик Windows
 

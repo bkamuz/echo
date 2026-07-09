@@ -11,8 +11,10 @@ public sealed class LinuxHotkeyService : IHotkeyService
 
     public void Configure(string hotkey) { }
 
-    public void Start() =>
-        throw new PlatformNotSupportedException("Hotkey service on Linux requires X11/evdev implementation.");
+    public void Start()
+    {
+        // Global hotkeys are not implemented on Linux yet; keep the app usable.
+    }
 
     public void Stop() { }
 }

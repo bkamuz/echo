@@ -42,7 +42,7 @@
   </PropertyGroup>
 
   <Target Name="CopyDirectMlNative" AfterTargets="Build;Publish"
-          Condition="'$(DirectMlNativeReady)' == 'true' and $([MSBuild]::IsOSPlatform('Windows'))">
+          Condition="'$(DirectMlNativeReady)' == 'true' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))">
     <PropertyGroup>
       <_DirectMlOutDir Condition="'$(PublishDir)' != ''">$(PublishDir)</_DirectMlOutDir>
       <_DirectMlOutDir Condition="'$(_DirectMlOutDir)' == ''">$(OutputPath)</_DirectMlOutDir>
@@ -71,6 +71,31 @@
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PrepareLinuxPublish" BeforeTargets="_ComputeFilesToBundle"
+          DependsOnTargets="ComputeResolvedFilesToPublishList"
+          Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux')) and '$(PublishSingleFile)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(RelativePath)').Contains('runtimes/win'))
+                  Or $([System.String]::Copy('%(RelativePath)').Contains('runtimes/macos'))
+                  Or $([System.String]::Copy('%(RelativePath)').Contains('directml'))
+                  Or $([System.String]::Copy('%(RelativePath)').EndsWith('.pdb'))
+                  Or $([System.String]::Copy('%(RelativePath)').EndsWith('.metal'))" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PrepareOsxPublish" BeforeTargets="_ComputeFilesToBundle"
+          DependsOnTargets="ComputeResolvedFilesToPublishList"
+          Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx')) and '$(PublishSingleFile)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(RelativePath)').Contains('runtimes/linux'))
+                  Or $([System.String]::Copy('%(RelativePath)').Contains('runtimes/win'))
+                  Or $([System.String]::Copy('%(RelativePath)').Contains('directml'))
+                  Or $([System.String]::Copy('%(RelativePath)').EndsWith('.pdb'))" />
     </ItemGroup>
   </Target>
 </Project>

@@ -6,7 +6,7 @@ REG_TOKEN="${1:?Usage: setup-runner.sh <registration-token>}"
 echo "=== Installing dependencies ==="
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq zip unzip curl ca-certificates libicu-dev
+apt-get install -y -qq zip unzip curl ca-certificates libicu-dev dpkg-dev wget
 
 if ! command -v dotnet >/dev/null 2>&1; then
   echo "Installing .NET 10 SDK..."

@@ -1,0 +1,29 @@
+app-id: com.echo.App
+runtime: org.freedesktop.Platform
+runtime-version: "24.08"
+sdk: org.freedesktop.Sdk
+command: Echo.App
+
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=xdg-config/echo:create
+  - --talk-name=org.freedesktop.Notifications
+
+modules:
+  - name: echo
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 Echo.App /app/bin/Echo.App
+      - install -Dm644 com.echo.App.desktop /app/share/applications/com.echo.App.desktop
+      - install -Dm644 echo.png /app/share/icons/hicolor/256x256/apps/com.echo.App.png
+    sources:
+      - type: file
+        path: Echo.App
+      - type: file
+        path: com.echo.App.desktop
+      - type: file
+        path: echo.png

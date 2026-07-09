@@ -82,7 +82,7 @@ jobs:
       - name: Publish all portable archives
         shell: bash
         run: |
-          chmod +x build/publish.sh build/portable.sh build/portable-all.sh
+          chmod +x build/publish.sh build/portable.sh build/portable-all.sh build/linux-packages.sh build/linux/*.sh
           ./build/portable-all.sh "$VERSION"
 
       - name: Upload win-x64 artifact
@@ -96,8 +96,12 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: echo-linux-x64
-          path: dist/releases/Echo-${{ env.VERSION }}-linux-x64-portable.tar.gz
-          if-no-files-found: error
+          path: |
+            dist/releases/Echo-${{ env.VERSION }}-linux-x64-portable.tar.gz
+            dist/releases/Echo-${{ env.VERSION }}-linux-x64.deb
+            dist/releases/Echo-${{ env.VERSION }}-linux-x64.AppImage
+            dist/releases/Echo-${{ env.VERSION }}-linux-x64.flatpak
+          if-no-files-found: warn
 
       - name: Upload osx-arm64 artifact
         uses: actions/upload-artifact@v7
@@ -133,4 +137,7 @@ jobs:
           files: |
             dist/releases/Echo-${{ env.VERSION }}-win-x64-portable.zip
             dist/releases/Echo-${{ env.VERSION }}-linux-x64-portable.tar.gz
+            dist/releases/Echo-${{ env.VERSION }}-linux-x64.deb
+            dist/releases/Echo-${{ env.VERSION }}-linux-x64.AppImage
+            dist/releases/Echo-${{ env.VERSION }}-linux-x64.flatpak
             dist/releases/Echo-${{ env.VERSION }}-osx-arm64-portable.tar.gz

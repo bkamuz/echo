@@ -41,6 +41,7 @@ publish_win_x64() {
 
 publish_win_x64
 bash "$root/build/portable.sh" linux-x64 "$version"
+bash "$root/build/linux-packages.sh" "$version"
 bash "$root/build/portable.sh" osx-arm64 "$version"
 
 echo "All portable archives in $release_dir"
