@@ -16,7 +16,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Resolve DirectML cache key
         id: directml
@@ -50,7 +50,7 @@ jobs:
               }
             }
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: native/win-x64/directml
           key: ${{ steps.directml.outputs.key }}

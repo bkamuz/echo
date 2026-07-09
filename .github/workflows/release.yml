@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Resolve version
         shell: bash
@@ -44,7 +44,7 @@ jobs:
           echo "key=directml-sherpa-${version}" >> "$GITHUB_OUTPUT"
 
       - name: Restore DirectML runtime cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: directml-cache
         with:
           path: native/win-x64/directml
@@ -86,21 +86,21 @@ jobs:
           ./build/portable-all.sh "$VERSION"
 
       - name: Upload win-x64 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: echo-win-x64
           path: dist/releases/Echo-${{ env.VERSION }}-win-x64-portable.zip
           if-no-files-found: error
 
       - name: Upload linux-x64 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: echo-linux-x64
           path: dist/releases/Echo-${{ env.VERSION }}-linux-x64-portable.tar.gz
           if-no-files-found: error
 
       - name: Upload osx-arm64 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: echo-osx-arm64
           path: dist/releases/Echo-${{ env.VERSION }}-osx-arm64-portable.tar.gz
@@ -115,19 +115,19 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Resolve version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist/releases
           pattern: echo-*
           merge-multiple: true
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           files: |
