@@ -7,6 +7,9 @@ version="${2:-}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out_dir="$root/dist/$rid"
 main_exe="Echo.App"
+if [[ "$rid" == win-* ]]; then
+  main_exe="Echo.App.exe"
+fi
 
 publish_args=(
   "$root/src/Echo.App/Echo.App.csproj"
