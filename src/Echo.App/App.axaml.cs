@@ -87,6 +87,13 @@ public partial class App : Application
             {
                 tray.AttachMainWindow(desktop.MainWindow);
             }
+
+            if (OperatingSystem.IsLinux())
+            {
+                LinuxApplicationClipboardBridge.Register(
+                    new AvaloniaApplicationClipboard(() => desktop.MainWindow));
+            }
+
             desktop.Exit += (_, _) =>
             {
                 coordinator.Stop();

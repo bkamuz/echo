@@ -2,6 +2,42 @@
 
 Кроссплатформенное приложение диктовки с локальным распознаванием речи.
 
+## Статус платформ
+
+Сводка по глобальному хоткею, записи звука, распознаванию и автовставке текста.
+
+### Проверено
+
+| Среда | Заметки |
+|-------|---------|
+| **Windows 10/11 (x64)** | Полный цикл диктовки: хоткей (Win32 hook), запись (WASAPI), автовставка (буфер обмена или SendInput). Опционально GPU через DirectML. |
+| **Ubuntu, GNOME на Wayland** | Полный цикл диктовки: хоткей (evdev / hotkey-bridge), запись (PipeWire / ALSA), автовставка через буфер Avalonia + ydotool (Ctrl+V). Панель GNOME не мигает. Нужны `ydotool` / `ydotoold` и доступ к `/dev/input` (группа `input`). |
+
+### Реализовано, но не проверено
+
+| Среда | Хоткей | Автовставка | Зависимости |
+|-------|--------|-------------|-------------|
+| **Linux, X11** (любой DE) | evdev / hotkey-bridge | `xdotool` (Ctrl+V) или AT-SPI | `xclip` / `xsel`, `xdotool`; для AT-SPI — `python3-gi` и включённый accessibility |
+| **Linux, wlroots Wayland** (Sway, Hyprland, …) | evdev / hotkey-bridge | `wtype` (Ctrl+V) | `wl-clipboard`, `wtype` |
+| **Linux, KDE Plasma Wayland** | evdev / hotkey-bridge | AT-SPI или только копирование в буфер (нет ydotool / wtype) | AT-SPI в настройках KDE |
+| **Linux, KDE / GNOME на X11** | evdev / hotkey-bridge | `xdotool` или AT-SPI | как для X11 |
+| **Linux, Flatpak** | с ограничениями sandbox | зависит от установленных утилит внутри песочницы | автоустановка системных пакетов недоступна |
+
+На **GNOME Wayland** AT-SPI намеренно отключён: Mutter не отдаёт сфокусированный виджет без включения специальных возможностей.
+
+Цепочка автовставки на Linux: AT-SPI → ydotool (только GNOME Wayland) → xdotool (X11) → wtype (wlroots Wayland) → запасной режим «только буфер».
+
+### Ещё не сделано
+
+| Среда | Что отсутствует |
+|-------|-----------------|
+| **macOS (Apple Silicon)** | Заглушки: AVFoundation (микрофон), CGEventTap (хоткей), Accessibility API (фокус и вставка). UI и движки собираются, полный цикл диктовки не работает. |
+| **macOS (Intel)** | Не в матрице CI / релизов |
+| **Windows ARM** | Не в матрице сборки |
+| **Linux без X11 / Wayland** | Сессия не определяется — хоткей и вставка недоступны |
+
+Если проверили среду из второй таблицы — откройте issue или PR с кратким описанием дистрибутива, DE и рабочих зависимостей.
+
 ## Сборка
 
 ```bash

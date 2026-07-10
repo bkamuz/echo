@@ -97,10 +97,10 @@ public partial class LinuxDependenciesDialog : Window
     {
         AccessibilityInstructions.Text = LinuxAccessibilityGuide.GetInstructions();
         LimitationsText.Text = LinuxDependencyCatalog.UsesGnomeWaylandYdotool
-            ? "ydotool работает в браузерах, офисных приложениях и большинстве полей ввода. "
-              + "В играх, ncurses-терминалах и sandbox-приложениях останется только копирование в буфер."
+            ? "Без спец. возможностей Echo использует буфер обмена — GNOME показывает значок в панели. "
+              + "С включёнными спец. возможностями вставка идёт напрямую, без мигания."
             : LinuxAccessibilityGuide.Limitations;
-        OpenAccessibilityButton.IsVisible = !LinuxDependencyCatalog.UsesGnomeWaylandYdotool;
+        OpenAccessibilityButton.IsVisible = true;
     }
 
     private static string GetPackagesStepSubtitle()
@@ -119,8 +119,8 @@ public partial class LinuxDependenciesDialog : Window
     {
         if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
         {
-            return "На GNOME Wayland автовставка идёт через ydotool — нужны ydotoold и группа input. "
-                + "AT-SPI для вставки здесь не используется.";
+            return "Включите специальные возможности GNOME — тогда вставка без буфера (без значка на панели). "
+                + "Также нужны ydotoold и группа input для хоткея.";
         }
 
         return "Для автоматической вставки через AT-SPI нужен доступ к специальным возможностям.";

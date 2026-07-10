@@ -8,10 +8,10 @@ public static class LinuxAccessibilityGuide
     {
         if (LinuxSession.IsGnome && LinuxSession.IsWayland)
         {
-            return "GNOME Wayland: Echo вставляет текст через ydotool (эмуляция Ctrl+V). "
-                + "AT-SPI здесь не используется. "
-                + "Убедитесь, что ydotool установлен, демон ydotoold запущен, "
-                + "и ваш пользователь добавлен в группу input (может потребоваться перезаход в сессию).";
+            return "GNOME Wayland: включите «Настройки» → «Специальные возможности» → "
+                + "«Вспомогательные технологии» (Assistive Technology Support). "
+                + "Тогда Echo вставляет текст напрямую через AT-SPI — без буфера обмена и без мигания индикатора на панели. "
+                + "Если спец. возможности выключены, используется буфер + Ctrl+V (ydotool) — появится значок буфера.";
         }
 
         if (LinuxSession.IsGnome)

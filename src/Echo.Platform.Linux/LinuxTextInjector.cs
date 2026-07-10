@@ -29,7 +29,7 @@ public sealed class LinuxTextInjector : ITextInjector
                         text,
                         method,
                         typeDelayMs,
-                        GetPreInjectDelayMs(),
+                        DefaultPreInjectDelayMs,
                         cancellationToken);
                     return attempt.Result;
                 },
@@ -55,7 +55,7 @@ public sealed class LinuxTextInjector : ITextInjector
                     text,
                     method,
                     typeDelayMs,
-                    GetPreInjectDelayMs(),
+                    DefaultPreInjectDelayMs,
                     cancellationToken),
                 cancellationToken).ConfigureAwait(false);
         }
@@ -63,11 +63,5 @@ public sealed class LinuxTextInjector : ITextInjector
         {
             InjectGate.Release();
         }
-    }
-
-    private static int GetPreInjectDelayMs()
-    {
-        // Default delay gives the target window time to regain focus after hotkey release.
-        return DefaultPreInjectDelayMs;
     }
 }

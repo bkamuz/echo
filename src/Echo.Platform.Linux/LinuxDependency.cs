@@ -16,10 +16,9 @@ public sealed record LinuxDependency(
 public static class LinuxDependencyCatalog
 {
     /// <summary>
-    /// Mutter on GNOME Wayland does not expose focused widgets to AT-SPI; ydotool is used instead.
+    /// AT-SPI packages are needed on all sessions where direct insert may run (including GNOME Wayland).
     /// </summary>
-    public static bool RequiresAtSpiPackages =>
-        !(LinuxSession.IsWayland && LinuxSession.IsGnome);
+    public static bool RequiresAtSpiPackages => true;
 
     public static bool UsesGnomeWaylandYdotool =>
         LinuxSession.IsWayland && LinuxSession.IsGnome;
@@ -64,6 +63,13 @@ public static class LinuxDependencyCatalog
         [LinuxPackageManager.Apt] = "xclip",
         [LinuxPackageManager.Dnf] = "xclip",
         [LinuxPackageManager.Pacman] = "xclip",
+    };
+
+    private static readonly Dictionary<LinuxPackageManager, string> GpastePackages = new()
+    {
+        [LinuxPackageManager.Apt] = "gpaste-2",
+        [LinuxPackageManager.Dnf] = "gpaste",
+        [LinuxPackageManager.Pacman] = "gpaste",
     };
 
     private static readonly Dictionary<LinuxPackageManager, string> PythonGiPackages = new()
@@ -136,6 +142,14 @@ public static class LinuxDependencyCatalog
                     "Нужен для автовставки Ctrl+V в GNOME на Wayland (требуется ydotoold и группа input).",
                     "ydotool",
                     YdotoolPackages));
+                dependencies.Add(new(
+                    "gpaste-client",
+                    "Буфер без мигания панели (GPaste)",
+                    "Рекомендуется на GNOME Wayland: автовставка без значка на панели. "
+                    + "Альтернатива: sudo apt install xclip. "
+                    + "После GPaste перезайдите в сессию и включите расширение.",
+                    "gpaste-client",
+                    GpastePackages));
             }
             else
             {
@@ -183,7 +197,7 @@ public static class LinuxDependencyCatalog
 
         var catalog = ForCurrentSession();
         var required = catalog
-            .Where(dependency => dependency.Id is not ("wtype" or "ydotool" or "sg"))
+            .Where(dependency => dependency.Id is not ("wtype" or "ydotool" or "sg" or "gpaste-client"))
             .Where(dependency => !IsDependencySatisfied(dependency))
             .ToList();
 
@@ -217,7 +231,8 @@ public static class LinuxDependencyCatalog
             "python3-gi" or "atspi" =>
                 !RequiresAtSpiPackages || LinuxAtSpiInserter.IsAvailable,
             "ydotool" => IsYdotoolSatisfied(),
-            "wl-copy" => LinuxCommandHelper.CommandExists("wl-copy"),
+            "wl-copy" => LinuxClipboard.IsAvailable,
+            "gpaste-client" => LinuxCommandHelper.CommandExists("gpaste-client"),
             "xclip" => LinuxCommandHelper.CommandExists("xclip") || LinuxCommandHelper.CommandExists("xsel"),
             _ => LinuxCommandHelper.CommandExists(dependency.Command),
         };

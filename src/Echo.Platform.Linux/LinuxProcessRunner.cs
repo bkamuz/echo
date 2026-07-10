@@ -59,19 +59,32 @@ internal static class LinuxProcessRunner
         CancellationToken cancellationToken,
         int timeoutMs = DefaultTimeoutMs)
     {
+        var exitCode = RunCommandWithInputExitCode(fileName, arguments, input, cancellationToken, timeoutMs);
+        if (exitCode != 0)
+        {
+            throw new InvalidOperationException($"{fileName} exited with code {exitCode}.");
+        }
+    }
+
+    public static int RunCommandWithInputExitCode(
+        string fileName,
+        IReadOnlyList<string> arguments,
+        string input,
+        CancellationToken cancellationToken,
+        int timeoutMs = DefaultTimeoutMs)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         var startInfo = CreateStartInfo(fileName, arguments, redirectInput: true);
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException($"Failed to start {fileName}.");
+        using var process = Process.Start(startInfo);
+        if (process is null)
+        {
+            return 1;
+        }
 
         process.StandardInput.Write(input);
         process.StandardInput.Close();
         WaitForProcess(process, cancellationToken, timeoutMs);
-
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidOperationException($"{fileName} exited with code {process.ExitCode}.");
-        }
+        return process.ExitCode;
     }
 
     private static ProcessStartInfo CreateStartInfo(

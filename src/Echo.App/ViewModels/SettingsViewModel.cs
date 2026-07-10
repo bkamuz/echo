@@ -148,8 +148,8 @@ public partial class SettingsViewModel : ObservableObject
                 new(
                     "auto",
                     "Авто",
-                    "На GNOME Wayland — ydotool (Ctrl+V). В X11 и wlroots — AT-SPI или xdotool/wtype. "
-                    + "Если автовставка недоступна — текст копируется в буфер."),
+                    "На GNOME Wayland — вставка через буфер Echo и ydotool (Ctrl+V), без wl-copy. "
+                    + "Если мигает панель — перезапустите Echo."),
                 new(
                     "clipboard",
                     "Вставка из буфера",

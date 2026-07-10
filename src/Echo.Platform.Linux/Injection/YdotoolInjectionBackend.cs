@@ -71,11 +71,19 @@ internal sealed class YdotoolInjectionBackend : ILinuxInjectionBackend
 
     private static TextInjectionResult? TryPaste(string text, CancellationToken cancellationToken)
     {
-        string? savedText = null;
-        var hadText = false;
-
         try
         {
+            if (LinuxSession.IsGnome && LinuxSession.IsWayland)
+            {
+                LinuxClipboard.Write(text, cancellationToken);
+                return RunYdotool(["key", "29:1", "47:1", "47:0", "29:0"], cancellationToken)
+                    ? TextInjectionResult.AutoPasted
+                    : null;
+            }
+
+            string? savedText = null;
+            var hadText = false;
+
             savedText = LinuxClipboard.Read(cancellationToken);
             hadText = !string.IsNullOrEmpty(savedText);
             LinuxClipboard.Write(text, cancellationToken);

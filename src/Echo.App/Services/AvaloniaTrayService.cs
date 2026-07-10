@@ -16,6 +16,7 @@ public sealed class AvaloniaTrayService : ITrayStateService
     private readonly byte[] _recordingIconBytes;
     private readonly byte[] _processingIconBytes;
     private Window? _mainWindow;
+    private DictationOverlayState _currentState = DictationOverlayState.Hidden;
 
     public AvaloniaTrayService(ITaskbarIconSync? taskbarIconSync = null)
     {
@@ -60,6 +61,13 @@ public sealed class AvaloniaTrayService : ITrayStateService
 
     public void SetState(DictationOverlayState state)
     {
+        if (_currentState == state)
+        {
+            return;
+        }
+
+        _currentState = state;
+
         var (icon, iconBytes, tooltip) = state switch
         {
             DictationOverlayState.Hidden => (_idleIcon, _idleIconBytes, "Echo — готов"),
@@ -80,15 +88,18 @@ public sealed class AvaloniaTrayService : ITrayStateService
 
         void Apply()
         {
-            mainWindow.Icon = icon;
-
-            var handle = mainWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-            if (handle != IntPtr.Zero)
+            if (!OperatingSystem.IsLinux())
             {
-                _taskbarIconSync?.Attach(handle);
-            }
+                mainWindow.Icon = icon;
 
-            _taskbarIconSync?.ApplyIcon(iconBytes, state, tooltip);
+                var handle = mainWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+                if (handle != IntPtr.Zero)
+                {
+                    _taskbarIconSync?.Attach(handle);
+                }
+
+                _taskbarIconSync?.ApplyIcon(iconBytes, state, tooltip);
+            }
         }
 
         if (Dispatcher.UIThread.CheckAccess())

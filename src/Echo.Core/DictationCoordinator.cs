@@ -298,7 +298,10 @@ public sealed class DictationCoordinator : IDisposable
         finally
         {
             _targetWindow = 0;
-            _tray.SetState(DictationOverlayState.Hidden);
+            if (!OperatingSystem.IsLinux())
+            {
+                _tray.SetState(DictationOverlayState.Hidden);
+            }
         }
     }
 

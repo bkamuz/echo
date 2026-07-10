@@ -80,7 +80,7 @@ public static class LinuxPlatformCapabilities
         if (!supportsInject)
         {
             var injectHint = LinuxDependencyCatalog.UsesGnomeWaylandYdotool
-                ? "Установите wl-clipboard и ydotool (с ydotoold) для автовставки на GNOME Wayland."
+                ? "Установите ydotool (с ydotoold) для автовставки на GNOME Wayland."
                 : LinuxSession.IsWayland
                     ? "Установите wl-clipboard и python3-gi для вставки текста."
                     : "Установите xclip и xdotool для вставки текста.";
