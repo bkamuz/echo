@@ -3,12 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using echo.Abstractions.Platform;
+using echo.App.DependencyInjection;
 using echo.App.Services;
 using echo.App.ViewModels;
 using echo.Core;
 using echo.Core.DependencyInjection;
 using echo.Engines.DependencyInjection;
-using echo.App.DependencyInjection;
 using echo.Platform.Linux;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -40,6 +40,7 @@ public partial class App : Application
                 services.AddSingleton<HomeViewModel>();
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<HistoryViewModel>();
+                services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<ShellViewModel>();
                 services.AddSingleton<ITrayStateService>(sp =>
                     new AvaloniaTrayService(sp.GetService<ITaskbarIconSync>()));

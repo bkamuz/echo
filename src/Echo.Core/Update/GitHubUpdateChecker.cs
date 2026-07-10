@@ -1,0 +1,77 @@
+using System.Text.Json;
+using echo.Abstractions.Core;
+using Microsoft.Extensions.Logging;
+
+namespace echo.Core.Update;
+
+public sealed class GitHubUpdateChecker : IUpdateChecker
+{
+    private readonly HttpClient _http;
+    private readonly ConfigStore _configStore;
+    private readonly ILogger<GitHubUpdateChecker> _logger;
+
+    public GitHubUpdateChecker(
+        HttpClient http,
+        ConfigStore configStore,
+        ILogger<GitHubUpdateChecker> logger)
+    {
+        _http = http;
+        _configStore = configStore;
+        _logger = logger;
+    }
+
+    public async Task<UpdateInfo?> CheckForUpdateAsync(CancellationToken cancellationToken = default)
+    {
+        if (!UpdateEnvironment.IsPublishedBuild)
+        {
+            _logger.LogDebug("Skipping update check: not a published Windows build");
+            return null;
+        }
+
+        var config = _configStore.Load();
+        if (!UpdateEnvironment.ShouldQueryRemote(config.LastUpdateCheckUtc))
+        {
+            _logger.LogDebug("Skipping remote update check; using cached pending update if any");
+            return UpdateEnvironment.TryCreatePendingUpdate(config);
+        }
+
+        try
+        {
+            var url = $"https://api.github.com/repos/{UpdateEnvironment.GitHubOwner}/{UpdateEnvironment.GitHubRepo}/releases/latest";
+            using var response = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var update = GitHubReleaseParser.TryParseLatestRelease(json, UpdateEnvironment.CurrentVersion);
+            PersistCheckResult(config, update);
+            return update;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            _logger.LogWarning(ex, "Update check failed");
+            config.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+            _configStore.Save(config);
+            return UpdateEnvironment.TryCreatePendingUpdate(config);
+        }
+    }
+
+    private void PersistCheckResult(AppConfig config, UpdateInfo? update)
+    {
+        config.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+
+        if (update is null)
+        {
+            config.PendingUpdateVersion = null;
+            config.PendingUpdateDownloadUrl = null;
+            config.PendingUpdateReleaseNotesUrl = null;
+        }
+        else
+        {
+            config.PendingUpdateVersion = update.Version.ToString();
+            config.PendingUpdateDownloadUrl = update.DownloadUrl;
+            config.PendingUpdateReleaseNotesUrl = update.ReleaseNotesUrl;
+        }
+
+        _configStore.Save(config);
+    }
+}

@@ -81,7 +81,7 @@
             x:Name="TitleBarHost"
             Classes="shell-header-main"
             Cursor="Arrow">
-      <Grid ColumnDefinitions="*,144">
+      <Grid ColumnDefinitions="*,Auto,144">
         <Border Grid.Column="0"
                 Background="Transparent"
                 HorizontalAlignment="Stretch"
@@ -102,6 +102,21 @@
           </StackPanel>
         </Border>
         <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Margin="0,0,8,0"
+                    IsVisible="{Binding Update.IsAvailable}">
+          <Button Classes="icon-action"
+                  Command="{Binding Update.ApplyCommand}"
+                  IsEnabled="{Binding !Update.IsApplying}"
+                  ToolTip.Tip="{Binding Update.Tooltip}">
+            <PathIcon Data="{StaticResource IconDownload}"
+                      Width="16"
+                      Height="16"/>
+          </Button>
+        </StackPanel>
+        <StackPanel Grid.Column="2"
                     x:Name="ClientCaptionButtons"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"

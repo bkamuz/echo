@@ -1,3 +1,4 @@
+using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 using Microsoft.Extensions.DependencyInjection;
 using System.Runtime.Versioning;
@@ -16,6 +17,7 @@ public static class WindowsServiceCollectionExtensions
         services.AddSingleton<IDirectMlAvailability, WindowsDirectMlAvailability>();
         services.AddSingleton<ITaskbarIconSync, WindowsTaskbarIconSync>();
         services.AddSingleton<IAutoStartService, WindowsAutoStartService>();
+        services.AddHttpClient<IUpdateApplier, WindowsUpdateApplier>();
         return services;
     }
 }

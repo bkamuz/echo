@@ -11,6 +11,8 @@ public partial class ShellViewModel : ObservableObject
 
     public AppStatusViewModel StatusBar { get; }
 
+    public UpdateViewModel Update { get; }
+
     [ObservableProperty]
     private object _currentPage;
 
@@ -21,12 +23,14 @@ public partial class ShellViewModel : ObservableObject
         HomeViewModel home,
         SettingsViewModel settings,
         HistoryViewModel history,
-        AppStatusViewModel statusBar)
+        AppStatusViewModel statusBar,
+        UpdateViewModel update)
     {
         _home = home;
         _settings = settings;
         _history = history;
         StatusBar = statusBar;
+        Update = update;
         _currentPage = home;
     }
 

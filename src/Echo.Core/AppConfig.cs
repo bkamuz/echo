@@ -52,6 +52,18 @@ public sealed class AppConfig
     [JsonPropertyName("start_with_system")]
     public bool StartWithSystem { get; set; }
 
+    [JsonPropertyName("last_update_check_utc")]
+    public DateTimeOffset? LastUpdateCheckUtc { get; set; }
+
+    [JsonPropertyName("pending_update_version")]
+    public string? PendingUpdateVersion { get; set; }
+
+    [JsonPropertyName("pending_update_download_url")]
+    public string? PendingUpdateDownloadUrl { get; set; }
+
+    [JsonPropertyName("pending_update_release_notes_url")]
+    public string? PendingUpdateReleaseNotesUrl { get; set; }
+
     [JsonPropertyName("extra")]
     public Dictionary<string, JsonElement> Extra { get; set; } = new();
 
