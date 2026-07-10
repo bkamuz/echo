@@ -74,7 +74,7 @@ public sealed class SettingsApplyService
                     return;
                 }
 
-                _status.SetStatusTemporary("Модель не загружена — скачайте в настройках", StatusClearMs);
+                _status.SetStatusTemporary(AppStatusViewModel.ModelMissingStatus, StatusClearMs, alert: true);
             });
         }
         catch (Exception)

@@ -60,14 +60,15 @@ public partial class App : Application
 
             coordinator.Start();
 
+            var status = Services.GetRequiredService<AppStatusViewModel>();
             if (OperatingSystem.IsLinux())
             {
                 LinuxPlatformCapabilities.Refresh();
-                var warning = LinuxPlatformCapabilities.StartupWarning;
-                if (!string.IsNullOrWhiteSpace(warning))
-                {
-                    Services.GetRequiredService<AppStatusViewModel>().SetStatus(warning);
-                }
+                status.SetPlatformWarning(LinuxPlatformCapabilities.StartupWarning);
+            }
+            else
+            {
+                status.RefreshReadiness();
             }
 
             var startMinimized = (desktop.Args ?? [])

@@ -78,21 +78,14 @@ public sealed class LinuxDependencyPromptService
 
     private void ApplyHotkeyStatus()
     {
-        if (LinuxPlatformCapabilities.SupportsGlobalHotkey)
+        string? platformWarning = null;
+        if (!LinuxPlatformCapabilities.SupportsGlobalHotkey
+            || LinuxPlatformCapabilities.MissingDependencies.Count > 0)
         {
-            if (LinuxPlatformCapabilities.MissingDependencies.Count == 0)
-            {
-                _status.SetStatus(AppStatusViewModel.ReadyStatus);
-            }
-
-            return;
+            platformWarning = LinuxPlatformCapabilities.StartupWarning;
         }
 
-        var warning = LinuxPlatformCapabilities.StartupWarning;
-        if (!string.IsNullOrWhiteSpace(warning))
-        {
-            _status.SetStatus(warning);
-        }
+        _status.SetPlatformWarning(platformWarning);
     }
 
     private static bool IsPromptDismissed(AppConfig config) =>

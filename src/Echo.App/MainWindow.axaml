@@ -172,10 +172,11 @@
                      Height="3"
                      Margin="0,0,10,0"
                      VerticalAlignment="Center"/>
-        <TextBlock Text="{Binding StatusBar.StatusText}"
+        <TextBlock Classes="status-text"
+                   Classes.alert="{Binding StatusBar.IsAlert}"
+                   Text="{Binding StatusBar.StatusText}"
                    FontSize="12"
-                   VerticalAlignment="Center"
-                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                   VerticalAlignment="Center"/>
       </DockPanel>
     </Border>
   </Grid>

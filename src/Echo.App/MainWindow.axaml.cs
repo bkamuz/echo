@@ -29,18 +29,10 @@ public partial class MainWindow : Window
         if (OperatingSystem.IsLinux())
         {
             App.Services.GetRequiredService<DictationCoordinator>().RestartHotkey();
-            var hotkey = App.Services.GetRequiredService<IHotkeyService>();
-            if (!hotkey.IsActive)
-            {
-                var message = LinuxHotkeySetup.GetSetupMessage();
-                if (!string.IsNullOrWhiteSpace(message))
-                {
-                    App.Services.GetRequiredService<AppStatusViewModel>().SetStatus(message);
-                }
-            }
         }
 
         await TryShowDependencyPromptAsync();
+        App.Services.GetRequiredService<AppStatusViewModel>().RefreshReadiness();
     }
 
     private void OnActivated(object? sender, EventArgs e)

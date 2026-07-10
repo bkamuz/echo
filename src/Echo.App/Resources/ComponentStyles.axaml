@@ -225,6 +225,14 @@
     <Setter Property="Padding" Value="12,8"/>
   </Style>
 
+  <Style Selector="TextBlock.status-text">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+  </Style>
+
+  <Style Selector="TextBlock.status-text.alert">
+    <Setter Property="Foreground" Value="{DynamicResource TextErrorBrush}"/>
+  </Style>
+
   <Style Selector="Border.status-bar">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>

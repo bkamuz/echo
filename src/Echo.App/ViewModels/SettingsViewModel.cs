@@ -295,6 +295,11 @@ public partial class SettingsViewModel : ObservableObject
         ModelStatus = downloaded
             ? $"{spec.Title} ✓ загружена"
             : $"{spec.Title} — не загружена";
+
+        if (!IsApplying && !IsCapturingHotkey)
+        {
+            _status.RefreshReadiness();
+        }
     }
 
     private ModelSpec? CurrentModelSpec() =>
@@ -381,7 +386,7 @@ public partial class SettingsViewModel : ObservableObject
         IsCapturingHotkey = false;
         HotkeyPreview = string.Empty;
         OnPropertyChanged(nameof(HotkeyDisplay));
-        _status.SetStatus(AppStatusViewModel.ReadyStatus);
+        _status.RefreshReadiness();
         _hotkeyService.Configure(Hotkey);
         _hotkeyService.Start();
         ScheduleApply();
@@ -393,7 +398,7 @@ public partial class SettingsViewModel : ObservableObject
         IsCapturingHotkey = false;
         HotkeyPreview = string.Empty;
         OnPropertyChanged(nameof(HotkeyDisplay));
-        _status.SetStatus(AppStatusViewModel.ReadyStatus);
+        _status.RefreshReadiness();
         _hotkeyService.Configure(_coordinator.Config.Hotkey);
         _hotkeyService.Start();
     }
