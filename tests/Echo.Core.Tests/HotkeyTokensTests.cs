@@ -5,13 +5,18 @@ namespace echo.Core.Tests;
 public class HotkeyTokensTests
 {
     [Theory]
-    [InlineData("ctrl+cmd", "Ctrl + Win")]
-    [InlineData("ctrl+alt+a", "Ctrl + Alt + a")]
-    [InlineData("shift+win+f2", "Shift + Win + f2")]
-    [InlineData("", "")]
-    public void ToDisplay_FormatsCorrectly(string input, string expected)
+    [InlineData(HotkeyDisplayPlatform.Windows, "ctrl+cmd", "Ctrl + Win")]
+    [InlineData(HotkeyDisplayPlatform.Linux, "ctrl+cmd", "Ctrl + Super")]
+    [InlineData(HotkeyDisplayPlatform.MacOS, "ctrl+cmd", "Ctrl + ⌘")]
+    [InlineData(HotkeyDisplayPlatform.Windows, "ctrl+alt+a", "Ctrl + Alt + a")]
+    [InlineData(HotkeyDisplayPlatform.Linux, "ctrl+alt+a", "Ctrl + Alt + a")]
+    [InlineData(HotkeyDisplayPlatform.Windows, "shift+win+f2", "Shift + Win + f2")]
+    [InlineData(HotkeyDisplayPlatform.Linux, "shift+win+f2", "Shift + Super + f2")]
+    [InlineData(HotkeyDisplayPlatform.MacOS, "shift+win+f2", "Shift + ⌘ + f2")]
+    [InlineData(HotkeyDisplayPlatform.Windows, "", "")]
+    public void ToDisplay_FormatsCorrectly(HotkeyDisplayPlatform platform, string input, string expected)
     {
-        var result = HotkeyTokens.ToDisplay(input);
+        var result = HotkeyTokens.ToDisplay(input, platform);
         Assert.Equal(expected, result);
     }
 
