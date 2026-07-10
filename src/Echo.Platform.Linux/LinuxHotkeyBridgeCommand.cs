@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace echo.Platform.Linux;
 
 internal static class LinuxHotkeyBridgeCommand
@@ -12,8 +10,8 @@ internal static class LinuxHotkeyBridgeCommand
 
         if (IsDotnetHost(processPath))
         {
-            var appDll = Assembly.GetEntryAssembly()?.Location;
-            if (string.IsNullOrWhiteSpace(appDll) || !File.Exists(appDll))
+            var appDll = Path.Combine(AppContext.BaseDirectory, "Echo.App.dll");
+            if (!File.Exists(appDll))
             {
                 throw new InvalidOperationException("Cannot resolve Echo.App assembly for hotkey bridge.");
             }
