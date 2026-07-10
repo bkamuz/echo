@@ -2,13 +2,6 @@ namespace echo.Platform.Linux;
 
 internal static class LinuxClipboard
 {
-    public static bool HasSilentBackend =>
-        LinuxSession.IsGnome
-        && LinuxSession.IsWayland
-        && (LinuxApplicationClipboardBridge.IsRegisteredAndAvailable
-            || LinuxCommandHelper.CommandExists("gpaste-client")
-            || (HasX11Display() && LinuxCommandHelper.CommandExists("xclip")));
-
     public static bool IsAvailable =>
         LinuxSession.IsWayland
             ? HasWaylandClipboardTool()

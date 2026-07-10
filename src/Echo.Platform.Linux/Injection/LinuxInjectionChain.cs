@@ -13,17 +13,10 @@ public static class LinuxInjectionChain
         new ClipboardFallbackBackend(),
     ];
 
-    public static IReadOnlyList<(string Name, bool Available)> ProbeBackends()
-    {
-        return Backends
-            .Select(backend => (backend.Name, backend.IsAvailable))
-            .ToList();
-    }
-
     public static bool HasAutoInjectionBackend =>
         Backends.Any(backend => backend is not ClipboardFallbackBackend && backend.IsAvailable);
 
-    public static LinuxInjectionAttempt Inject(
+    public static TextInjectionResult Inject(
         string text,
         string method,
         int typeDelayMs,
@@ -32,7 +25,7 @@ public static class LinuxInjectionChain
     {
         if (string.IsNullOrEmpty(text))
         {
-            return new LinuxInjectionAttempt(TextInjectionResult.AutoPasted, "none");
+            return TextInjectionResult.AutoPasted;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -52,17 +45,13 @@ public static class LinuxInjectionChain
             }
 
             var result = backend.TryInject(text, normalizedMethod, typeDelayMs, cancellationToken);
-            if (result is null)
+            if (result is not null)
             {
-                continue;
+                return result;
             }
-
-            return new LinuxInjectionAttempt(result, backend.Name);
         }
 
-        return new LinuxInjectionAttempt(
-            TextInjectionResult.Failed("No injection backend available."),
-            "none");
+        return TextInjectionResult.Failed("No injection backend available.");
     }
 
     public static void ResetProbes()

@@ -4,8 +4,6 @@ namespace echo.Platform.Linux.Injection;
 
 internal sealed class ClipboardFallbackBackend : ILinuxInjectionBackend
 {
-    public string Name => "clipboard";
-
     public bool IsAvailable => LinuxClipboard.IsAvailable;
 
     public TextInjectionResult? TryInject(

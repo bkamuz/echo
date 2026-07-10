@@ -4,8 +4,6 @@ namespace echo.Platform.Linux.Injection;
 
 internal sealed class AtSpiInjectionBackend : ILinuxInjectionBackend
 {
-    public string Name => "AT-SPI";
-
     public bool IsAvailable => LinuxAtSpiInserter.IsAvailable;
 
     public TextInjectionResult? TryInject(

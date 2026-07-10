@@ -16,9 +16,9 @@ public sealed record LinuxDependency(
 public static class LinuxDependencyCatalog
 {
     /// <summary>
-    /// AT-SPI packages are needed on all sessions where direct insert may run (including GNOME Wayland).
+    /// AT-SPI packages are not used on GNOME Wayland (Mutter blocks AT-SPI focus).
     /// </summary>
-    public static bool RequiresAtSpiPackages => true;
+    public static bool RequiresAtSpiPackages => !UsesGnomeWaylandYdotool;
 
     public static bool UsesGnomeWaylandYdotool =>
         LinuxSession.IsWayland && LinuxSession.IsGnome;
@@ -249,7 +249,6 @@ public static class LinuxDependencyCatalog
             return true;
         }
 
-        return LinuxInjectionChain.ProbeBackends()
-            .Any(probe => probe.Name == "ydotool" && probe.Available);
+        return YdotoolInjectionBackend.IsWorking();
     }
 }

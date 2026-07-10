@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using echo.Abstractions.Platform;
 using echo.Platform.Linux;
-using echo.Platform.Linux.Injection;
 
 namespace echo.App.Views;
 
@@ -11,6 +11,7 @@ public partial class LinuxDependenciesDialog : Window
 
     private readonly IReadOnlyList<LinuxDependency> _dependencies;
     private readonly bool _needsInputGroup;
+    private readonly bool _skipAccessibilityStep;
     private int _step;
 
     public LinuxDependenciesDialog(
@@ -21,6 +22,7 @@ public partial class LinuxDependenciesDialog : Window
     {
         _dependencies = dependencies;
         _needsInputGroup = needsInputGroup;
+        _skipAccessibilityStep = LinuxDependencyCatalog.UsesGnomeWaylandYdotool;
         InitializeComponent();
         DependenciesList.ItemsSource = dependencies;
         DependenciesList.IsVisible = dependencies.Count > 0;
@@ -29,8 +31,6 @@ public partial class LinuxDependenciesDialog : Window
         InputGroupButton.IsVisible = needsInputGroup;
         InputGroupButton.IsEnabled = LinuxPackageManagerDetector.CanElevateInstall()
             || LinuxInputGroupInstaller.IsCurrentUserInInputGroup();
-        UpdateAccessibilityStepContent();
-        UpdateBackendsSummary();
 
         if (!string.IsNullOrWhiteSpace(extraMessage))
         {
@@ -59,89 +59,52 @@ public partial class LinuxDependenciesDialog : Window
 
     public bool InstallAttempted { get; private set; }
 
+    private int LastStep => _skipAccessibilityStep ? 1 : 2;
+
     private void ShowStep(int step)
     {
         _step = step;
         PackagesPanel.IsVisible = step == 0;
-        AccessibilityPanel.IsVisible = step == 1;
-        TestPanel.IsVisible = step == 2;
+        AccessibilityPanel.IsVisible = !_skipAccessibilityStep && step == 1;
+        TestPanel.IsVisible = step == LastStep;
 
         BackButton.IsVisible = step > 0;
-        NextButton.IsVisible = step is 0 or 1;
-        FinishButton.IsVisible = step == 2;
+        NextButton.IsVisible = step < LastStep;
+        FinishButton.IsVisible = step == LastStep;
         InstallButton.IsVisible = step == 0 && _dependencies.Count > 0;
 
+        var totalSteps = LastStep + 1;
         StepTitle.Text = step switch
         {
-            0 => "Шаг 1 из 3 — Системные пакеты",
-            1 => LinuxDependencyCatalog.UsesGnomeWaylandYdotool
-                ? "Шаг 2 из 3 — ydotool и группа input"
-                : "Шаг 2 из 3 — Специальные возможности",
-            _ => "Шаг 3 из 3 — Проверка вставки",
+            0 => $"Шаг 1 из {totalSteps} — Системные пакеты",
+            _ when step == LastStep => $"Шаг {totalSteps} из {totalSteps} — Проверка вставки",
+            _ => $"Шаг 2 из {totalSteps} — Специальные возможности",
         };
 
         StepSubtitle.Text = step switch
         {
             0 => GetPackagesStepSubtitle(),
-            1 => GetAccessibilityStepSubtitle(),
-            _ => "Убедитесь, что вставка работает в вашем окружении.",
+            _ when step == LastStep => "Убедитесь, что вставка работает в вашем окружении.",
+            _ => "Для автоматической вставки через AT-SPI нужен доступ к специальным возможностям.",
         };
 
-        if (step == 1)
+        if (!_skipAccessibilityStep && step == 1)
         {
-            UpdateAccessibilityStepContent();
+            AccessibilityInstructions.Text = LinuxAccessibilityGuide.GetInstructions();
+            LimitationsText.Text = LinuxAccessibilityGuide.Limitations;
         }
-    }
-
-    private void UpdateAccessibilityStepContent()
-    {
-        AccessibilityInstructions.Text = LinuxAccessibilityGuide.GetInstructions();
-        LimitationsText.Text = LinuxDependencyCatalog.UsesGnomeWaylandYdotool
-            ? "Без спец. возможностей Echo использует буфер обмена — GNOME показывает значок в панели. "
-              + "С включёнными спец. возможностями вставка идёт напрямую, без мигания."
-            : LinuxAccessibilityGuide.Limitations;
-        OpenAccessibilityButton.IsVisible = true;
     }
 
     private static string GetPackagesStepSubtitle()
     {
         if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
         {
-            return "На GNOME Wayland Echo использует ydotool для автовставки (Ctrl+V). "
-                + "Пакеты AT-SPI не нужны — установите ydotool, wl-clipboard и arecord.";
+            return "На GNOME Wayland Echo использует ydotool для автовставки. "
+                + "Установите ydotool, wl-clipboard и arecord.";
         }
 
-        return "Echo подберёт способ вставки автоматически (AT-SPI, ydotool, xdotool или wtype). "
+        return "Echo подберёт способ вставки автоматически (AT-SPI, xdotool или wtype). "
             + "Установите недостающие компоненты.";
-    }
-
-    private static string GetAccessibilityStepSubtitle()
-    {
-        if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
-        {
-            return "Включите специальные возможности GNOME — тогда вставка без буфера (без значка на панели). "
-                + "Также нужны ydotoold и группа input для хоткея.";
-        }
-
-        return "Для автоматической вставки через AT-SPI нужен доступ к специальным возможностям.";
-    }
-
-    private void UpdateBackendsSummary()
-    {
-        var probes = LinuxInjectionChain.ProbeBackends();
-        var available = probes.Where(probe => probe.Available).Select(probe => probe.Name).ToList();
-        if (available.Count > 0)
-        {
-            var prefix = LinuxDependencyCatalog.UsesGnomeWaylandYdotool
-                ? "На GNOME Wayland автовставка через ydotool (AT-SPI не используется). "
-                : string.Empty;
-            BackendsText.Text = $"{prefix}Доступные способы вставки: {string.Join(", ", available)}.";
-            return;
-        }
-
-        BackendsText.Text = LinuxDependencyCatalog.UsesGnomeWaylandYdotool
-            ? "Пока нет рабочих способов автовставки — установите ydotool и wl-clipboard, запустите ydotoold и добавьте себя в группу input."
-            : "Пока нет рабочих способов автовставки — установите пакеты и включите спец. возможности.";
     }
 
     private void OnBackClick(object? sender, RoutedEventArgs e) => ShowStep(_step - 1);
@@ -149,7 +112,6 @@ public partial class LinuxDependenciesDialog : Window
     private void OnNextClick(object? sender, RoutedEventArgs e)
     {
         LinuxPlatformCapabilities.Refresh();
-        UpdateBackendsSummary();
         ShowStep(_step + 1);
     }
 
@@ -176,7 +138,6 @@ public partial class LinuxDependenciesDialog : Window
         SkipButton.IsEnabled = true;
         InputGroupButton.IsEnabled = _needsInputGroup;
         LinuxPlatformCapabilities.Refresh();
-        UpdateBackendsSummary();
 
         if (result.Succeeded)
         {
@@ -229,14 +190,13 @@ public partial class LinuxDependenciesDialog : Window
         try
         {
             var injector = new LinuxTextInjector();
-            var attempt = await injector.InjectWithDetailsAsync(TestPhrase, "auto", 0).ConfigureAwait(true);
-            TestResultText.Text = attempt.Result.Outcome switch
+            var result = await injector.InjectAsync(TestPhrase, "auto", 0).ConfigureAwait(true);
+            TestResultText.Text = result.Outcome switch
             {
-                echo.Abstractions.Platform.TextInjectionOutcome.AutoPasted =>
-                    $"Успех — бэкенд «{attempt.BackendName}» вставил текст автоматически.",
-                echo.Abstractions.Platform.TextInjectionOutcome.ClipboardOnly =>
-                    $"Частично — текст скопирован ({attempt.BackendName}). Нажмите Ctrl+V в целевом поле.",
-                _ => $"Не удалось: {attempt.Result.Message ?? "неизвестная ошибка"}",
+                TextInjectionOutcome.AutoPasted => "Успех — текст вставлен автоматически.",
+                TextInjectionOutcome.ClipboardOnly =>
+                    $"Частично — {result.Message ?? "текст скопирован в буфер."}",
+                _ => $"Не удалось: {result.Message ?? "неизвестная ошибка"}",
             };
         }
         catch (Exception ex)

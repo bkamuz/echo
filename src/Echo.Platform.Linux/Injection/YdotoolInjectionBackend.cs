@@ -7,8 +7,6 @@ internal sealed class YdotoolInjectionBackend : ILinuxInjectionBackend
     private static readonly object ProbeGate = new();
     private static bool? _ydotoolWorks;
 
-    public string Name => "ydotool";
-
     public bool IsAvailable =>
         LinuxSession.IsWayland
         && LinuxSession.IsGnome
@@ -34,77 +32,48 @@ internal sealed class YdotoolInjectionBackend : ILinuxInjectionBackend
             return null;
         }
 
-        return TryPaste(text, cancellationToken);
-    }
-
-    private static bool YdotoolWorks
-    {
-        get
+        if (LinuxSession.IsGnome && LinuxSession.IsWayland)
         {
-            lock (ProbeGate)
-            {
-                if (_ydotoolWorks.HasValue)
-                {
-                    return _ydotoolWorks.Value;
-                }
-
-                _ydotoolWorks = ProbeYdotool();
-                return _ydotoolWorks.Value;
-            }
-        }
-    }
-
-    private static bool ProbeYdotool()
-    {
-        if (!LinuxCommandHelper.CommandExists("ydotool"))
-        {
-            return false;
-        }
-
-        return LinuxProcessRunner.RunCommand(
-            "ydotool",
-            ["key", "0:0"],
-            CancellationToken.None,
-            allowFailure: true,
-            out _) == 0;
-    }
-
-    private static TextInjectionResult? TryPaste(string text, CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (LinuxSession.IsGnome && LinuxSession.IsWayland)
+            try
             {
                 LinuxClipboard.Write(text, cancellationToken);
                 return RunYdotool(["key", "29:1", "47:1", "47:0", "29:0"], cancellationToken)
                     ? TextInjectionResult.AutoPasted
                     : null;
             }
-
-            string? savedText = null;
-            var hadText = false;
-
-            savedText = LinuxClipboard.Read(cancellationToken);
-            hadText = !string.IsNullOrEmpty(savedText);
-            LinuxClipboard.Write(text, cancellationToken);
-
-            if (!RunYdotool(["key", "29:1", "47:1", "47:0", "29:0"], cancellationToken))
+            catch
             {
                 return null;
             }
+        }
 
-            if (hadText && savedText is not null)
+        return LinuxClipboardPaste.TryPaste(
+            text,
+            ct => RunYdotool(["key", "29:1", "47:1", "47:0", "29:0"], ct),
+            cancellationToken);
+    }
+
+    public static bool IsWorking()
+    {
+        lock (ProbeGate)
+        {
+            if (_ydotoolWorks.HasValue)
             {
-                LinuxClipboard.Write(savedText, cancellationToken);
+                return _ydotoolWorks.Value;
             }
 
-            return TextInjectionResult.AutoPasted;
-        }
-        catch
-        {
-            return null;
+            _ydotoolWorks = LinuxCommandHelper.CommandExists("ydotool")
+                && LinuxProcessRunner.RunCommand(
+                    "ydotool",
+                    ["key", "0:0"],
+                    CancellationToken.None,
+                    allowFailure: true,
+                    out _) == 0;
+            return _ydotoolWorks.Value;
         }
     }
+
+    private static bool YdotoolWorks => IsWorking();
 
     private static bool RunYdotool(IReadOnlyList<string> arguments, CancellationToken cancellationToken) =>
         LinuxProcessRunner.RunCommand("ydotool", arguments, cancellationToken, allowFailure: true, out _) == 0;

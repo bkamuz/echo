@@ -23,34 +23,6 @@ public sealed class LinuxTextInjector : ITextInjector
         try
         {
             return await Task.Run(
-                () =>
-                {
-                    var attempt = LinuxInjectionChain.Inject(
-                        text,
-                        method,
-                        typeDelayMs,
-                        DefaultPreInjectDelayMs,
-                        cancellationToken);
-                    return attempt.Result;
-                },
-                cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            InjectGate.Release();
-        }
-    }
-
-    public async Task<LinuxInjectionAttempt> InjectWithDetailsAsync(
-        string text,
-        string method,
-        int typeDelayMs = 0,
-        CancellationToken cancellationToken = default)
-    {
-        await InjectGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            return await Task.Run(
                 () => LinuxInjectionChain.Inject(
                     text,
                     method,

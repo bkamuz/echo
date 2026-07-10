@@ -7,8 +7,6 @@ internal sealed class WtypeInjectionBackend : ILinuxInjectionBackend
     private static readonly object ProbeGate = new();
     private static bool? _wtypeWorks;
 
-    public string Name => "wtype";
-
     public bool IsAvailable =>
         LinuxSession.IsWayland
         && LinuxSession.IsWlroots
@@ -34,10 +32,12 @@ internal sealed class WtypeInjectionBackend : ILinuxInjectionBackend
             return null;
         }
 
-        var preferType = method == "type";
-        return preferType
+        return method == "type"
             ? TryType(text, typeDelayMs, cancellationToken)
-            : TryPaste(text, cancellationToken);
+            : LinuxClipboardPaste.TryPaste(
+                text,
+                ct => RunWtype(["-M", "ctrl", "-k", "v", "-m", "ctrl"], ct),
+                cancellationToken);
     }
 
     private static bool WtypeWorks
@@ -51,53 +51,15 @@ internal sealed class WtypeInjectionBackend : ILinuxInjectionBackend
                     return _wtypeWorks.Value;
                 }
 
-                _wtypeWorks = ProbeWtype();
+                _wtypeWorks = LinuxCommandHelper.CommandExists("wtype")
+                    && LinuxProcessRunner.RunCommand(
+                        "wtype",
+                        ["-k", "VoidSymbol"],
+                        CancellationToken.None,
+                        allowFailure: true,
+                        out _) == 0;
                 return _wtypeWorks.Value;
             }
-        }
-    }
-
-    private static bool ProbeWtype()
-    {
-        if (!LinuxCommandHelper.CommandExists("wtype"))
-        {
-            return false;
-        }
-
-        return LinuxProcessRunner.RunCommand(
-            "wtype",
-            ["-k", "VoidSymbol"],
-            CancellationToken.None,
-            allowFailure: true,
-            out _) == 0;
-    }
-
-    private static TextInjectionResult? TryPaste(string text, CancellationToken cancellationToken)
-    {
-        string? savedText = null;
-        var hadText = false;
-
-        try
-        {
-            savedText = LinuxClipboard.Read(cancellationToken);
-            hadText = !string.IsNullOrEmpty(savedText);
-            LinuxClipboard.Write(text, cancellationToken);
-
-            if (!RunWtype(["-M", "ctrl", "-k", "v", "-m", "ctrl"], cancellationToken))
-            {
-                return null;
-            }
-
-            if (hadText && savedText is not null)
-            {
-                LinuxClipboard.Write(savedText, cancellationToken);
-            }
-
-            return TextInjectionResult.AutoPasted;
-        }
-        catch
-        {
-            return null;
         }
     }
 

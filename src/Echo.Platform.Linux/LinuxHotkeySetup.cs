@@ -1,5 +1,12 @@
 namespace echo.Platform.Linux;
 
+public enum LinuxInputAccessState
+{
+    Granted,
+    PendingRelogin,
+    NotConfigured,
+}
+
 public static class LinuxHotkeySetup
 {
     public static LinuxInputAccessState GetAccessState()
@@ -24,7 +31,7 @@ public static class LinuxHotkeySetup
 
         try
         {
-            var output = RunCommand("groups", string.Empty);
+            var output = LinuxProcessRunner.RunCommand("groups", [], CancellationToken.None, allowFailure: true);
             return output.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Contains("input", StringComparer.Ordinal);
         }
@@ -44,7 +51,7 @@ public static class LinuxHotkeySetup
 
         try
         {
-            var output = RunCommand("getent", "group input");
+            var output = LinuxProcessRunner.RunCommand("getent", ["group", "input"], CancellationToken.None, allowFailure: true);
             var members = output.Split(':');
             if (members.Length < 4)
             {
@@ -61,18 +68,13 @@ public static class LinuxHotkeySetup
     }
 
     public static bool NeedsSgBridge() =>
-        LinuxHotkeySetup.IsListedInInputGroup()
+        IsListedInInputGroup()
         && !LinuxEvdevNative.CanAccessKeyboardDevices()
-        && !LinuxHotkeySetup.HasActiveInputGroupSession();
+        && !HasActiveInputGroupSession();
 
     public static string GetSetupMessage()
     {
-        if (LinuxEvdevNative.CanAccessKeyboardDevices())
-        {
-            return string.Empty;
-        }
-
-        if (LinuxHotkeyBridgeLauncher.CanLaunch())
+        if (LinuxEvdevNative.CanAccessKeyboardDevices() || LinuxHotkeyBridgeLauncher.CanLaunch())
         {
             return string.Empty;
         }
@@ -92,22 +94,5 @@ public static class LinuxHotkeySetup
                 + "(Настройки → «Группа input» или: sudo usermod -aG input $USER), затем перезайдите в сессию.",
             _ => throw new ArgumentOutOfRangeException(),
         };
-    }
-
-    private static string RunCommand(string fileName, string arguments)
-    {
-        using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        }) ?? throw new InvalidOperationException($"Failed to start {fileName}.");
-
-        var output = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
-        return output;
     }
 }

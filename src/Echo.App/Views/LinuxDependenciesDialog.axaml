@@ -12,11 +12,11 @@
 
   <Border Classes="tile" Margin="16">
     <StackPanel Spacing="12" Margin="16">
-      <TextBlock x:Name="StepTitle" Classes="page-title" Text="Шаг 1 из 3 — Системные пакеты"/>
+      <TextBlock x:Name="StepTitle" Classes="page-title" Text="Шаг 1 из 2 — Системные пакеты"/>
       <TextBlock x:Name="StepSubtitle"
                  Classes="page-subtitle"
                  TextWrapping="Wrap"
-                 Text="Echo подберёт способ вставки автоматически. На GNOME Wayland используется ydotool — пакеты AT-SPI не нужны."/>
+                 Text="Echo подберёт способ вставки автоматически."/>
 
       <StackPanel x:Name="PackagesPanel" Spacing="8">
         <ItemsControl x:Name="DependenciesList">
@@ -29,9 +29,6 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <TextBlock x:Name="BackendsText"
-                   Classes="page-subtitle"
-                   TextWrapping="Wrap"/>
       </StackPanel>
 
       <StackPanel x:Name="AccessibilityPanel" Spacing="8" IsVisible="False">
@@ -50,9 +47,9 @@
       <StackPanel x:Name="TestPanel" Spacing="8" IsVisible="False">
         <TextBlock Classes="page-subtitle"
                    TextWrapping="Wrap"
-                   Text="Поставьте курсор в поле ниже и нажмите «Проверить вставку». Echo попробует вставить тестовую фразу тем же способом, что и при диктовке."/>
+                   Text="Поставьте курсор в поле ниже и нажмите «Проверить вставку»."/>
         <TextBox x:Name="TestInput"
-                 Watermark="Курсор сюда…"
+                 PlaceholderText="Курсор сюда…"
                  MinHeight="36"/>
         <Button x:Name="TestButton"
                 Content="Проверить вставку"

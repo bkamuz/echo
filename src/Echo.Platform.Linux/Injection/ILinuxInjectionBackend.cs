@@ -4,8 +4,6 @@ namespace echo.Platform.Linux.Injection;
 
 internal interface ILinuxInjectionBackend
 {
-    string Name { get; }
-
     bool IsAvailable { get; }
 
     TextInjectionResult? TryInject(

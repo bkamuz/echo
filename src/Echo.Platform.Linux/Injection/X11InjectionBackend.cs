@@ -4,8 +4,6 @@ namespace echo.Platform.Linux.Injection;
 
 internal sealed class X11InjectionBackend : ILinuxInjectionBackend
 {
-    public string Name => "xdotool";
-
     public bool IsAvailable =>
         LinuxSession.IsX11
         && LinuxCommandHelper.CommandExists("xdotool")
@@ -22,49 +20,17 @@ internal sealed class X11InjectionBackend : ILinuxInjectionBackend
             return null;
         }
 
-        var preferType = method == "type";
-        if (preferType)
-        {
-            return TryType(text, typeDelayMs, cancellationToken);
-        }
-
-        return TryPaste(text, cancellationToken);
-    }
-
-    private static TextInjectionResult? TryPaste(string text, CancellationToken cancellationToken)
-    {
-        string? savedText = null;
-        var hadText = false;
-
-        try
-        {
-            savedText = LinuxClipboard.Read(cancellationToken);
-            hadText = !string.IsNullOrEmpty(savedText);
-            LinuxClipboard.Write(text, cancellationToken);
-
-            var exitCode = LinuxProcessRunner.RunCommand(
-                "xdotool",
-                ["key", "--clearmodifiers", "ctrl+v"],
-                cancellationToken,
-                allowFailure: true,
-                out _);
-
-            if (exitCode != 0)
-            {
-                return null;
-            }
-
-            if (hadText && savedText is not null)
-            {
-                LinuxClipboard.Write(savedText, cancellationToken);
-            }
-
-            return TextInjectionResult.AutoPasted;
-        }
-        catch
-        {
-            return null;
-        }
+        return method == "type"
+            ? TryType(text, typeDelayMs, cancellationToken)
+            : LinuxClipboardPaste.TryPaste(
+                text,
+                ct => LinuxProcessRunner.RunCommand(
+                    "xdotool",
+                    ["key", "--clearmodifiers", "ctrl+v"],
+                    ct,
+                    allowFailure: true,
+                    out _) == 0,
+                cancellationToken);
     }
 
     private static TextInjectionResult? TryType(string text, int typeDelayMs, CancellationToken cancellationToken)

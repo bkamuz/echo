@@ -34,7 +34,7 @@ public sealed class LinuxDependencyPromptService
             return;
         }
 
-        LinuxPlatformCapabilities.PrepareForDependencyPrompt();
+        LinuxPlatformCapabilities.Refresh();
 
         var config = _configStore.Load();
         var missing = LinuxPlatformCapabilities.MissingDependencies;

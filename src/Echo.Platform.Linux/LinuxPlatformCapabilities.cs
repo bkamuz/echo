@@ -19,8 +19,6 @@ public static class LinuxPlatformCapabilities
 
     public static bool IsFlatpakSandbox => LinuxCommandHelper.IsFlatpakSandbox();
 
-    public static void PrepareForDependencyPrompt() => Refresh();
-
     public static void Refresh()
     {
         lock (Gate)
