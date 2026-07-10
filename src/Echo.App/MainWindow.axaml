@@ -11,6 +11,7 @@
         Width="960" Height="640"
         MinWidth="880" MinHeight="600"
         WindowStartupLocation="CenterScreen"
+        Focusable="True"
         WindowDecorations="Full"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="56">

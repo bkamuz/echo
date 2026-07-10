@@ -34,7 +34,7 @@ Version: ${version}
 Section: sound
 Priority: optional
 Architecture: amd64
-Depends: libicu74 | libicu72 | libicu70 | libicu67, libfontconfig1, libfreetype6, libharfbuzz0b, libx11-6, libice6, libsm6, libglib2.0-0, libdbus-1-3, libegl1, libgl1
+Depends: libicu74 | libicu72 | libicu70 | libicu67, libfontconfig1, libfreetype6, libharfbuzz0b, libx11-6, libice6, libsm6, libglib2.0-0, libdbus-1-3, libegl1, libgl1, alsa-utils, wl-clipboard | xclip, wtype | xdotool, python3-gi, gir1.2-atspi-2.0, util-linux-extra
 Maintainer: Echo <noreply@example.com>
 Homepage: https://github.com/bkamuz/echo
 Description: Local speech-to-text dictation

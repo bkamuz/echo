@@ -10,4 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Echo.Abstractions\Echo.Abstractions.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Scripts\atspi-insert.py" CopyToOutputDirectory="PreserveNewest" Link="Scripts\atspi-insert.py" />
+  </ItemGroup>
 </Project>

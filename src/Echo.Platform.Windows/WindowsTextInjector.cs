@@ -12,20 +12,24 @@ public sealed class WindowsTextInjector : ITextInjector
     private const uint CfUnicode = 13;
     private const uint GmemMoveable = 0x0002;
 
-    public Task InjectAsync(string text, string method, int typeDelayMs = 0, CancellationToken cancellationToken = default)
+    public Task<TextInjectionResult> InjectAsync(
+        string text,
+        string method,
+        int typeDelayMs = 0,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(text))
         {
-            return Task.CompletedTask;
+            return Task.FromResult(TextInjectionResult.AutoPasted);
         }
 
-        if (method == "clipboard" && TryInjectViaClipboard(text))
+        if (method is "clipboard" or "auto" && TryInjectViaClipboard(text))
         {
-            return Task.CompletedTask;
+            return Task.FromResult(TextInjectionResult.AutoPasted);
         }
 
         TypeText(text, typeDelayMs);
-        return Task.CompletedTask;
+        return Task.FromResult(TextInjectionResult.AutoPasted);
     }
 
     private static void TypeText(string text, int typeDelayMs)

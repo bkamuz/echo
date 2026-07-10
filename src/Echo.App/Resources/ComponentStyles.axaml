@@ -506,7 +506,6 @@
     <Setter Property="VerticalContentAlignment" Value="Center"/>
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
     <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="Focusable" Value="False"/>
   </Style>
 
   <Style Selector="Button.sidebar-nav-item /template/ ContentPresenter#PART_ContentPresenter">

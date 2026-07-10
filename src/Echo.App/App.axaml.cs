@@ -2,13 +2,14 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using echo.Abstractions.Platform;
 using echo.App.Services;
 using echo.App.ViewModels;
 using echo.Core;
 using echo.Core.DependencyInjection;
 using echo.Engines.DependencyInjection;
 using echo.App.DependencyInjection;
-using echo.Abstractions.Platform;
+using echo.Platform.Linux;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -33,7 +34,9 @@ public partial class App : Application
                 services.UsePlatform();
                 services.UseEchoEngines();
                 services.AddSingleton<AppStatusViewModel>();
+                services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();
                 services.AddSingleton<SettingsApplyService>();
+                services.AddSingleton<LinuxDependencyPromptService>();
                 services.AddSingleton<HomeViewModel>();
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<HistoryViewModel>();
@@ -55,6 +58,16 @@ public partial class App : Application
             }
 
             coordinator.Start();
+
+            if (OperatingSystem.IsLinux())
+            {
+                LinuxPlatformCapabilities.Refresh();
+                var warning = LinuxPlatformCapabilities.StartupWarning;
+                if (!string.IsNullOrWhiteSpace(warning))
+                {
+                    Services.GetRequiredService<AppStatusViewModel>().SetStatus(warning);
+                }
+            }
 
             var startMinimized = (desktop.Args ?? [])
                 .Any(arg => string.Equals(arg, ApplicationLauncher.MinimizedArgument, StringComparison.OrdinalIgnoreCase));

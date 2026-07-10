@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using echo.App.ViewModels;
 
 namespace echo.App.Views;
@@ -8,12 +9,13 @@ public partial class SettingsView : UserControl
 {
     private readonly HotkeyCaptureSession _captureSession = new();
     private SettingsViewModel? _viewModel;
+    private TopLevel? _captureTopLevel;
+    private EventHandler<KeyEventArgs>? _tunnelKeyDown;
+    private EventHandler<KeyEventArgs>? _tunnelKeyUp;
 
     public SettingsView()
     {
         InitializeComponent();
-        KeyDown += OnKeyDown;
-        KeyUp += OnKeyUp;
         DataContextChanged += OnDataContextChanged;
     }
 
@@ -33,21 +35,55 @@ public partial class SettingsView : UserControl
 
     private void ViewModelOnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SettingsViewModel.IsCapturingHotkey))
+        if (e.PropertyName != nameof(SettingsViewModel.IsCapturingHotkey))
         {
-            if (_viewModel?.IsCapturingHotkey == true)
-            {
-                _captureSession.Reset();
-                Focus();
-            }
-            else
-            {
-                _captureSession.Reset();
-            }
+            return;
+        }
+
+        if (_viewModel?.IsCapturingHotkey == true)
+        {
+            _captureSession.Reset();
+            StartCaptureHandlers();
+            Focus();
+        }
+        else
+        {
+            _captureSession.Reset();
+            StopCaptureHandlers();
         }
     }
 
-    private void OnKeyDown(object? sender, KeyEventArgs e)
+    private void StartCaptureHandlers()
+    {
+        StopCaptureHandlers();
+
+        _captureTopLevel = TopLevel.GetTopLevel(this);
+        if (_captureTopLevel is null)
+        {
+            return;
+        }
+
+        _tunnelKeyDown = OnTunnelKeyDown;
+        _tunnelKeyUp = OnTunnelKeyUp;
+        _captureTopLevel.AddHandler(KeyDownEvent, _tunnelKeyDown, RoutingStrategies.Tunnel);
+        _captureTopLevel.AddHandler(KeyUpEvent, _tunnelKeyUp, RoutingStrategies.Tunnel);
+    }
+
+    private void StopCaptureHandlers()
+    {
+        if (_captureTopLevel is null || _tunnelKeyDown is null || _tunnelKeyUp is null)
+        {
+            return;
+        }
+
+        _captureTopLevel.RemoveHandler(KeyDownEvent, _tunnelKeyDown);
+        _captureTopLevel.RemoveHandler(KeyUpEvent, _tunnelKeyUp);
+        _captureTopLevel = null;
+        _tunnelKeyDown = null;
+        _tunnelKeyUp = null;
+    }
+
+    private void OnTunnelKeyDown(object? sender, KeyEventArgs e)
     {
         if (_viewModel is null || !_viewModel.IsCapturingHotkey)
         {
@@ -59,7 +95,7 @@ public partial class SettingsView : UserControl
         e.Handled = true;
     }
 
-    private void OnKeyUp(object? sender, KeyEventArgs e)
+    private void OnTunnelKeyUp(object? sender, KeyEventArgs e)
     {
         if (_viewModel is null || !_viewModel.IsCapturingHotkey)
         {

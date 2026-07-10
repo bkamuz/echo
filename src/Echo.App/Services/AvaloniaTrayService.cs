@@ -40,6 +40,8 @@ public sealed class AvaloniaTrayService : ITrayStateService
         _mainWindow = window;
         window.Icon = _idleIcon;
 
+        _tray.Clicked += (_, _) => ShowMainWindow();
+
         void TryAttachHandle()
         {
             var handle = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
@@ -97,6 +99,23 @@ public sealed class AvaloniaTrayService : ITrayStateService
         {
             Dispatcher.UIThread.Post(Apply);
         }
+    }
+
+    private void ShowMainWindow()
+    {
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
+        var mainWindow = _mainWindow;
+        Dispatcher.UIThread.Post(() =>
+        {
+            mainWindow.ShowInTaskbar = true;
+            mainWindow.Show();
+            mainWindow.WindowState = WindowState.Normal;
+            mainWindow.Activate();
+        });
     }
 
     private static byte[] LoadTrayIconBytes(string name)

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using echo.App.Services;
 using echo.Core;
+using echo.Platform.Linux;
 using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
 using echo.Abstractions.Platform;
@@ -130,11 +131,46 @@ public partial class SettingsViewModel : ObservableObject
     }
     public IReadOnlyList<string> WhisperSizes => AppConfig.WhisperSizes;
     public IReadOnlyList<string> GigaAmSizes => AppConfig.GigaAmSizes;
-    public IReadOnlyList<InputMethodOption> InputMethodOptions { get; } =
-    [
-        new("clipboard", "Вставка из буфера", "Быстрая вставка. Содержимое буфера обмена восстанавливается после вставки."),
-        new("type", "Печать", "Посимвольный ввод через эмуляцию клавиатуры."),
-    ];
+    public IReadOnlyList<InputMethodOption> InputMethodOptions =>
+        OperatingSystem.IsLinux()
+            ? BuildLinuxInputMethodOptions()
+            :
+            [
+                new("clipboard", "Вставка из буфера", "Быстрая вставка. Содержимое буфера обмена восстанавливается после вставки."),
+                new("type", "Печать", "Посимвольный ввод через эмуляцию клавиатуры."),
+            ];
+    private static IReadOnlyList<InputMethodOption> BuildLinuxInputMethodOptions()
+    {
+        if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
+        {
+            return
+            [
+                new(
+                    "auto",
+                    "Авто",
+                    "На GNOME Wayland — ydotool (Ctrl+V). В X11 и wlroots — AT-SPI или xdotool/wtype. "
+                    + "Если автовставка недоступна — текст копируется в буфер."),
+                new(
+                    "clipboard",
+                    "Вставка из буфера",
+                    "Мгновенная вставка всего текста через буфер и Ctrl+V (ydotool)."),
+            ];
+        }
+
+        return
+        [
+            new(
+                "auto",
+                "Авто",
+                "Echo выберет лучший способ: AT-SPI, ydotool, xdotool или wtype. "
+                + "Если автовставка недоступна — текст копируется в буфер."),
+            new(
+                "clipboard",
+                "Вставка из буфера",
+                "Сначала AT-SPI; иначе эмуляция Ctrl+V через ydotool, xdotool или wtype."),
+        ];
+    }
+
     public IReadOnlyList<TypeSpeedOption> TypeSpeedOptions { get; } =
     [
         new("Быстро", 0),
@@ -143,7 +179,10 @@ public partial class SettingsViewModel : ObservableObject
     ];
     public IReadOnlyList<string> Languages { get; } = ["auto", "ru", "en"];
 
-    public bool IsTypeInput => SelectedInputMethod?.Id == "type";
+    public bool IsTypeInput =>
+        !OperatingSystem.IsLinux() && SelectedInputMethod?.Id == "type";
+
+    public string TypeSpeedTooltip => "Задержка между символами при методе «Печать»";
 
     public string HotkeyDisplay =>
         IsCapturingHotkey && !string.IsNullOrEmpty(HotkeyPreview)
@@ -416,8 +455,9 @@ public partial class SettingsViewModel : ObservableObject
         config.GigaAmModelSize = GigaAmModelSize;
         config.Language = Language;
         config.Device = SelectedComputeDevice?.Id ?? ExecutionProviderResolver.CpuDevice;
-        config.InputDevice = InputDevice?.Name ?? string.Empty;
-        config.InputMethod = SelectedInputMethod?.Id ?? "clipboard";
+        config.InputDevice = InputDevice?.Id ?? string.Empty;
+        config.InputMethod = SelectedInputMethod?.Id
+            ?? (OperatingSystem.IsLinux() ? "auto" : "clipboard");
         config.TypeDelayMs = SelectedTypeSpeed?.DelayMs ?? 1;
         config.AddTrailingSpace = AddTrailingSpace;
         config.StartWithSystem = StartWithSystem;
@@ -438,12 +478,13 @@ public partial class SettingsViewModel : ObservableObject
             Language = config.Language;
             SelectedComputeDevice = ResolveComputeDeviceOption(config.Device);
             SelectedInputMethod = InputMethodOptions.FirstOrDefault(o => o.Id == config.InputMethod)
-                ?? InputMethodOptions[0];
+                ?? InputMethodOptions.First();
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == config.TypeDelayMs)
                 ?? TypeSpeedOptions[1];
             AddTrailingSpace = config.AddTrailingSpace;
             StartWithSystem = config.StartWithSystem;
-            InputDevice = InputDevices.FirstOrDefault(d => d.Name == config.InputDevice)
+            InputDevice = InputDevices.FirstOrDefault(d => d.Id == config.InputDevice)
+                ?? InputDevices.FirstOrDefault(d => d.Name == config.InputDevice)
                 ?? InputDevices.FirstOrDefault();
             UpdateModelStatus();
             OnPropertyChanged(nameof(ComputeDeviceOptions));

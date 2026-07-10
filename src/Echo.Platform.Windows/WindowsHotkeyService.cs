@@ -23,6 +23,8 @@ public sealed class WindowsHotkeyService : IHotkeyService
     public event Action? Activated;
     public event Action? Deactivated;
 
+    public bool IsActive => _hook != IntPtr.Zero;
+
     public void Configure(string hotkey)
     {
         lock (_lock)

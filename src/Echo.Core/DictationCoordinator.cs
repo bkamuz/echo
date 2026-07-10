@@ -14,6 +14,7 @@ public sealed class DictationCoordinator : IDisposable
     private readonly ITextInjector _injector;
     private readonly IFocusTarget _focusTarget;
     private readonly ITrayStateService _tray;
+    private readonly IUserStatusNotifier? _statusNotifier;
     private readonly ILogger<DictationCoordinator> _logger;
 
     private AppConfig _config;
@@ -31,7 +32,8 @@ public sealed class DictationCoordinator : IDisposable
         ITextInjector injector,
         IFocusTarget focusTarget,
         ITrayStateService tray,
-        ILogger<DictationCoordinator> logger)
+        ILogger<DictationCoordinator> logger,
+        IUserStatusNotifier? statusNotifier = null)
     {
         _configStore = configStore;
         _transcription = transcription;
@@ -41,6 +43,7 @@ public sealed class DictationCoordinator : IDisposable
         _injector = injector;
         _focusTarget = focusTarget;
         _tray = tray;
+        _statusNotifier = statusNotifier;
         _logger = logger;
         _config = _configStore.Load();
     }
@@ -96,7 +99,14 @@ public sealed class DictationCoordinator : IDisposable
         _hotkey.Activated += OnHotkeyActivated;
         _hotkey.Deactivated += () => _ = HandleDeactivatedAsync();
         _hotkey.Start();
-        _logger.LogInformation("Hotkey active: {Hotkey}", _config.Hotkey);
+        if (_hotkey.IsActive)
+        {
+            _logger.LogInformation("Hotkey active: {Hotkey}", _config.Hotkey);
+        }
+        else
+        {
+            _logger.LogWarning("Global hotkey is not listening — check Linux input group or hotkey permissions");
+        }
         _ = WarmupModelAsync();
     }
 
@@ -156,6 +166,21 @@ public sealed class DictationCoordinator : IDisposable
         _hotkey.Stop();
     }
 
+    public void RestartHotkey()
+    {
+        _hotkey.Stop();
+        _hotkey.Configure(_config.Hotkey);
+        _hotkey.Start();
+        if (_hotkey.IsActive)
+        {
+            _logger.LogInformation("Hotkey active: {Hotkey}", _config.Hotkey);
+        }
+        else
+        {
+            _logger.LogWarning("Global hotkey is not listening — check Linux input group or hotkey permissions");
+        }
+    }
+
     private void OnHotkeyActivated()
     {
         if (_isRecording)
@@ -166,7 +191,18 @@ public sealed class DictationCoordinator : IDisposable
         _isRecording = true;
         _pressStarted = DateTimeOffset.UtcNow;
         _targetWindow = CaptureInjectionTarget();
-        _audio.StartRecording(_config.SampleRate, _config.InputDevice);
+        try
+        {
+            _audio.StartRecording(_config.SampleRate, _config.InputDevice);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to start audio recording");
+            _isRecording = false;
+            _tray.SetState(DictationOverlayState.Hidden);
+            return;
+        }
+
         _tray.SetState(DictationOverlayState.Recording);
     }
 
@@ -215,19 +251,45 @@ public sealed class DictationCoordinator : IDisposable
                 text += " ";
             }
 
+            var engine = _transcription.Resolve(_config);
+            _history.Append(engine.DisplayName, text.TrimEnd());
+
             sw.Restart();
             _tray.SetState(DictationOverlayState.Hidden);
             RestoreInjectionTarget();
-            await _injector.InjectAsync(text, _config.InputMethod, _config.TypeDelayMs);
-            var injectMs = sw.ElapsedMilliseconds;
-
-            var engine = _transcription.Resolve(_config);
-            _history.Append(engine.DisplayName, text.TrimEnd());
-            _logger.LogInformation(
-                "Dictation done: transcribe={TranscribeMs}ms inject={InjectMs}ms chars={Chars}",
-                transcribeMs,
-                injectMs,
-                text.Length);
+            try
+            {
+                var injectResult = await _injector.InjectAsync(text, _config.InputMethod, _config.TypeDelayMs);
+                var injectMs = sw.ElapsedMilliseconds;
+                if (injectResult.Outcome == TextInjectionOutcome.Failed)
+                {
+                    _logger.LogWarning(
+                        "Text injection failed — result saved to history: {Message}",
+                        injectResult.Message);
+                }
+                else if (injectResult.Outcome == TextInjectionOutcome.ClipboardOnly)
+                {
+                    _statusNotifier?.ShowTemporary(injectResult.Message ?? "Текст скопирован — нажмите Ctrl+V.");
+                    _logger.LogInformation(
+                        "Dictation done (clipboard only): transcribe={TranscribeMs}ms inject={InjectMs}ms chars={Chars} — {Message}",
+                        transcribeMs,
+                        injectMs,
+                        text.Length,
+                        injectResult.Message);
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Dictation done: transcribe={TranscribeMs}ms inject={InjectMs}ms chars={Chars}",
+                        transcribeMs,
+                        injectMs,
+                        text.Length);
+                }
+            }
+            catch (Exception injectEx)
+            {
+                _logger.LogWarning(injectEx, "Text injection failed — result saved to history");
+            }
         }
         catch (Exception ex)
         {

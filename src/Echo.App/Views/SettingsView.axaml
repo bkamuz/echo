@@ -51,7 +51,7 @@
                           Classes="settings-field"
                           IsVisible="{Binding IsTypeInput}">
                 <TextBlock Classes="field-label" Text="Скорость печати"
-                           ToolTip.Tip="Задержка между символами при методе «Печать»"/>
+                           ToolTip.Tip="{Binding TypeSpeedTooltip}"/>
                 <ComboBox ItemsSource="{Binding TypeSpeedOptions}"
                           SelectedItem="{Binding SelectedTypeSpeed}"
                           HorizontalAlignment="Stretch"/>

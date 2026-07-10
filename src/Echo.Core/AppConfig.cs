@@ -35,7 +35,7 @@ public sealed class AppConfig
     public string InputDevice { get; set; } = string.Empty;
 
     [JsonPropertyName("input_method")]
-    public string InputMethod { get; set; } = "clipboard";
+    public string InputMethod { get; set; } = OperatingSystem.IsLinux() ? "auto" : "clipboard";
 
     [JsonPropertyName("type_delay_ms")]
     public int TypeDelayMs { get; set; } = 1;
@@ -87,5 +87,17 @@ public sealed class AppConfig
         }
 
         TypeDelayMs = Math.Clamp(TypeDelayMs, 0, 50);
+
+        if (OperatingSystem.IsLinux())
+        {
+            if (InputMethod is "type")
+            {
+                InputMethod = "auto";
+            }
+            else if (InputMethod is not ("auto" or "clipboard"))
+            {
+                InputMethod = "auto";
+            }
+        }
     }
 }
