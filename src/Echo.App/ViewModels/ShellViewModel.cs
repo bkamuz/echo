@@ -13,6 +13,8 @@ public partial class ShellViewModel : ObservableObject
 
     public UpdateViewModel Update { get; }
 
+    public string AppVersion => Update.AppVersion;
+
     [ObservableProperty]
     private object _currentPage;
 

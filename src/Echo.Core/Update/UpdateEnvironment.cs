@@ -1,5 +1,6 @@
 using System.Reflection;
 using echo.Abstractions.Core;
+using echo.Abstractions.Platform;
 
 namespace echo.Core.Update;
 
@@ -10,7 +11,11 @@ public static class UpdateEnvironment
     public const string WindowsPortableAssetSuffix = "-win-x64-portable.zip";
 
     public static Version CurrentVersion =>
-        Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
+        Assembly.GetEntryAssembly()?.GetName().Version
+        ?? Assembly.GetExecutingAssembly().GetName().Version
+        ?? new Version(0, 0, 0);
+
+    public static string DisplayVersion => $"v{CurrentVersion}";
 
     public static bool IsPublishedBuild
     {
@@ -21,7 +26,7 @@ public static class UpdateEnvironment
                 return false;
             }
 
-            var path = Environment.ProcessPath;
+            var path = ResolveProcessPath();
             if (string.IsNullOrWhiteSpace(path))
             {
                 return false;
@@ -63,5 +68,22 @@ public static class UpdateEnvironment
             DownloadUrl = config.PendingUpdateDownloadUrl,
             ReleaseNotesUrl = config.PendingUpdateReleaseNotesUrl,
         };
+    }
+
+    private static string? ResolveProcessPath()
+    {
+        if (!string.IsNullOrWhiteSpace(Environment.ProcessPath))
+        {
+            return Environment.ProcessPath;
+        }
+
+        try
+        {
+            return ApplicationLauncher.ResolveExecutablePath();
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

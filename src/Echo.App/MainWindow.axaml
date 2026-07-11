@@ -81,7 +81,8 @@
             x:Name="TitleBarHost"
             Classes="shell-header-main"
             Cursor="Arrow">
-      <Grid ColumnDefinitions="*,Auto,144">
+      <Grid ColumnDefinitions="*,Auto,144"
+            x:Name="TitleBarGrid">
         <Border Grid.Column="0"
                 Background="Transparent"
                 HorizontalAlignment="Stretch"
@@ -96,16 +97,18 @@
                        FontWeight="SemiBold"
                        LetterSpacing="0.32"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <TextBlock Text="Speech to text"
+            <TextBlock Text="{Binding AppVersion}"
                        Classes="page-subtitle"
                        FontSize="11"/>
           </StackPanel>
         </Border>
         <StackPanel Grid.Column="1"
+                    x:Name="UpdateButtonPanel"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
                     Margin="0,0,8,0"
+                    Panel.ZIndex="1"
                     IsVisible="{Binding Update.IsAvailable}">
           <Button Classes="icon-action"
                   Command="{Binding Update.ApplyCommand}"

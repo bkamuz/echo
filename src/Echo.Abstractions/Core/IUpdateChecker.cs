@@ -2,5 +2,7 @@ namespace echo.Abstractions.Core;
 
 public interface IUpdateChecker
 {
-    Task<UpdateInfo?> CheckForUpdateAsync(CancellationToken cancellationToken = default);
+    Task<UpdateCheckResult> CheckForUpdateAsync(
+        bool forceRefresh = false,
+        CancellationToken cancellationToken = default);
 }

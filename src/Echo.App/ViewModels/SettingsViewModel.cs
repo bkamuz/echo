@@ -28,6 +28,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly SettingsApplyService _applyService;
     private readonly IDirectMlAvailability _directMlAvailability;
     private readonly IAutoStartService _autoStartService;
+    private readonly UpdateViewModel _update;
     private string _savedHotkey = string.Empty;
     private bool _isLoadingFromConfig;
 
@@ -83,7 +84,8 @@ public partial class SettingsViewModel : ObservableObject
         AppStatusViewModel status,
         SettingsApplyService applyService,
         IDirectMlAvailability directMlAvailability,
-        IAutoStartService autoStartService)
+        IAutoStartService autoStartService,
+        UpdateViewModel update)
     {
         _coordinator = coordinator;
         _downloader = downloader;
@@ -94,10 +96,15 @@ public partial class SettingsViewModel : ObservableObject
         _applyService = applyService;
         _directMlAvailability = directMlAvailability;
         _autoStartService = autoStartService;
+        _update = update;
         LoadFromConfig();
     }
 
     public bool IsAutoStartSupported => _autoStartService.IsSupported;
+
+    public UpdateViewModel Update => _update;
+
+    public bool ShowUpdateSection => _update.IsCheckSupported;
 
     private static readonly ComputeDeviceOption CpuDeviceOption = new(
         ExecutionProviderResolver.CpuDevice,

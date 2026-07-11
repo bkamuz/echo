@@ -217,6 +217,30 @@
           </DockPanel>
         </Border>
 
+        <Border Classes="tile"
+                IsVisible="{Binding ShowUpdateSection}">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Classes="tile-header">
+              <TextBlock Classes="section-title" Text="ОБНОВЛЕНИЕ"/>
+            </Border>
+            <StackPanel Classes="tile-body" Spacing="8">
+              <TextBlock Classes="page-subtitle"
+                         Text="{Binding Update.AppVersion, StringFormat='Текущая версия: {0}'}"
+                         TextWrapping="Wrap"/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Проверить обновления"
+                        Command="{Binding Update.CheckForUpdatesCommand}"
+                        IsEnabled="{Binding !Update.IsChecking}"/>
+                <Button Classes="primary"
+                        Content="Установить"
+                        Command="{Binding Update.ApplyCommand}"
+                        IsVisible="{Binding Update.IsAvailable}"
+                        IsEnabled="{Binding !Update.IsApplying}"/>
+              </StackPanel>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
       </StackPanel>
     </ScrollViewer>
   </Grid>

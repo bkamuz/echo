@@ -20,19 +20,22 @@ public sealed class GitHubUpdateChecker : IUpdateChecker
         _logger = logger;
     }
 
-    public async Task<UpdateInfo?> CheckForUpdateAsync(CancellationToken cancellationToken = default)
+    public async Task<UpdateCheckResult> CheckForUpdateAsync(
+        bool forceRefresh = false,
+        CancellationToken cancellationToken = default)
     {
         if (!UpdateEnvironment.IsPublishedBuild)
         {
             _logger.LogDebug("Skipping update check: not a published Windows build");
-            return null;
+            return UpdateCheckResult.Skipped;
         }
 
         var config = _configStore.Load();
-        if (!UpdateEnvironment.ShouldQueryRemote(config.LastUpdateCheckUtc))
+        if (!forceRefresh && !UpdateEnvironment.ShouldQueryRemote(config.LastUpdateCheckUtc))
         {
             _logger.LogDebug("Skipping remote update check; using cached pending update if any");
-            return UpdateEnvironment.TryCreatePendingUpdate(config);
+            var cached = UpdateEnvironment.TryCreatePendingUpdate(config);
+            return cached is null ? UpdateCheckResult.UpToDate : UpdateCheckResult.Available(cached);
         }
 
         try
@@ -44,14 +47,16 @@ public sealed class GitHubUpdateChecker : IUpdateChecker
             var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             var update = GitHubReleaseParser.TryParseLatestRelease(json, UpdateEnvironment.CurrentVersion);
             PersistCheckResult(config, update);
-            return update;
+            return update is null ? UpdateCheckResult.UpToDate : UpdateCheckResult.Available(update);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             _logger.LogWarning(ex, "Update check failed");
             config.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
             _configStore.Save(config);
-            return UpdateEnvironment.TryCreatePendingUpdate(config);
+
+            var cached = UpdateEnvironment.TryCreatePendingUpdate(config);
+            return cached is null ? UpdateCheckResult.Failed : UpdateCheckResult.Available(cached);
         }
     }
 

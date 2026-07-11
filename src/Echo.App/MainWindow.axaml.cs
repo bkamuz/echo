@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        ApplyWindowsChrome();
         Opened += OnOpened;
         Activated += OnActivated;
     }
@@ -41,6 +42,17 @@ public partial class MainWindow : Window
         {
             EnsureKeyboardFocus();
         }
+    }
+
+    private void ApplyWindowsChrome()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        TitleBarGrid.ColumnDefinitions = new ColumnDefinitions("*,Auto,0");
+        UpdateButtonPanel.Margin = new Thickness(0, 0, 140, 0);
     }
 
     private void ApplyLinuxChrome()

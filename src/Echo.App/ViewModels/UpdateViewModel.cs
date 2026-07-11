@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
+using echo.Core.Update;
 using Microsoft.Extensions.Logging;
 
 namespace echo.App.ViewModels;
@@ -22,6 +23,14 @@ public partial class UpdateViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isApplying;
+
+    [ObservableProperty]
+    private bool _isChecking;
+
+    public string AppVersion => UpdateEnvironment.DisplayVersion;
+
+    public bool IsCheckSupported =>
+        _updateApplier.IsSupported && UpdateEnvironment.IsPublishedBuild;
 
     public string Tooltip =>
         _pendingUpdate is null ? string.Empty : $"Обновить до v{_pendingUpdate.Version}";
@@ -41,29 +50,82 @@ public partial class UpdateViewModel : ObservableObject
 
     private async Task CheckOnStartupAsync()
     {
+        await CheckAsync(forceRefresh: false, notifyWhenUpToDate: false).ConfigureAwait(false);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
+    private async Task CheckForUpdatesAsync()
+    {
+        await CheckAsync(forceRefresh: true, notifyWhenUpToDate: true).ConfigureAwait(false);
+    }
+
+    private bool CanCheckForUpdates() => IsCheckSupported && !IsChecking && !IsApplying;
+
+    private async Task CheckAsync(bool forceRefresh, bool notifyWhenUpToDate)
+    {
+        if (!IsCheckSupported)
+        {
+            return;
+        }
+
+        IsChecking = true;
+        CheckForUpdatesCommand.NotifyCanExecuteChanged();
+        ApplyCommand.NotifyCanExecuteChanged();
+
         try
         {
-            var update = await _updateChecker.CheckForUpdateAsync().ConfigureAwait(false);
-            if (update is null || !_updateApplier.IsSupported)
+            var result = await _updateChecker.CheckForUpdateAsync(forceRefresh).ConfigureAwait(false);
+            if (result.WasSkipped)
             {
                 return;
             }
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                _pendingUpdate = update;
-                IsAvailable = true;
+                if (result.Update is not null)
+                {
+                    _pendingUpdate = result.Update;
+                    IsAvailable = true;
+                    OnPropertyChanged(nameof(Tooltip));
+                    ApplyCommand.NotifyCanExecuteChanged();
+                    return;
+                }
+
+                _pendingUpdate = null;
+                IsAvailable = false;
                 OnPropertyChanged(nameof(Tooltip));
                 ApplyCommand.NotifyCanExecuteChanged();
+
+                if (result.CheckFailed)
+                {
+                    _statusBar.SetStatusTemporary("Не удалось проверить обновления", alert: false);
+                }
+                else if (notifyWhenUpToDate)
+                {
+                    _statusBar.SetStatusTemporary("Установлена последняя версия", alert: false);
+                }
             });
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Startup update check failed");
+            _logger.LogDebug(ex, "Update check failed");
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _statusBar.SetStatusTemporary("Не удалось проверить обновления", alert: false);
+            });
+        }
+        finally
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                IsChecking = false;
+                CheckForUpdatesCommand.NotifyCanExecuteChanged();
+                ApplyCommand.NotifyCanExecuteChanged();
+            });
         }
     }
 
-    private bool CanApply() => IsAvailable && !IsApplying && _pendingUpdate is not null;
+    private bool CanApply() => IsAvailable && !IsApplying && !IsChecking && _pendingUpdate is not null;
 
     [RelayCommand(CanExecute = nameof(CanApply))]
     private async Task ApplyAsync()
@@ -75,6 +137,7 @@ public partial class UpdateViewModel : ObservableObject
 
         IsApplying = true;
         ApplyCommand.NotifyCanExecuteChanged();
+        CheckForUpdatesCommand.NotifyCanExecuteChanged();
 
         try
         {
@@ -104,6 +167,7 @@ public partial class UpdateViewModel : ObservableObject
             {
                 IsApplying = false;
                 ApplyCommand.NotifyCanExecuteChanged();
+                CheckForUpdatesCommand.NotifyCanExecuteChanged();
             });
         }
     }
