@@ -106,14 +106,13 @@
                     Margin="0,0,8,0"
                     Panel.ZIndex="1"
                     IsVisible="{Binding Update.IsAvailable}">
-          <Button Classes="icon-action"
+          <Button Classes="primary"
+                  Content="Обновить"
                   Command="{Binding Update.ApplyCommand}"
                   IsEnabled="{Binding !Update.IsApplying}"
-                  ToolTip.Tip="{Binding Update.Tooltip}">
-            <PathIcon Data="{StaticResource IconDownload}"
-                      Width="16"
-                      Height="16"/>
-          </Button>
+                  ToolTip.Tip="{Binding Update.Tooltip}"
+                  MinHeight="28"
+                  Padding="12,4"/>
         </StackPanel>
         <StackPanel Grid.Column="2"
                     x:Name="ClientCaptionButtons"
