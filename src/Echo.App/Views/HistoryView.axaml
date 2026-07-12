@@ -5,13 +5,7 @@
              x:DataType="vm:HistoryViewModel"
              VerticalAlignment="Stretch">
 
-  <Grid RowDefinitions="Auto,*" VerticalAlignment="Stretch">
-    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
-      <TextBlock Classes="page-title" Text="История"/>
-      <TextBlock Classes="page-subtitle" Text="{Binding EntryCountLabel}"/>
-    </StackPanel>
-
-    <Border Grid.Row="1" Classes="tile" ClipToBounds="True">
+  <Border Classes="tile" ClipToBounds="True" VerticalAlignment="Stretch">
       <Grid>
         <StackPanel IsVisible="{Binding IsLoadingInitial}"
                     VerticalAlignment="Center"
@@ -114,6 +108,5 @@
                      Margin="0,8,0,4"/>
         </Grid>
       </Grid>
-    </Border>
-  </Grid>
+  </Border>
 </UserControl>

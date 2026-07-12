@@ -92,14 +92,10 @@
           <StackPanel VerticalAlignment="Center"
                       Spacing="0"
                       Margin="12,0,0,0">
-            <TextBlock Text="Echo"
-                       FontSize="14"
-                       FontWeight="SemiBold"
-                       LetterSpacing="0.32"
-                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <TextBlock Text="{Binding AppVersion}"
-                       Classes="page-subtitle"
-                       FontSize="11"/>
+            <TextBlock Classes="page-title"
+                       Text="{Binding PageTitle}"/>
+            <TextBlock Classes="page-subtitle"
+                       Text="{Binding PageSubtitle}"/>
           </StackPanel>
         </Border>
         <StackPanel Grid.Column="1"

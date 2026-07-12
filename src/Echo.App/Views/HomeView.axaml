@@ -5,13 +5,7 @@
              x:DataType="vm:HomeViewModel"
              VerticalAlignment="Stretch">
 
-  <Grid RowDefinitions="Auto,*" VerticalAlignment="Stretch">
-    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
-      <TextBlock Classes="page-title" Text="Главная"/>
-      <TextBlock Classes="page-subtitle" Text="Диктовка с локальным распознаванием речи"/>
-    </StackPanel>
-
-    <StackPanel Grid.Row="1" Spacing="16" VerticalAlignment="Top">
+  <StackPanel Spacing="16" VerticalAlignment="Top">
       <Border Classes="tile">
         <DockPanel>
           <Border DockPanel.Dock="Top" Classes="tile-header">
@@ -44,6 +38,5 @@
           </StackPanel>
         </DockPanel>
       </Border>
-    </StackPanel>
-  </Grid>
+  </StackPanel>
 </UserControl>

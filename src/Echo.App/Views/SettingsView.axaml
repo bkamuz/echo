@@ -7,16 +7,10 @@
              HorizontalAlignment="Stretch"
              Focusable="True">
 
-  <Grid RowDefinitions="Auto,*" VerticalAlignment="Stretch">
-    <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
-      <TextBlock Classes="page-title" Text="Настройки"/>
-      <TextBlock Classes="page-subtitle" Text="Хоткей, движок, микрофон и способ ввода текста"/>
-    </StackPanel>
-
-    <ScrollViewer Grid.Row="1"
-                  VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled"
-                  IsEnabled="{Binding IsSettingsEnabled}">
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalAlignment="Stretch"
+                IsEnabled="{Binding IsSettingsEnabled}">
       <StackPanel Spacing="12">
 
         <Border Classes="tile">
@@ -243,5 +237,4 @@
 
       </StackPanel>
     </ScrollViewer>
-  </Grid>
 </UserControl>
