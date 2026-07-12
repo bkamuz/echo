@@ -8,14 +8,31 @@ public static class UpdateEnvironment
 {
     public const string GitHubOwner = "bkamuz";
     public const string GitHubRepo = "echo";
+    public const string UpdatesRepo = "echo-updates";
     public const string WindowsPortableAssetSuffix = "-win-x64-portable.zip";
+
+    public static string UpdateManifestUrl =>
+        $"https://raw.githubusercontent.com/{GitHubOwner}/{UpdatesRepo}/main/latest.json";
 
     public static Version CurrentVersion =>
         Assembly.GetEntryAssembly()?.GetName().Version
         ?? Assembly.GetExecutingAssembly().GetName().Version
         ?? new Version(0, 0, 0);
 
-    public static string DisplayVersion => $"v{CurrentVersion}";
+    public static string DisplayVersion
+    {
+        get
+        {
+            var version = NormalizeVersion(CurrentVersion);
+            return $"v{version.Major}.{version.Minor}.{version.Build}";
+        }
+    }
+
+    public static Version NormalizeVersion(Version version) =>
+        new(version.Major, version.Minor, version.Build);
+
+    public static bool IsNewerVersion(Version available, Version current) =>
+        NormalizeVersion(available) > NormalizeVersion(current);
 
     public static bool IsPublishedBuild
     {
@@ -57,14 +74,14 @@ public static class UpdateEnvironment
             return null;
         }
 
-        if (version <= CurrentVersion)
+        if (!IsNewerVersion(version, CurrentVersion))
         {
             return null;
         }
 
         return new UpdateInfo
         {
-            Version = version,
+            Version = NormalizeVersion(version),
             DownloadUrl = config.PendingUpdateDownloadUrl,
             ReleaseNotesUrl = config.PendingUpdateReleaseNotesUrl,
         };

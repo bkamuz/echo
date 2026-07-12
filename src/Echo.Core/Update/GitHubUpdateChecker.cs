@@ -40,24 +40,38 @@ public sealed class GitHubUpdateChecker : IUpdateChecker
 
         try
         {
-            var url = $"https://api.github.com/repos/{UpdateEnvironment.GitHubOwner}/{UpdateEnvironment.GitHubRepo}/releases/latest";
-            using var response = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            using var response = await _http
+                .GetAsync(UpdateEnvironment.UpdateManifestUrl, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Update check failed with HTTP {StatusCode} from {Url}",
+                    (int)response.StatusCode,
+                    UpdateEnvironment.UpdateManifestUrl);
+                return HandleCheckFailure(config);
+            }
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var update = GitHubReleaseParser.TryParseLatestRelease(json, UpdateEnvironment.CurrentVersion);
+            var update = UpdateManifestParser.TryParseManifest(json, UpdateEnvironment.CurrentVersion);
             PersistCheckResult(config, update);
             return update is null ? UpdateCheckResult.UpToDate : UpdateCheckResult.Available(update);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             _logger.LogWarning(ex, "Update check failed");
-            config.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
-            _configStore.Save(config);
-
-            var cached = UpdateEnvironment.TryCreatePendingUpdate(config);
-            return cached is null ? UpdateCheckResult.Failed : UpdateCheckResult.Available(cached);
+            return HandleCheckFailure(config);
         }
+    }
+
+    private UpdateCheckResult HandleCheckFailure(AppConfig config)
+    {
+        config.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+        _configStore.Save(config);
+
+        var cached = UpdateEnvironment.TryCreatePendingUpdate(config);
+        return cached is null ? UpdateCheckResult.Failed : UpdateCheckResult.Available(cached);
     }
 
     private void PersistCheckResult(AppConfig config, UpdateInfo? update)

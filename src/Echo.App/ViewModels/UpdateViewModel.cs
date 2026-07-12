@@ -98,7 +98,7 @@ public partial class UpdateViewModel : ObservableObject
 
                 if (result.CheckFailed)
                 {
-                    _statusBar.SetStatusTemporary("Не удалось проверить обновления", alert: false);
+                    _statusBar.SetStatusTemporary("Не удалось проверить обновления", alert: true);
                 }
                 else if (notifyWhenUpToDate)
                 {
@@ -111,7 +111,7 @@ public partial class UpdateViewModel : ObservableObject
             _logger.LogDebug(ex, "Update check failed");
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                _statusBar.SetStatusTemporary("Не удалось проверить обновления", alert: false);
+                _statusBar.SetStatusTemporary("Не удалось проверить обновления", alert: true);
             });
         }
         finally

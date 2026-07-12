@@ -26,7 +26,7 @@ public static class GitHubReleaseParser
             return null;
         }
 
-        if (releaseVersion <= currentVersion)
+        if (!UpdateEnvironment.IsNewerVersion(releaseVersion, currentVersion))
         {
             return null;
         }
@@ -77,7 +77,7 @@ public static class GitHubReleaseParser
 
         return new UpdateInfo
         {
-            Version = releaseVersion,
+            Version = UpdateEnvironment.NormalizeVersion(releaseVersion),
             DownloadUrl = downloadUrl,
             ReleaseNotesUrl = releaseNotesUrl,
         };
@@ -106,5 +106,6 @@ public static class GitHubReleaseParser
         return true;
     }
 
-    public static bool IsNewerVersion(Version available, Version current) => available > current;
+    public static bool IsNewerVersion(Version available, Version current) =>
+        UpdateEnvironment.IsNewerVersion(available, current);
 }
