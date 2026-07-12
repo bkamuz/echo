@@ -35,6 +35,7 @@
       <SolidColorBrush x:Key="SuccessBrush" Color="#42BE65"/>
       <SolidColorBrush x:Key="SuccessBgBrush" Color="#044317"/>
       <SolidColorBrush x:Key="SuccessTextBrush" Color="#A7F0BA"/>
+      <SolidColorBrush x:Key="TextWarningBrush" Color="#FFD600"/>
       <SolidColorBrush x:Key="TextErrorBrush" Color="#FA4D56"/>
       <SolidColorBrush x:Key="OverlayBrush" Color="#262626"/>
     </ResourceDictionary>
@@ -69,6 +70,7 @@
       <SolidColorBrush x:Key="SuccessBrush" Color="#24A148"/>
       <SolidColorBrush x:Key="SuccessBgBrush" Color="#DEFBE6"/>
       <SolidColorBrush x:Key="SuccessTextBrush" Color="#044317"/>
+      <SolidColorBrush x:Key="TextWarningBrush" Color="#B28600"/>
       <SolidColorBrush x:Key="TextErrorBrush" Color="#DA1E28"/>
       <SolidColorBrush x:Key="OverlayBrush" Color="#393939"/>
     </ResourceDictionary>

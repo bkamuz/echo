@@ -157,7 +157,7 @@ public partial class UpdateViewModel : ObservableObject
             _logger.LogWarning(ex, "Failed to apply update");
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                _statusBar.SetStatusTemporary($"Не удалось обновить: {ex.Message}");
+                _statusBar.SetStatusTemporary($"Не удалось обновить: {ex.Message}", alert: true);
                 _statusBar.IsBusy = false;
             });
         }

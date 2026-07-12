@@ -173,6 +173,7 @@
                      VerticalAlignment="Center"/>
         <TextBlock Classes="status-text"
                    Classes.alert="{Binding StatusBar.IsAlert}"
+                   Classes.warning="{Binding StatusBar.IsWarning}"
                    Text="{Binding StatusBar.StatusText}"
                    FontSize="12"
                    VerticalAlignment="Center"/>

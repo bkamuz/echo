@@ -86,7 +86,7 @@ public sealed class SettingsApplyService
                     return;
                 }
 
-                _status.SetStatusTemporary("Ошибка применения настроек", StatusClearMs);
+                _status.SetStatusTemporary("Ошибка применения настроек", StatusClearMs, alert: true);
             });
         }
         finally

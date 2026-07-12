@@ -23,6 +23,9 @@ public partial class AppStatusViewModel : ObservableObject
     [ObservableProperty]
     private bool _isAlert;
 
+    [ObservableProperty]
+    private bool _isWarning;
+
     public AppStatusViewModel(ConfigStore configStore)
     {
         _configStore = configStore;
@@ -46,39 +49,45 @@ public partial class AppStatusViewModel : ObservableObject
         if (spec is not null && !spec.IsDownloaded())
         {
             StatusText = ModelMissingStatus;
-            IsAlert = true;
+            ApplyStatusTone(alert: true);
             return;
         }
 
         if (_platformWarning is not null)
         {
             StatusText = _platformWarning;
-            IsAlert = false;
+            ApplyStatusTone(warning: true);
             return;
         }
 
         StatusText = ReadyStatus;
-        IsAlert = false;
+        ApplyStatusTone();
     }
 
-    public void SetStatus(string text, bool busy = false, bool alert = false)
+    public void SetStatus(string text, bool busy = false, bool alert = false, bool warning = false)
     {
         _clearStatusCts?.Cancel();
         _clearStatusCts?.Dispose();
         _clearStatusCts = null;
         StatusText = text;
         IsBusy = busy;
-        IsAlert = alert;
+        ApplyStatusTone(alert, warning);
     }
 
-    public void SetStatusTemporary(string text, int clearAfterMs = 2500, bool alert = false)
+    public void SetStatusTemporary(string text, int clearAfterMs = 2500, bool alert = false, bool warning = false)
     {
-        SetStatus(text, busy: false, alert: alert);
+        SetStatus(text, busy: false, alert: alert, warning: warning);
         _clearStatusCts?.Cancel();
         _clearStatusCts?.Dispose();
         _clearStatusCts = new CancellationTokenSource();
         var token = _clearStatusCts.Token;
         _ = ClearAfterDelayAsync(clearAfterMs, token);
+    }
+
+    private void ApplyStatusTone(bool alert = false, bool warning = false)
+    {
+        IsAlert = alert;
+        IsWarning = warning && !alert;
     }
 
     private async Task ClearAfterDelayAsync(int delayMs, CancellationToken token)

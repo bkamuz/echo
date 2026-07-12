@@ -269,7 +269,9 @@ public sealed class DictationCoordinator : IDisposable
                 }
                 else if (injectResult.Outcome == TextInjectionOutcome.ClipboardOnly)
                 {
-                    _statusNotifier?.ShowTemporary(injectResult.Message ?? "Текст скопирован — нажмите Ctrl+V.");
+                    _statusNotifier?.ShowTemporary(
+                        injectResult.Message ?? "Текст скопирован — нажмите Ctrl+V.",
+                        warning: true);
                     _logger.LogInformation(
                         "Dictation done (clipboard only): transcribe={TranscribeMs}ms inject={InjectMs}ms chars={Chars} — {Message}",
                         transcribeMs,
