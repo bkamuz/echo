@@ -2,12 +2,13 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using echo.Abstractions.Core;
 using echo.Core;
+using echo.Core.Update;
 
 namespace echo.App.ViewModels;
 
 public partial class AppStatusViewModel : ObservableObject
 {
-    public const string ReadyStatus = "Echo готов";
+    public static string ReadyStatus => $"Echo {UpdateEnvironment.DisplayVersion} готов";
     public const string ModelMissingStatus = "Модель не загружена — скачайте в «Настройках»";
 
     private readonly ConfigStore _configStore;
