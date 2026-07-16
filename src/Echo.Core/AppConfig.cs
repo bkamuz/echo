@@ -70,6 +70,32 @@ public sealed class AppConfig
     [JsonPropertyName("extra")]
     public Dictionary<string, JsonElement> Extra { get; set; } = new();
 
+    public AppConfig Clone()
+    {
+        return new AppConfig
+        {
+            Hotkey = Hotkey,
+            Engine = Engine,
+            WhisperModelSize = WhisperModelSize,
+            GigaAmModelSize = GigaAmModelSize,
+            Language = Language,
+            Device = Device,
+            InputDevice = InputDevice,
+            InputMethod = InputMethod,
+            TypeDelayMs = TypeDelayMs,
+            MinPressMs = MinPressMs,
+            SampleRate = SampleRate,
+            AddTrailingSpace = AddTrailingSpace,
+            ShowDictationToast = ShowDictationToast,
+            StartWithSystem = StartWithSystem,
+            LastUpdateCheckUtc = LastUpdateCheckUtc,
+            PendingUpdateVersion = PendingUpdateVersion,
+            PendingUpdateDownloadUrl = PendingUpdateDownloadUrl,
+            PendingUpdateReleaseNotesUrl = PendingUpdateReleaseNotesUrl,
+            Extra = new Dictionary<string, JsonElement>(Extra),
+        };
+    }
+
     public void Normalize()
     {
         if (!Engines.Contains(Engine))

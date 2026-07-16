@@ -1,5 +1,5 @@
 using echo.Abstractions.Core;
-using echo.Engines.Whisper;
+using echo.Abstractions.Engines;
 using Microsoft.Extensions.Logging;
 
 namespace echo.Core;
@@ -8,22 +8,30 @@ public sealed class ModelDownloader
 {
     private readonly ILogger<ModelDownloader> _logger;
     private readonly HttpClient _http;
+    private readonly IWhisperModelSupport? _whisper;
 
-    public ModelDownloader(ILogger<ModelDownloader> logger, HttpClient http)
+    public ModelDownloader(
+        ILogger<ModelDownloader> logger,
+        HttpClient http,
+        IWhisperModelSupport? whisper = null)
     {
         _logger = logger;
         _http = http;
+        _whisper = whisper;
     }
 
     public async Task DownloadAsync(ModelSpec spec, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
         if (spec.Engine == "whisper")
         {
+            if (_whisper is null)
+            {
+                throw new InvalidOperationException(
+                    "Whisper не включён в этой сборке Echo.");
+            }
+
             var size = ModelRegistry.WhisperSizeFromSpecId(spec.Id);
-            progress?.Report($"Скачивание Whisper {size}…");
-            _logger.LogInformation("Downloading Whisper ggml model {Size}", size);
-            await WhisperGgmlHelper.DownloadGgmlModelAsync(size, _logger, cancellationToken);
-            progress?.Report($"Готово: Whisper {size}");
+            await _whisper.DownloadAsync(size, progress, cancellationToken);
             return;
         }
 
@@ -40,15 +48,13 @@ public sealed class ModelDownloader
     {
         if (spec.Engine == "whisper")
         {
-            var size = ModelRegistry.WhisperSizeFromSpecId(spec.Id);
-            var dir = AppPaths.WhisperDir(size);
-            if (!Directory.Exists(dir))
+            if (_whisper is null)
             {
                 return;
             }
 
-            Directory.Delete(dir, recursive: true);
-            _logger.LogInformation("Deleted Whisper model weights: {Size}", size);
+            var size = ModelRegistry.WhisperSizeFromSpecId(spec.Id);
+            _whisper.Delete(size);
             return;
         }
 

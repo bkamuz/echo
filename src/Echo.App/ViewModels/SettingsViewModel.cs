@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using echo.App.Services;
 using echo.Core;
 using echo.Platform.Linux;
+using echo.Platform.Windows;
 using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
 using echo.Abstractions.Platform;
@@ -17,18 +18,17 @@ public sealed record TypeSpeedOption(string Label, int DelayMs)
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private const string HotkeyCaptureStatus = "Удерживайте комбинацию и отпустите все клавиши…";
-
     private readonly DictationCoordinator _coordinator;
-    private readonly ModelDownloader _downloader;
     private readonly IAudioCapture _audio;
-    private readonly IHotkeyService _hotkeyService;
     private readonly HomeViewModel _home;
     private readonly AppStatusViewModel _status;
     private readonly SettingsApplyService _applyService;
     private readonly IDirectMlAvailability _directMlAvailability;
     private readonly IAutoStartService _autoStartService;
-    private string _savedHotkey = string.Empty;
+    private readonly HotkeyCaptureController _hotkeyCapture;
+    private readonly ModelSettingsController _models;
+    private readonly DirectMlRuntimeInstaller? _directMlInstaller;
+    private readonly IReadOnlyList<EngineOption> _allEngineOptions;
     private bool _isLoadingFromConfig;
 
     [ObservableProperty] private string _hotkey = string.Empty;
@@ -77,24 +77,41 @@ public partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(
         DictationCoordinator coordinator,
-        ModelDownloader downloader,
         IAudioCapture audio,
-        IHotkeyService hotkey,
         HomeViewModel home,
         AppStatusViewModel status,
         SettingsApplyService applyService,
         IDirectMlAvailability directMlAvailability,
-        IAutoStartService autoStartService)
+        IAutoStartService autoStartService,
+        HotkeyCaptureController hotkeyCapture,
+        ModelSettingsController models,
+        IEnumerable<ITranscriptionEngine> engines,
+        DirectMlRuntimeInstaller? directMlInstaller = null)
     {
         _coordinator = coordinator;
-        _downloader = downloader;
         _audio = audio;
-        _hotkeyService = hotkey;
         _home = home;
         _status = status;
         _applyService = applyService;
         _directMlAvailability = directMlAvailability;
         _autoStartService = autoStartService;
+        _hotkeyCapture = hotkeyCapture;
+        _models = models;
+        _directMlInstaller = directMlInstaller;
+
+        var registered = engines.Select(e => e.EngineId).ToHashSet(StringComparer.Ordinal);
+        _allEngineOptions =
+        [
+            new("gigaam", "GigaAM (русский)"),
+            new("whisper", "Whisper (мультиязычный)"),
+            new("omnilingual", "Omnilingual (1600 языков)"),
+        ];
+        EngineOptions = _allEngineOptions.Where(o => registered.Contains(o.Id)).ToList();
+        if (EngineOptions.Count == 0)
+        {
+            EngineOptions = _allEngineOptions.Where(o => o.Id == "gigaam").ToList();
+        }
+
         LoadFromConfig();
     }
 
@@ -108,14 +125,9 @@ public partial class SettingsViewModel : ObservableObject
     private static readonly ComputeDeviceOption DirectMlDeviceOption = new(
         ExecutionProviderResolver.DirectMlDevice,
         "GPU (DirectML)",
-        "Ускорение через DirectML на Windows (AMD Radeon, Intel, NVIDIA).");
+        "Ускорение через DirectML на Windows (AMD Radeon, Intel, NVIDIA). При первом выборе скачается ~30 МБ.");
 
-    public IReadOnlyList<EngineOption> EngineOptions { get; } =
-    [
-        new("gigaam", "GigaAM (русский)"),
-        new("whisper", "Whisper (мультиязычный)"),
-        new("omnilingual", "Omnilingual (1600 языков)"),
-    ];
+    public IReadOnlyList<EngineOption> EngineOptions { get; private set; }
     public IReadOnlyList<ComputeDeviceOption> ComputeDeviceOptions => BuildComputeDeviceOptions();
 
     private IReadOnlyList<ComputeDeviceOption> BuildComputeDeviceOptions()
@@ -130,6 +142,7 @@ public partial class SettingsViewModel : ObservableObject
             ? [CpuDeviceOption, DirectMlDeviceOption]
             : [CpuDeviceOption];
     }
+
     public IReadOnlyList<string> WhisperSizes => AppConfig.WhisperSizes;
     public IReadOnlyList<string> GigaAmSizes => AppConfig.GigaAmSizes;
     public IReadOnlyList<InputMethodOption> InputMethodOptions =>
@@ -140,6 +153,7 @@ public partial class SettingsViewModel : ObservableObject
                 new("clipboard", "Вставка из буфера", "Быстрая вставка. Содержимое буфера обмена восстанавливается после вставки."),
                 new("type", "Печать", "Посимвольный ввод через эмуляцию клавиатуры."),
             ];
+
     private static IReadOnlyList<InputMethodOption> BuildLinuxInputMethodOptions()
     {
         if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
@@ -252,7 +266,21 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnLanguageChanged(string value) => ScheduleApply();
 
-    partial void OnSelectedComputeDeviceChanged(ComputeDeviceOption? value) => ScheduleApply();
+    partial void OnSelectedComputeDeviceChanged(ComputeDeviceOption? value)
+    {
+        if (_isLoadingFromConfig)
+        {
+            return;
+        }
+
+        if (value?.Id == ExecutionProviderResolver.DirectMlDevice && _directMlInstaller is not null)
+        {
+            _ = EnsureDirectMlThenApplyAsync();
+            return;
+        }
+
+        ScheduleApply();
+    }
 
     partial void OnSelectedInputMethodChanged(InputMethodOption? value)
     {
@@ -281,23 +309,11 @@ public partial class SettingsViewModel : ObservableObject
 
     public void UpdateModelStatus()
     {
-        var spec = CurrentModelSpec();
-        if (spec is null)
-        {
-            ModelTitle = string.Empty;
-            IsModelDownloaded = false;
-            HasCurrentModel = false;
-            ModelStatus = "Неизвестная модель";
-            return;
-        }
-
-        var downloaded = spec.IsDownloaded();
-        ModelTitle = spec.Title;
-        IsModelDownloaded = downloaded;
-        HasCurrentModel = true;
-        ModelStatus = downloaded
-            ? $"{spec.Title} ✓ загружена"
-            : $"{spec.Title} — не загружена";
+        var snapshot = _models.Refresh(Engine, WhisperModelSize, GigaAmModelSize);
+        ModelTitle = snapshot.Title;
+        IsModelDownloaded = snapshot.IsDownloaded;
+        HasCurrentModel = snapshot.HasModel;
+        ModelStatus = snapshot.StatusText;
 
         if (!IsApplying && !IsCapturingHotkey)
         {
@@ -305,60 +321,25 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    private ModelSpec? CurrentModelSpec() =>
-        ModelRegistry.SpecForEngine(Engine, WhisperModelSize, GigaAmModelSize);
-
     [RelayCommand]
     private async Task DownloadModelAsync()
     {
-        var spec = CurrentModelSpec();
-        if (spec is null || spec.IsDownloaded())
-        {
-            return;
-        }
-
-        IsApplying = true;
-        var downloadLabel = $"Скачивание {spec.Title}…";
-        ModelStatus = downloadLabel;
-        _status.SetStatus(downloadLabel, busy: true);
-        try
-        {
-            var progress = _applyService.CreateProgressReporter(null, ApplyDownloadProgress);
-            await _downloader.DownloadAsync(spec, progress).ConfigureAwait(false);
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                ModelStatus = $"{spec.Title} ✓ загружена";
-                UpdateModelStatus();
-            });
-
-            var warmupProgress = _applyService.CreateStatusProgress(_applyService.ApplyGeneration);
-            await _coordinator.TryWarmupCurrentModelAsync(warmupProgress).ConfigureAwait(false);
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                _home.NotifyConfigChanged();
-                _status.SetStatusTemporary($"{spec.Title} ✓ загружена", SettingsApplyService.StatusClearMs);
-            });
-        }
-        finally
-        {
-            await Dispatcher.UIThread.InvokeAsync(() => IsApplying = false);
-        }
+        await _models.DownloadAsync(
+            Engine,
+            WhisperModelSize,
+            GigaAmModelSize,
+            status => ModelStatus = status,
+            applying => IsApplying = applying);
+        UpdateModelStatus();
     }
 
     [RelayCommand]
     private void DeleteModel()
     {
-        var spec = CurrentModelSpec();
-        if (spec is null || !spec.IsDownloaded())
+        if (_models.Delete(Engine, WhisperModelSize, GigaAmModelSize, status => ModelStatus = status))
         {
-            return;
+            UpdateModelStatus();
         }
-
-        _downloader.Delete(spec);
-        ModelStatus = $"{spec.Title} удалена";
-        UpdateModelStatus();
-        _status.SetStatusTemporary($"{spec.Title} удалена", SettingsApplyService.StatusClearMs);
     }
 
     [RelayCommand]
@@ -370,46 +351,45 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        _savedHotkey = Hotkey;
+        _hotkeyCapture.Begin(Hotkey);
         IsCapturingHotkey = true;
         HotkeyPreview = string.Empty;
-        _status.SetStatus(HotkeyCaptureStatus);
-        _hotkeyService.Stop();
+        _status.SetStatus(HotkeyCaptureController.CaptureStatus);
     }
 
     public void UpdateHotkeyPreview(string preview)
     {
+        _hotkeyCapture.UpdatePreview(preview);
         HotkeyPreview = preview;
         OnPropertyChanged(nameof(HotkeyDisplay));
     }
 
     public void ApplyCapturedHotkey(string hotkey)
     {
-        Hotkey = hotkey;
+        var applied = _hotkeyCapture.Complete(hotkey);
+        if (applied is null)
+        {
+            return;
+        }
+
+        Hotkey = applied;
         IsCapturingHotkey = false;
         HotkeyPreview = string.Empty;
         OnPropertyChanged(nameof(HotkeyDisplay));
         _status.RefreshReadiness();
-        _hotkeyService.Configure(Hotkey);
-        _hotkeyService.Start();
         ScheduleApply();
     }
 
     public void CancelHotkeyCapture()
     {
-        Hotkey = _savedHotkey;
+        Hotkey = _hotkeyCapture.Cancel();
         IsCapturingHotkey = false;
         HotkeyPreview = string.Empty;
         OnPropertyChanged(nameof(HotkeyDisplay));
         _status.RefreshReadiness();
-        _hotkeyService.Configure(_coordinator.Config.Hotkey);
-        _hotkeyService.Start();
     }
 
-    partial void OnHotkeyChanged(string value)
-    {
-        OnPropertyChanged(nameof(HotkeyDisplay));
-    }
+    partial void OnHotkeyChanged(string value) => OnPropertyChanged(nameof(HotkeyDisplay));
 
     private void ScheduleApply()
     {
@@ -419,6 +399,36 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         _applyService.ScheduleApply(PrepareConfigForApplyAsync, OnApplySucceeded, OnApplyFinished);
+    }
+
+    private async Task EnsureDirectMlThenApplyAsync()
+    {
+        if (_directMlInstaller is null)
+        {
+            ScheduleApply();
+            return;
+        }
+
+        IsApplying = true;
+        _status.SetStatus("Подготовка DirectML…", busy: true);
+        try
+        {
+            var progress = _applyService.CreateProgressReporter(null, s => _status.SetStatus(s, busy: true));
+            await _directMlInstaller.EnsureInstalledAsync(progress).ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(ScheduleApply);
+        }
+        catch (Exception)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                SelectedComputeDevice = CpuDeviceOption;
+                _status.SetStatusTemporary(
+                    "Не удалось скачать DirectML — оставлен CPU",
+                    SettingsApplyService.StatusClearMs,
+                    alert: true);
+                IsApplying = false;
+            });
+        }
     }
 
     private async Task<AppConfig> PrepareConfigForApplyAsync()
@@ -446,17 +456,9 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    private void ApplyDownloadProgress(string status)
-    {
-        var normalized = status.Trim();
-        var isTerminal = normalized.StartsWith("Готово", StringComparison.Ordinal);
-        ModelStatus = normalized;
-        _status.SetStatus(normalized, busy: !isTerminal);
-    }
-
     private AppConfig BuildConfigFromViewModel()
     {
-        var config = _coordinator.Config;
+        var config = _coordinator.Config.Clone();
         config.Hotkey = Hotkey;
         config.Engine = Engine;
         config.WhisperModelSize = WhisperModelSize;
@@ -480,8 +482,9 @@ public partial class SettingsViewModel : ObservableObject
         {
             var config = _coordinator.Config;
             Hotkey = config.Hotkey;
-            _savedHotkey = Hotkey;
-            Engine = config.Engine;
+            Engine = EngineOptions.Any(e => e.Id == config.Engine)
+                ? config.Engine
+                : EngineOptions[0].Id;
             WhisperModelSize = config.WhisperModelSize;
             GigaAmModelSize = config.GigaAmModelSize;
             Language = config.Language;

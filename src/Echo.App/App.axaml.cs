@@ -2,14 +2,18 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
+using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 using echo.App.DependencyInjection;
 using echo.App.Services;
 using echo.App.ViewModels;
+using echo.App.Views;
 using echo.Core;
 using echo.Core.DependencyInjection;
 using echo.Engines.DependencyInjection;
 using echo.Platform.Linux;
+using echo.Platform.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -37,9 +41,22 @@ public partial class App : Application
                 services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();
                 services.AddSingleton<IDictationResultNotifier, DictationToastService>();
                 services.AddSingleton<SettingsApplyService>();
+                services.AddSingleton<HotkeyCaptureController>();
                 services.AddSingleton<LinuxDependencyPromptService>();
                 services.AddSingleton<HomeViewModel>();
-                services.AddSingleton<SettingsViewModel>();
+                services.AddSingleton<ModelSettingsController>();
+                services.AddSingleton(sp => new SettingsViewModel(
+                    sp.GetRequiredService<DictationCoordinator>(),
+                    sp.GetRequiredService<IAudioCapture>(),
+                    sp.GetRequiredService<HomeViewModel>(),
+                    sp.GetRequiredService<AppStatusViewModel>(),
+                    sp.GetRequiredService<SettingsApplyService>(),
+                    sp.GetRequiredService<IDirectMlAvailability>(),
+                    sp.GetRequiredService<IAutoStartService>(),
+                    sp.GetRequiredService<HotkeyCaptureController>(),
+                    sp.GetRequiredService<ModelSettingsController>(),
+                    sp.GetServices<echo.Abstractions.Engines.ITranscriptionEngine>(),
+                    sp.GetService<DirectMlRuntimeInstaller>()));
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<ShellViewModel>();
@@ -85,6 +102,10 @@ public partial class App : Application
                 desktop.MainWindow.ShowInTaskbar = false;
                 desktop.MainWindow.Opened += (_, _) => desktop.MainWindow.Hide();
             }
+            else
+            {
+                desktop.MainWindow.Opened += (_, _) => _ = MaybeShowFirstRunAsync(desktop.MainWindow);
+            }
 
             if (Services.GetRequiredService<ITrayStateService>() is AvaloniaTrayService tray)
             {
@@ -106,5 +127,25 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static async Task MaybeShowFirstRunAsync(Window mainWindow)
+    {
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var coordinator = Services.GetRequiredService<DictationCoordinator>();
+            var config = coordinator.Config;
+            var spec = ModelRegistry.SpecForEngine(config.Engine, config.WhisperModelSize, config.GigaAmModelSize);
+            if (spec is null || spec.IsDownloaded())
+            {
+                return;
+            }
+
+            var settings = Services.GetRequiredService<SettingsViewModel>();
+            var dialog = new FirstRunDialog(settings, coordinator);
+            await dialog.ShowDialog(mainWindow);
+            Services.GetRequiredService<HomeViewModel>().NotifyConfigChanged();
+            Services.GetRequiredService<AppStatusViewModel>().RefreshReadiness();
+        });
     }
 }

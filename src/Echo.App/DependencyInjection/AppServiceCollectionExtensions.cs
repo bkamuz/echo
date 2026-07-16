@@ -10,10 +10,12 @@ public static class AppServiceCollectionExtensions
         {
             echo.Platform.Windows.DependencyInjection.WindowsServiceCollectionExtensions.AddWindowsPlatform(services);
         }
+#if INCLUDE_MACOS
         else if (OperatingSystem.IsMacOS())
         {
             echo.Platform.MacOS.DependencyInjection.MacOsServiceCollectionExtensions.AddMacOsPlatform(services);
         }
+#endif
         else if (OperatingSystem.IsLinux())
         {
             echo.Platform.Linux.DependencyInjection.LinuxServiceCollectionExtensions.AddLinuxPlatform(services);

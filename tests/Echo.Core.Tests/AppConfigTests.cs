@@ -14,6 +14,28 @@ public class AppConfigTests
     }
 
     [Fact]
+    public void Clone_CopiesMutableFieldsWithoutSharingExtra()
+    {
+        var original = new AppConfig
+        {
+            Hotkey = "ctrl+shift+x",
+            Engine = "omnilingual",
+            Device = "directml",
+        };
+        original.Extra["k"] = System.Text.Json.JsonSerializer.SerializeToElement(1);
+
+        var clone = original.Clone();
+        clone.Hotkey = "ctrl+cmd";
+        clone.Extra["k"] = System.Text.Json.JsonSerializer.SerializeToElement(2);
+
+        Assert.Equal("ctrl+shift+x", original.Hotkey);
+        Assert.Equal(1, original.Extra["k"].GetInt32());
+        Assert.Equal("ctrl+cmd", clone.Hotkey);
+        Assert.Equal("omnilingual", clone.Engine);
+        Assert.Equal("directml", clone.Device);
+    }
+
+    [Fact]
     public void ModelRegistry_GigaAmSpec_PointsToAppData()
     {
         var spec = ModelRegistry.GigaAmSpecFor("e2e");

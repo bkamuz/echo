@@ -37,6 +37,7 @@ public static class AppPaths
     public static string WhisperDir(string modelSize) => Path.Combine(ModelsDir, "whisper", modelSize);
     public static string GigaAmDir => Path.Combine(ModelsDir, "gigaam-v3");
     public static string OmnilingualDir => Path.Combine(ModelsDir, "omnilingual-300m");
+    public static string DirectMlDir => Path.Combine(BaseDir, "directml");
 
     public static void EnsureDirectories()
     {

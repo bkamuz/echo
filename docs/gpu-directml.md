@@ -6,12 +6,11 @@ Whisper always runs on CPU in this release.
 
 ## Quick check
 
-1. Run Echo from a release zip or installer (includes `directml/` folder).
-2. In **Settings → Распознавание → Устройство**, you should see **GPU (DirectML)**.
-3. Select GigaAM, choose **GPU (DirectML)**, dictate a 10+ second phrase.
-4. Check logs for `Loading GigaAM ... (provider=directml)` and compare `transcribe=...ms` with CPU.
+1. Run Echo. In **Settings → Распознавание → Устройство** choose **GPU (DirectML)** — Echo downloads ~30 MB of DirectML natives into your profile on first use (or use a Debug build with local `native/win-x64/directml/`).
+2. Select GigaAM, dictate a 10+ second phrase.
+3. Check logs for `Loading GigaAM ... (provider=directml)` and compare `transcribe=...ms` with CPU.
 
-If **GPU (DirectML)** is not shown, the `directml/` folder is missing next to `Echo.App.exe`.
+If download fails, Echo stays on CPU and shows a status message.
 
 ## Obtain DirectML DLLs (developers)
 
@@ -45,13 +44,13 @@ Copy **all** `*.dll` from the same build output — do not mix CPU and DirectML 
 
 ## How deployment works
 
-On build/publish (Windows only), if `native/win-x64/directml/sherpa-onnx-c-api.dll` exists:
+**Default Release / portable zip:** CPU-only. DirectML is **not** baked in.
 
-1. CPU Sherpa/ONNX DLLs from NuGet are bundled inside `Echo.App.exe` (single-file).
-2. DirectML DLLs are copied to `directml/` next to `Echo.App.exe` (never mixed into the root).
-3. `WindowsDirectMlAvailability` probes `directml/onnxruntime.dll` for the DML export.
+When the user selects **GPU (DirectML)** in Settings, Echo downloads the three DLLs from the maintainer GitHub release `directml-runtime-<version>` into `%APPDATA%\Echo\directml` (and mirrors beside the exe when writable).
 
-Portable zip and Inno Setup include `directml/` when present.
+**Debug builds** still copy `native/win-x64/directml/` next to the output when present (`ShipDirectMl=true` by default in Debug). Override with `-p:ShipDirectMl=true` on Release if you want the old bake-in behavior.
+
+`WindowsDirectMlAvailability` always offers GPU on Windows; natives are verified before use via `OrtDirectMlExport`.
 
 ### GitHub Releases (CI)
 

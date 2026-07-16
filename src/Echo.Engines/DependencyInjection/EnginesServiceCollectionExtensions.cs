@@ -7,7 +7,10 @@ public static class EnginesServiceCollectionExtensions
 {
     public static IServiceCollection UseEchoEngines(this IServiceCollection services)
     {
+#if INCLUDE_WHISPER
         services.AddSingleton<ITranscriptionEngine, Whisper.WhisperEngine>();
+        services.AddSingleton<IWhisperModelSupport, Whisper.WhisperModelSupport>();
+#endif
         services.AddSingleton<ITranscriptionEngine, GigaAm.GigaAmEngine>();
         services.AddSingleton<ITranscriptionEngine, Omnilingual.OmnilingualEngine>();
         return services;

@@ -26,9 +26,7 @@ publish_win_x64() {
   fi
 
   cp "$source_dir/Echo.App.exe" "$staging/"
-  if [[ -d "$root/native/win-x64/directml" ]]; then
-    cp -r "$root/native/win-x64/directml" "$staging/directml"
-  fi
+  # DirectML is downloaded on first GPU select — not baked into the default portable zip.
 
   rm -f "$zip_path"
   (cd "$staging" && zip -qr "$zip_path" .)

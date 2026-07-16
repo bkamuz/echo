@@ -43,7 +43,7 @@ jobs:
           version="$(tr -d '[:space:]' < .github/directml-sherpa-version)"
           echo "key=directml-sherpa-${version}" >> "$GITHUB_OUTPUT"
 
-      - name: Restore DirectML runtime cache
+      - name: Restore DirectML runtime cache (optional — GPU natives download on first use)
         uses: actions/cache@v6
         id: directml-cache
         with:
@@ -51,9 +51,11 @@ jobs:
           key: ${{ steps.directml.outputs.key }}
           restore-keys: |
             directml-sherpa-
+        continue-on-error: true
 
-      - name: Download DirectML runtime if missing
+      - name: Download DirectML runtime if missing (optional)
         if: steps.directml-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -65,19 +67,17 @@ jobs:
             gh release download "directml-runtime-${version}" \
               --repo "${{ github.repository }}" \
               --dir "$dest" \
-              --clobber
+              --clobber || true
           fi
 
-      - name: Verify DirectML runtime
+      - name: Note DirectML status
         shell: bash
         run: |
-          for f in sherpa-onnx-c-api.dll onnxruntime.dll DirectML.dll; do
-            if [[ ! -f "native/win-x64/directml/$f" ]]; then
-              echo "Missing DirectML runtime file: $f" >&2
-              echo "Run Seed DirectML cache or upload directml-runtime-<version> release." >&2
-              exit 1
-            fi
-          done
+          if [[ -f native/win-x64/directml/sherpa-onnx-c-api.dll ]]; then
+            echo "DirectML natives present (Debug/ShipDirectMl only; not baked into default Release zip)."
+          else
+            echo "DirectML natives absent — end users download on first GPU select."
+          fi
 
       - name: Publish all portable archives
         shell: bash

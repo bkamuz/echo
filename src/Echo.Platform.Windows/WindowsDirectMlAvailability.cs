@@ -4,16 +4,8 @@ namespace echo.Platform.Windows;
 
 public sealed class WindowsDirectMlAvailability : IDirectMlAvailability
 {
-    public bool IsAvailable => Probe();
-
-    private static bool Probe()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return false;
-        }
-
-        var baseDir = DirectMlPaths.ResolveDirectory();
-        return baseDir is not null && OrtDirectMlExport.IsPresent(baseDir);
-    }
+    /// <summary>
+    /// GPU option is offered on all Windows builds; natives may be downloaded on first use.
+    /// </summary>
+    public bool IsAvailable => OperatingSystem.IsWindows();
 }

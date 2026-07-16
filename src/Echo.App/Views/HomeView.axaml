@@ -34,7 +34,10 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource LinkBrush}"/>
             <TextBlock Classes="page-subtitle"
-                       Text="Движок и модель можно изменить в настройках"/>
+                       Text="{Binding ReadinessText}"/>
+            <TextBlock Classes="page-subtitle"
+                       Text="{Binding LastOutcome}"
+                       IsVisible="{Binding ShowLastOutcome}"/>
           </StackPanel>
         </DockPanel>
       </Border>

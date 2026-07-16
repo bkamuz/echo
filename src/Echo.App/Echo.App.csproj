@@ -6,6 +6,14 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- macOS platform assembly only when targeting/building on macOS (stubs otherwise). -->
+    <IncludeMacOs Condition="'$(IncludeMacOs)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">true</IncludeMacOs>
+    <IncludeMacOs Condition="'$(IncludeMacOs)' == '' and '$(RuntimeIdentifier)' != '' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))">true</IncludeMacOs>
+    <IncludeMacOs Condition="'$(IncludeMacOs)' == ''">false</IncludeMacOs>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IncludeMacOs)' == 'true'">
+    <DefineConstants>$(DefineConstants);INCLUDE_MACOS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,20 +39,22 @@
     <ProjectReference Include="..\Echo.Core\Echo.Core.csproj" />
     <ProjectReference Include="..\Echo.Engines\Echo.Engines.csproj" />
     <ProjectReference Include="..\Echo.Platform.Windows\Echo.Platform.Windows.csproj" />
-    <ProjectReference Include="..\Echo.Platform.MacOS\Echo.Platform.MacOS.csproj" />
     <ProjectReference Include="..\Echo.Platform.Linux\Echo.Platform.Linux.csproj" />
+    <ProjectReference Include="..\Echo.Platform.MacOS\Echo.Platform.MacOS.csproj" Condition="'$(IncludeMacOs)' == 'true'" />
   </ItemGroup>
 
   <PropertyGroup>
     <DirectMlNativeDir>$(MSBuildThisFileDirectory)..\..\native\win-x64\directml\</DirectMlNativeDir>
     <DirectMlNativeReady>false</DirectMlNativeReady>
     <DirectMlNativeReady Condition="Exists('$(DirectMlNativeDir)sherpa-onnx-c-api.dll')">true</DirectMlNativeReady>
+    <!-- Default: do not bake DirectML into Release publishes (download on GPU select). Debug still copies for local GPU testing. -->
+    <ShipDirectMl Condition="'$(ShipDirectMl)' == '' and '$(Configuration)' == 'Debug'">true</ShipDirectMl>
+    <ShipDirectMl Condition="'$(ShipDirectMl)' == ''">false</ShipDirectMl>
   </PropertyGroup>
 
-  <Target Name="CopyDirectMlNative" AfterTargets="Build;Publish"
-          Condition="'$(DirectMlNativeReady)' == 'true' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))">
+  <Target Name="CopyDirectMlNative" AfterTargets="Build"
+          Condition="'$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true' and ('$(RuntimeIdentifier)' == '' or $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win')))">
     <PropertyGroup>
-      <_DirectMlOutDir Condition="'$(PublishDir)' != ''">$(PublishDir)</_DirectMlOutDir>
       <_DirectMlOutDir Condition="'$(_DirectMlOutDir)' == ''">$(OutputPath)</_DirectMlOutDir>
     </PropertyGroup>
     <ItemGroup>
@@ -65,8 +75,8 @@
                   Or $([System.String]::Copy('%(RelativePath)').EndsWith('.pdb'))
                   Or $([System.String]::Copy('%(RelativePath)').EndsWith('.lib'))
                   Or $([System.String]::Copy('%(RelativePath)').EndsWith('.metal'))" />
-      <DirectMlNativeForPublish Include="$(DirectMlNativeDir)*.dll" Condition="'$(DirectMlNativeReady)' == 'true'" />
-      <ResolvedFileToPublish Include="@(DirectMlNativeForPublish)" Condition="'$(DirectMlNativeReady)' == 'true'">
+      <DirectMlNativeForPublish Include="$(DirectMlNativeDir)*.dll" Condition="'$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true'" />
+      <ResolvedFileToPublish Include="@(DirectMlNativeForPublish)" Condition="'$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true'">
         <RelativePath>directml\%(DirectMlNativeForPublish.Filename)%(DirectMlNativeForPublish.Extension)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>

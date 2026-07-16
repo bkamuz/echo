@@ -4,7 +4,7 @@ namespace echo.Platform.Linux.Injection;
 
 public static class LinuxInjectionChain
 {
-    private static readonly ILinuxInjectionBackend[] Backends =
+    private static readonly ILinuxInjectionBackend[] AllBackends =
     [
         new AtSpiInjectionBackend(),
         new YdotoolInjectionBackend(),
@@ -13,8 +13,11 @@ public static class LinuxInjectionChain
         new ClipboardFallbackBackend(),
     ];
 
+    private static ILinuxInjectionBackend? _cachedPrimary;
+    private static readonly object CacheGate = new();
+
     public static bool HasAutoInjectionBackend =>
-        Backends.Any(backend => backend is not ClipboardFallbackBackend && backend.IsAvailable);
+        AllBackends.Any(backend => backend is not ClipboardFallbackBackend && backend.IsAvailable);
 
     public static TextInjectionResult Inject(
         string text,
@@ -36,8 +39,9 @@ public static class LinuxInjectionChain
         }
 
         var normalizedMethod = NormalizeMethod(method);
+        var clipboard = AllBackends.OfType<ClipboardFallbackBackend>().First();
 
-        foreach (var backend in Backends)
+        foreach (var backend in ResolveAttemptOrder())
         {
             if (!backend.IsAvailable)
             {
@@ -47,7 +51,21 @@ public static class LinuxInjectionChain
             var result = backend.TryInject(text, normalizedMethod, typeDelayMs, cancellationToken);
             if (result is not null)
             {
+                if (backend is not ClipboardFallbackBackend)
+                {
+                    CachePrimary(backend);
+                }
+
                 return result;
+            }
+        }
+
+        if (clipboard.IsAvailable)
+        {
+            var fallback = clipboard.TryInject(text, normalizedMethod, typeDelayMs, cancellationToken);
+            if (fallback is not null)
+            {
+                return fallback;
             }
         }
 
@@ -56,9 +74,53 @@ public static class LinuxInjectionChain
 
     public static void ResetProbes()
     {
+        lock (CacheGate)
+        {
+            _cachedPrimary = null;
+        }
+
         WtypeInjectionBackend.ResetProbe();
         YdotoolInjectionBackend.ResetProbe();
         LinuxAtSpiInserter.ResetProbe();
+    }
+
+    private static IEnumerable<ILinuxInjectionBackend> ResolveAttemptOrder()
+    {
+        lock (CacheGate)
+        {
+            if (_cachedPrimary is not null && _cachedPrimary.IsAvailable)
+            {
+                yield return _cachedPrimary;
+                yield break;
+            }
+        }
+
+        // Prefer session-appropriate primary, then remaining auto backends (clipboard last, handled separately).
+        foreach (var backend in PreferredPrimaries().Concat(AllBackends))
+        {
+            if (backend is ClipboardFallbackBackend)
+            {
+                continue;
+            }
+
+            yield return backend;
+        }
+    }
+
+    private static IEnumerable<ILinuxInjectionBackend> PreferredPrimaries()
+    {
+        if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
+        {
+            yield return AllBackends.OfType<YdotoolInjectionBackend>().First();
+        }
+    }
+
+    private static void CachePrimary(ILinuxInjectionBackend backend)
+    {
+        lock (CacheGate)
+        {
+            _cachedPrimary = backend;
+        }
     }
 
     private static string NormalizeMethod(string method) =>

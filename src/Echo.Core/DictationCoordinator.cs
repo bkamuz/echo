@@ -53,6 +53,10 @@ public sealed class DictationCoordinator : IDisposable
 
     public AppConfig Config => _config;
 
+    public string? LastOutcomeMessage { get; private set; }
+
+    public event Action? OutcomeChanged;
+
     public void ReloadConfig()
     {
         _config = _configStore.Load();
@@ -202,7 +206,7 @@ public sealed class DictationCoordinator : IDisposable
         {
             _logger.LogWarning(ex, "Failed to start audio recording");
             _isRecording = false;
-            _tray.SetState(DictationOverlayState.Hidden);
+            FinishDictation("Не удалось начать запись микрофона", alert: true);
             return;
         }
 
@@ -222,7 +226,7 @@ public sealed class DictationCoordinator : IDisposable
         if (elapsed.TotalMilliseconds < _config.MinPressMs)
         {
             _audio.StopRecording();
-            _tray.SetState(DictationOverlayState.Hidden);
+            FinishDictation(status: null);
             return;
         }
 
@@ -236,6 +240,16 @@ public sealed class DictationCoordinator : IDisposable
 
             if (samples.Length == 0)
             {
+                FinishDictation("Тишина — речь не распознана", warning: true);
+                return;
+            }
+
+            if (!ModelRegistry.IsEngineModelDownloaded(
+                    _config.Engine,
+                    _config.WhisperModelSize,
+                    _config.GigaAmModelSize))
+            {
+                FinishDictation("Модель не загружена — скачайте в «Настройках»", alert: true);
                 return;
             }
 
@@ -246,6 +260,7 @@ public sealed class DictationCoordinator : IDisposable
 
             if (string.IsNullOrWhiteSpace(text))
             {
+                FinishDictation("Речь не распознана", warning: true);
                 return;
             }
 
@@ -258,7 +273,6 @@ public sealed class DictationCoordinator : IDisposable
             _history.Append(engine.DisplayName, text.TrimEnd());
 
             sw.Restart();
-            _tray.SetState(DictationOverlayState.Hidden);
             RestoreInjectionTarget();
             try
             {
@@ -269,18 +283,21 @@ public sealed class DictationCoordinator : IDisposable
                     _logger.LogWarning(
                         "Text injection failed — result saved to history: {Message}",
                         injectResult.Message);
+                    FinishDictation(
+                        injectResult.Message ?? "Не удалось вставить текст — результат в истории",
+                        alert: true);
                 }
                 else if (injectResult.Outcome == TextInjectionOutcome.ClipboardOnly)
                 {
-                    _statusNotifier?.ShowTemporary(
-                        injectResult.Message ?? "Текст скопирован — нажмите Ctrl+V.",
-                        warning: true);
                     _logger.LogInformation(
                         "Dictation done (clipboard only): transcribe={TranscribeMs}ms inject={InjectMs}ms chars={Chars} — {Message}",
                         transcribeMs,
                         injectMs,
                         text.Length,
                         injectResult.Message);
+                    FinishDictation(
+                        injectResult.Message ?? "Текст скопирован — нажмите Ctrl+V.",
+                        warning: true);
                 }
                 else
                 {
@@ -289,11 +306,13 @@ public sealed class DictationCoordinator : IDisposable
                         transcribeMs,
                         injectMs,
                         text.Length);
+                    FinishDictation(status: null);
                 }
             }
             catch (Exception injectEx)
             {
                 _logger.LogWarning(injectEx, "Text injection failed — result saved to history");
+                FinishDictation("Не удалось вставить текст — результат в истории", alert: true);
             }
 
             _dictationToast.Show(text.TrimEnd());
@@ -301,14 +320,27 @@ public sealed class DictationCoordinator : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Transcription pipeline failed");
+            var message = ex is InvalidOperationException
+                ? ex.Message
+                : "Ошибка распознавания";
+            FinishDictation(message, alert: true);
         }
         finally
         {
             _targetWindow = 0;
-            if (!OperatingSystem.IsLinux())
-            {
-                _tray.SetState(DictationOverlayState.Hidden);
-            }
+            _tray.SetState(DictationOverlayState.Hidden);
+        }
+    }
+
+    private void FinishDictation(string? status, bool alert = false, bool warning = false)
+    {
+        _tray.SetState(DictationOverlayState.Hidden);
+        LastOutcomeMessage = status;
+        OutcomeChanged?.Invoke();
+
+        if (!string.IsNullOrEmpty(status))
+        {
+            _statusNotifier?.ShowTemporary(status, alert: alert, warning: warning);
         }
     }
 

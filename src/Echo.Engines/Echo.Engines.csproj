@@ -4,15 +4,27 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>echo.Engines</RootNamespace>
+    <!-- Debug ships Whisper for local testing; Release omits Whisper.net natives unless overridden. -->
+    <IncludeWhisper Condition="'$(IncludeWhisper)' == '' and '$(Configuration)' == 'Debug'">true</IncludeWhisper>
+    <IncludeWhisper Condition="'$(IncludeWhisper)' == ''">false</IncludeWhisper>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IncludeWhisper)' == 'true'">
+    <DefineConstants>$(DefineConstants);INCLUDE_WHISPER</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.0" />
     <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.4" />
-    <PackageReference Include="Whisper.net" Version="1.9.1" />
-    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" Condition="'$(IncludeWhisper)' == 'true'" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" Condition="'$(IncludeWhisper)' == 'true'" />
   </ItemGroup>
+
+  <ItemGroup Condition="'$(IncludeWhisper)' != 'true'">
+    <Compile Remove="Whisper\**\*.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Echo.Abstractions\Echo.Abstractions.csproj" />
   </ItemGroup>
