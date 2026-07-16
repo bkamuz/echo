@@ -9,17 +9,17 @@ public partial class DictationToastWindow : Window
 {
     private const int MarginDip = 16;
     private string _fullText = string.Empty;
-    private Func<string, Task>? _onCopyRequested;
+
+    public event EventHandler<string>? CopyRequested;
 
     public DictationToastWindow()
     {
         InitializeComponent();
     }
 
-    public void Present(string text, Func<string, Task> onCopyRequested)
+    public void Present(string text)
     {
         _fullText = text;
-        _onCopyRequested = onCopyRequested;
         PreviewText.Text = text;
 
         if (!IsVisible)
@@ -38,17 +38,15 @@ public partial class DictationToastWindow : Window
         }
     }
 
-    private async void OnRootPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void OnRootPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_onCopyRequested is null || string.IsNullOrEmpty(_fullText))
+        if (string.IsNullOrEmpty(_fullText))
         {
             return;
         }
 
         e.Handled = true;
-        var handler = _onCopyRequested;
-        var text = _fullText;
-        await handler(text).ConfigureAwait(true);
+        CopyRequested?.Invoke(this, _fullText);
     }
 
     private void PositionToBottomRight()

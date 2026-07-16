@@ -3,26 +3,36 @@ using Avalonia.Input.Platform;
 using Avalonia.Threading;
 using echo.Abstractions.Platform;
 using echo.App.Views;
+using echo.Core;
 
 namespace echo.App.Services;
 
-public sealed class DictationToastService : IDictationResultNotifier
+public sealed class DictationToastService : IDictationResultNotifier, IDisposable
 {
     private const int AutoDismissMs = 7000;
 
+    private readonly ConfigStore _configStore;
     private readonly IUserStatusNotifier? _statusNotifier;
     private DictationToastWindow? _window;
     private CancellationTokenSource? _dismissCts;
-    private bool _exitHooked;
+    private IClassicDesktopStyleApplicationLifetime? _desktop;
+    private EventHandler<ControlledApplicationLifetimeExitEventArgs>? _exitHandler;
+    private bool _disposed;
 
-    public DictationToastService(IUserStatusNotifier? statusNotifier = null)
+    public DictationToastService(ConfigStore configStore, IUserStatusNotifier? statusNotifier = null)
     {
+        _configStore = configStore;
         _statusNotifier = statusNotifier;
     }
 
     public void Show(string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (_disposed || string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        if (!_configStore.Load().ShowDictationToast)
         {
             return;
         }
@@ -38,62 +48,63 @@ public sealed class DictationToastService : IDictationResultNotifier
 
     private void ShowOnUi(string text)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _dismissCts?.Cancel();
         _dismissCts?.Dispose();
         _dismissCts = new CancellationTokenSource();
         var token = _dismissCts.Token;
 
-        EnsureWindow();
-        _window!.Present(text, CopyAndDismissAsync);
+        if (!EnsureWindow())
+        {
+            return;
+        }
 
+        _window!.Present(text);
         _ = AutoDismissAsync(token);
     }
 
-    private void EnsureWindow()
+    private bool EnsureWindow()
     {
         if (_window is not null)
         {
-            return;
+            return true;
         }
 
-        _window = new DictationToastWindow();
         if (Avalonia.Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
-            return;
+            return false;
         }
 
-        if (_exitHooked)
-        {
-            return;
-        }
-
-        _exitHooked = true;
-        desktop.Exit += (_, _) =>
-        {
-            CancelAutoDismiss();
-            if (_window is null)
-            {
-                return;
-            }
-
-            _window.Close();
-            _window = null;
-        };
+        _desktop = desktop;
+        _window = new DictationToastWindow();
+        _window.CopyRequested += OnWindowCopyRequested;
+        _exitHandler = OnDesktopExit;
+        desktop.Exit += _exitHandler;
+        return true;
     }
+
+    private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e) =>
+        DisposeWindowResources();
+
+    private void OnWindowCopyRequested(object? sender, string text) =>
+        _ = CopyAndDismissAsync(text);
 
     private async Task CopyAndDismissAsync(string text)
     {
         try
         {
-            var clipboard = _window?.Clipboard
-                ?? (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
-                    ?.MainWindow?.Clipboard;
-
-            if (clipboard is not null)
+            var clipboard = _window?.Clipboard;
+            if (clipboard is null)
             {
-                await clipboard.SetTextAsync(text).ConfigureAwait(true);
-                _statusNotifier?.ShowTemporary("Скопировано");
+                return;
             }
+
+            await clipboard.SetTextAsync(text).ConfigureAwait(true);
+            _statusNotifier?.ShowTemporary("Скопировано");
         }
         finally
         {
@@ -120,5 +131,35 @@ public sealed class DictationToastService : IDictationResultNotifier
         _dismissCts?.Cancel();
         _dismissCts?.Dispose();
         _dismissCts = null;
+    }
+
+    private void DisposeWindowResources()
+    {
+        CancelAutoDismiss();
+
+        if (_window is not null)
+        {
+            _window.CopyRequested -= OnWindowCopyRequested;
+            _window.Close();
+            _window = null;
+        }
+
+        if (_desktop is not null && _exitHandler is not null)
+        {
+            _desktop.Exit -= _exitHandler;
+            _exitHandler = null;
+            _desktop = null;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        DisposeWindowResources();
     }
 }
