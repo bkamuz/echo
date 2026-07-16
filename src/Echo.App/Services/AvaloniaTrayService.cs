@@ -1,7 +1,10 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using echo.Abstractions.Platform;
+using echo.App.ViewModels;
 
 namespace echo.App.Services;
 
@@ -33,6 +36,7 @@ public sealed class AvaloniaTrayService : ITrayStateService
             Icon = _idleIcon,
             ToolTipText = "Echo — готов",
             IsVisible = true,
+            Menu = BuildMenu(),
         };
     }
 
@@ -112,20 +116,76 @@ public sealed class AvaloniaTrayService : ITrayStateService
         }
     }
 
+    private NativeMenu BuildMenu()
+    {
+        var open = new NativeMenuItem("Открыть");
+        open.Click += (_, _) => ShowMainWindow();
+
+        var settings = new NativeMenuItem("Настройки");
+        settings.Click += (_, _) => OpenPage(AppPage.Settings);
+
+        var history = new NativeMenuItem("История");
+        history.Click += (_, _) => OpenPage(AppPage.History);
+
+        var exit = new NativeMenuItem("Выход");
+        exit.Click += (_, _) => ExitApp();
+
+        var menu = new NativeMenu();
+        menu.Items.Add(open);
+        menu.Items.Add(settings);
+        menu.Items.Add(history);
+        menu.Items.Add(new NativeMenuItemSeparator());
+        menu.Items.Add(exit);
+        return menu;
+    }
+
+    private void OpenPage(AppPage page)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_mainWindow?.DataContext is ShellViewModel shell)
+            {
+                shell.NavigateCommand.Execute(page);
+            }
+
+            ShowMainWindowCore();
+        });
+    }
+
     private void ShowMainWindow()
+    {
+        Dispatcher.UIThread.Post(ShowMainWindowCore);
+    }
+
+    private void ShowMainWindowCore()
     {
         if (_mainWindow is null)
         {
             return;
         }
 
-        var mainWindow = _mainWindow;
+        _mainWindow.ShowInTaskbar = true;
+        _mainWindow.Show();
+        _mainWindow.WindowState = WindowState.Normal;
+        _mainWindow.Activate();
+    }
+
+    private static void ExitApp()
+    {
         Dispatcher.UIThread.Post(() =>
         {
-            mainWindow.ShowInTaskbar = true;
-            mainWindow.Show();
-            mainWindow.WindowState = WindowState.Normal;
-            mainWindow.Activate();
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                return;
+            }
+
+            if (desktop.MainWindow is echo.App.MainWindow mainWindow)
+            {
+                mainWindow.ForceClose();
+                return;
+            }
+
+            desktop.Shutdown();
         });
     }
 

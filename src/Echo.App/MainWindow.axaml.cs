@@ -14,6 +14,7 @@ public partial class MainWindow : Window
 {
     private bool _linuxChromeApplied;
     private bool _dependencyPromptShown;
+    private bool _forceClose;
 
     public MainWindow()
     {
@@ -21,6 +22,33 @@ public partial class MainWindow : Window
         ApplyWindowsChrome();
         Opened += OnOpened;
         Activated += OnActivated;
+        Closing += OnClosing;
+    }
+
+    /// <summary>
+    /// Closes the window for real (tray Exit / app shutdown). Normal close hides to tray.
+    /// </summary>
+    public void ForceClose()
+    {
+        _forceClose = true;
+        Close();
+    }
+
+    private void OnClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (_forceClose)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        HideToTray();
+    }
+
+    private void HideToTray()
+    {
+        ShowInTaskbar = false;
+        Hide();
     }
 
     private async void OnOpened(object? sender, EventArgs e)

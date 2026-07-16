@@ -19,50 +19,50 @@
               <TextBlock Classes="section-title" Text="УПРАВЛЕНИЕ"/>
             </Border>
             <StackPanel Classes="tile-body" Spacing="10">
-              <Grid ColumnDefinitions="*,*,*,Auto" ColumnSpacing="12">
-              <StackPanel Grid.Column="0" Classes="settings-field">
-                <TextBlock Classes="field-label" Text="Хоткей"/>
-                <Button Classes="hotkey-field"
-                        Classes.capturing="{Binding IsCapturingHotkey}"
-                        Content="{Binding HotkeyDisplay}"
-                        Command="{Binding ToggleHotkeyCaptureCommand}"
-                        HorizontalAlignment="Stretch"/>
-              </StackPanel>
-              <StackPanel Grid.Column="1" Classes="settings-field">
-                <TextBlock Classes="field-label" Text="Метод ввода"/>
-                <ComboBox ItemsSource="{Binding InputMethodOptions}"
-                          SelectedItem="{Binding SelectedInputMethod}"
-                          HorizontalAlignment="Stretch">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:InputMethodOption">
-                      <TextBlock Text="{Binding DisplayName}"
-                                 ToolTip.Tip="{Binding Tooltip}"/>
-                    </DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </StackPanel>
-              <StackPanel Grid.Column="2"
-                          Classes="settings-field"
-                          IsVisible="{Binding IsTypeInput}">
-                <TextBlock Classes="field-label" Text="Скорость печати"
-                           ToolTip.Tip="{Binding TypeSpeedTooltip}"/>
-                <ComboBox ItemsSource="{Binding TypeSpeedOptions}"
-                          SelectedItem="{Binding SelectedTypeSpeed}"
+              <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="12">
+                <StackPanel Grid.Column="0" Classes="settings-field">
+                  <TextBlock Classes="field-label" Text="Хоткей"/>
+                  <Button Classes="hotkey-field"
+                          Classes.capturing="{Binding IsCapturingHotkey}"
+                          Content="{Binding HotkeyDisplay}"
+                          Command="{Binding ToggleHotkeyCaptureCommand}"
                           HorizontalAlignment="Stretch"/>
-              </StackPanel>
-              <CheckBox Grid.Column="3"
-                        Content="Пробел в конце фразы"
-                        IsChecked="{Binding AddTrailingSpace}"
-                        VerticalAlignment="Bottom"
-                        Margin="0,0,0,2"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Classes="settings-field">
+                  <TextBlock Classes="field-label" Text="Метод ввода"/>
+                  <ComboBox ItemsSource="{Binding InputMethodOptions}"
+                            SelectedItem="{Binding SelectedInputMethod}"
+                            HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:InputMethodOption">
+                        <TextBlock Text="{Binding DisplayName}"
+                                   ToolTip.Tip="{Binding Tooltip}"/>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+                <StackPanel Grid.Column="2"
+                            Classes="settings-field"
+                            MinWidth="140"
+                            IsVisible="{Binding IsTypeInput}">
+                  <TextBlock Classes="field-label" Text="Скорость печати"
+                             ToolTip.Tip="{Binding TypeSpeedTooltip}"/>
+                  <ComboBox ItemsSource="{Binding TypeSpeedOptions}"
+                            SelectedItem="{Binding SelectedTypeSpeed}"
+                            HorizontalAlignment="Stretch"/>
+                </StackPanel>
               </Grid>
-              <CheckBox Content="Показывать текст после диктовки"
-                        IsChecked="{Binding ShowDictationToast}"
-                        ToolTip.Tip="Вспышка с распознанным текстом. Нажмите на неё, чтобы скопировать."/>
-              <CheckBox Content="Запускать при старте системы"
-                        IsChecked="{Binding StartWithSystem}"
-                        IsVisible="{Binding IsAutoStartSupported}"
-                        ToolTip.Tip="Echo запустится в фоне при входе в систему"/>
+              <StackPanel Orientation="Horizontal" Spacing="16">
+                <CheckBox Content="Пробел в конце фразы"
+                          IsChecked="{Binding AddTrailingSpace}"/>
+                <CheckBox Content="Показывать текст после диктовки"
+                          IsChecked="{Binding ShowDictationToast}"
+                          ToolTip.Tip="Вспышка с распознанным текстом. Нажмите на неё, чтобы скопировать."/>
+                <CheckBox Content="Запускать при старте системы"
+                          IsChecked="{Binding StartWithSystem}"
+                          IsVisible="{Binding IsAutoStartSupported}"
+                          ToolTip.Tip="Echo запустится в фоне при входе в систему"/>
+              </StackPanel>
             </StackPanel>
           </DockPanel>
         </Border>

@@ -148,7 +148,14 @@ public partial class UpdateViewModel : ObservableObject
                 _statusBar.SetStatus("Перезапуск…", busy: true);
                 if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
-                    desktop.Shutdown();
+                    if (desktop.MainWindow is echo.App.MainWindow mainWindow)
+                    {
+                        mainWindow.ForceClose();
+                    }
+                    else
+                    {
+                        desktop.Shutdown();
+                    }
                 }
             });
         }
