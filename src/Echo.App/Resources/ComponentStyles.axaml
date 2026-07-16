@@ -148,6 +148,29 @@
     <Setter Property="Padding" Value="0"/>
   </Style>
 
+  <Style Selector="Border.dictation-toast">
+    <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusNone}"/>
+  </Style>
+
+  <Style Selector="Border.dictation-toast:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+  </Style>
+
+  <Style Selector="TextBlock.dictation-toast-hint">
+    <Setter Property="FontSize" Value="11"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+  </Style>
+
+  <Style Selector="TextBlock.dictation-toast-text">
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    <Setter Property="LineHeight" Value="20"/>
+  </Style>
+
   <Style Selector="Border.tile-header">
     <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>

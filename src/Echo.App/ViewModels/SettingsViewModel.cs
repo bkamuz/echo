@@ -41,6 +41,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private InputMethodOption? _selectedInputMethod;
     [ObservableProperty] private TypeSpeedOption? _selectedTypeSpeed;
     [ObservableProperty] private bool _addTrailingSpace;
+    [ObservableProperty] private bool _showDictationToast;
     [ObservableProperty] private bool _startWithSystem;
     [ObservableProperty] private bool _isCapturingHotkey;
     [ObservableProperty] private string _hotkeyPreview = string.Empty;
@@ -263,6 +264,8 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnAddTrailingSpaceChanged(bool value) => ScheduleApply();
 
+    partial void OnShowDictationToastChanged(bool value) => ScheduleApply();
+
     partial void OnStartWithSystemChanged(bool value)
     {
         if (_isLoadingFromConfig)
@@ -465,6 +468,7 @@ public partial class SettingsViewModel : ObservableObject
             ?? (OperatingSystem.IsLinux() ? "auto" : "clipboard");
         config.TypeDelayMs = SelectedTypeSpeed?.DelayMs ?? 1;
         config.AddTrailingSpace = AddTrailingSpace;
+        config.ShowDictationToast = ShowDictationToast;
         config.StartWithSystem = StartWithSystem;
         return config;
     }
@@ -487,6 +491,7 @@ public partial class SettingsViewModel : ObservableObject
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == config.TypeDelayMs)
                 ?? TypeSpeedOptions[1];
             AddTrailingSpace = config.AddTrailingSpace;
+            ShowDictationToast = config.ShowDictationToast;
             StartWithSystem = config.StartWithSystem;
             InputDevice = InputDevices.FirstOrDefault(d => d.Id == config.InputDevice)
                 ?? InputDevices.FirstOrDefault(d => d.Name == config.InputDevice)

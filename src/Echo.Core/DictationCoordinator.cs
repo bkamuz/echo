@@ -15,6 +15,7 @@ public sealed class DictationCoordinator : IDisposable
     private readonly IFocusTarget _focusTarget;
     private readonly ITrayStateService _tray;
     private readonly IUserStatusNotifier? _statusNotifier;
+    private readonly IDictationResultNotifier? _dictationToast;
     private readonly ILogger<DictationCoordinator> _logger;
 
     private AppConfig _config;
@@ -33,7 +34,8 @@ public sealed class DictationCoordinator : IDisposable
         IFocusTarget focusTarget,
         ITrayStateService tray,
         ILogger<DictationCoordinator> logger,
-        IUserStatusNotifier? statusNotifier = null)
+        IUserStatusNotifier? statusNotifier = null,
+        IDictationResultNotifier? dictationToast = null)
     {
         _configStore = configStore;
         _transcription = transcription;
@@ -44,6 +46,7 @@ public sealed class DictationCoordinator : IDisposable
         _focusTarget = focusTarget;
         _tray = tray;
         _statusNotifier = statusNotifier;
+        _dictationToast = dictationToast;
         _logger = logger;
         _config = _configStore.Load();
     }
@@ -291,6 +294,11 @@ public sealed class DictationCoordinator : IDisposable
             catch (Exception injectEx)
             {
                 _logger.LogWarning(injectEx, "Text injection failed — result saved to history");
+            }
+
+            if (_config.ShowDictationToast)
+            {
+                _dictationToast?.Show(text.TrimEnd());
             }
         }
         catch (Exception ex)

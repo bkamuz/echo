@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="echo.App.Views.DictationToastWindow"
+        Title="Echo"
+        Width="360"
+        SizeToContent="Height"
+        MinHeight="72"
+        MaxHeight="160"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        WindowDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        WindowStartupLocation="Manual">
+
+  <Border x:Name="RootBorder"
+          Classes="dictation-toast"
+          Cursor="Hand"
+          PointerPressed="OnRootPointerPressed">
+    <StackPanel Spacing="4" Margin="14,12">
+      <TextBlock Classes="dictation-toast-hint"
+                 Text="Нажмите, чтобы скопировать"/>
+      <TextBlock x:Name="PreviewText"
+                 Classes="dictation-toast-text"
+                 TextWrapping="Wrap"
+                 TextTrimming="CharacterEllipsis"
+                 MaxLines="4"/>
+    </StackPanel>
+  </Border>
+</Window>

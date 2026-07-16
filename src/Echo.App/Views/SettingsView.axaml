@@ -56,6 +56,9 @@
                         VerticalAlignment="Bottom"
                         Margin="0,0,0,2"/>
               </Grid>
+              <CheckBox Content="Показывать текст после диктовки"
+                        IsChecked="{Binding ShowDictationToast}"
+                        ToolTip.Tip="Вспышка с распознанным текстом. Нажмите на неё, чтобы скопировать."/>
               <CheckBox Content="Запускать при старте системы"
                         IsChecked="{Binding StartWithSystem}"
                         IsVisible="{Binding IsAutoStartSupported}"

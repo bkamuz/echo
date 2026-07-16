@@ -35,6 +35,7 @@ public partial class App : Application
                 services.UseEchoEngines();
                 services.AddSingleton<AppStatusViewModel>();
                 services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();
+                services.AddSingleton<IDictationResultNotifier, DictationToastService>();
                 services.AddSingleton<SettingsApplyService>();
                 services.AddSingleton<LinuxDependencyPromptService>();
                 services.AddSingleton<HomeViewModel>();
