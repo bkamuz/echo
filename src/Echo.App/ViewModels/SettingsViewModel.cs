@@ -42,6 +42,7 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private string _hotkey = string.Empty;
     [ObservableProperty] private string _engine = string.Empty;
+    [ObservableProperty] private EngineOption? _selectedEngine;
     [ObservableProperty] private string _whisperModelSize = string.Empty;
     [ObservableProperty] private string _gigaAmModelSize = string.Empty;
     [ObservableProperty] private string _language = string.Empty;
@@ -115,6 +116,8 @@ public partial class SettingsViewModel : ObservableObject
         RebuildEngineOptions();
         RebuildTypeSpeedOptions();
         RebuildUiLanguageChoices();
+        RebuildInputMethodOptions();
+        RebuildComputeDeviceOptions();
 
         _loc.LanguageChanged += (_, _) => RefreshLocalizedOptions();
 
@@ -123,74 +126,14 @@ public partial class SettingsViewModel : ObservableObject
 
     public bool IsAutoStartSupported => _autoStartService.IsSupported;
 
-    private ComputeDeviceOption CpuDeviceOption => new(
-        ExecutionProviderResolver.CpuDevice,
-        _loc.Get("Loc.Device.Cpu"),
-        _loc.Get("Loc.Device.Cpu.Tooltip"));
-
-    private ComputeDeviceOption DirectMlDeviceOption => new(
-        ExecutionProviderResolver.DirectMlDevice,
-        _loc.Get("Loc.Device.DirectMl"),
-        _loc.Get("Loc.Device.DirectMl.Tooltip"));
-
     public IReadOnlyList<EngineOption> EngineOptions { get; private set; } = [];
-    public IReadOnlyList<ComputeDeviceOption> ComputeDeviceOptions => BuildComputeDeviceOptions();
+    public IReadOnlyList<ComputeDeviceOption> ComputeDeviceOptions { get; private set; } = [];
     public IReadOnlyList<TypeSpeedOption> TypeSpeedOptions { get; private set; } = [];
     public IReadOnlyList<UiLanguageChoice> UiLanguageChoices { get; private set; } = [];
-
-    private IReadOnlyList<ComputeDeviceOption> BuildComputeDeviceOptions()
-    {
-        if (IsWhisper)
-        {
-            return [CpuDeviceOption];
-        }
-
-        var dmlAvailable = _directMlAvailability.IsAvailable;
-        return dmlAvailable
-            ? [CpuDeviceOption, DirectMlDeviceOption]
-            : [CpuDeviceOption];
-    }
+    public IReadOnlyList<InputMethodOption> InputMethodOptions { get; private set; } = [];
 
     public IReadOnlyList<string> WhisperSizes => AppConfig.WhisperSizes;
     public IReadOnlyList<string> GigaAmSizes => AppConfig.GigaAmSizes;
-    public IReadOnlyList<InputMethodOption> InputMethodOptions =>
-        OperatingSystem.IsLinux()
-            ? BuildLinuxInputMethodOptions()
-            :
-            [
-                new("clipboard", _loc.Get("Loc.Input.Clipboard"), _loc.Get("Loc.Input.Clipboard.Tooltip")),
-                new("type", _loc.Get("Loc.Input.Type"), _loc.Get("Loc.Input.Type.Tooltip")),
-            ];
-
-    private IReadOnlyList<InputMethodOption> BuildLinuxInputMethodOptions()
-    {
-        if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
-        {
-            return
-            [
-                new(
-                    "auto",
-                    _loc.Get("Loc.Input.Auto"),
-                    _loc.Get("Loc.Input.Linux.Auto.Gnome.Tooltip")),
-                new(
-                    "clipboard",
-                    _loc.Get("Loc.Input.Clipboard"),
-                    _loc.Get("Loc.Input.Linux.Clipboard.Gnome.Tooltip")),
-            ];
-        }
-
-        return
-        [
-            new(
-                "auto",
-                _loc.Get("Loc.Input.Auto"),
-                _loc.Get("Loc.Input.Linux.Auto.Tooltip")),
-            new(
-                "clipboard",
-                _loc.Get("Loc.Input.Clipboard"),
-                _loc.Get("Loc.Input.Linux.Clipboard.Tooltip")),
-        ];
-    }
 
     public IReadOnlyList<string> Languages { get; } = ["auto", "ru", "en"];
 
@@ -213,19 +156,20 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsOmnilingual => Engine == "omnilingual";
     public bool IsDeviceVisible => Engine != "whisper";
 
-    public EngineOption? SelectedEngine
+    partial void OnIsApplyingChanged(bool value) => OnPropertyChanged(nameof(IsSettingsEnabled));
+
+    partial void OnSelectedEngineChanged(EngineOption? value)
     {
-        get => EngineOptions.FirstOrDefault(e => e.Id == Engine);
-        set
+        if (value is null)
         {
-            if (value is not null && value.Id != Engine)
-            {
-                Engine = value.Id;
-            }
+            return;
+        }
+
+        if (!_isLoadingFromConfig && value.Id != Engine)
+        {
+            Engine = value.Id;
         }
     }
-
-    partial void OnIsApplyingChanged(bool value) => OnPropertyChanged(nameof(IsSettingsEnabled));
 
     partial void OnEngineChanged(string value)
     {
@@ -233,7 +177,8 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsWhisper));
         OnPropertyChanged(nameof(IsOmnilingual));
         OnPropertyChanged(nameof(IsDeviceVisible));
-        OnPropertyChanged(nameof(SelectedEngine));
+        SyncSelectedEngine();
+        RebuildComputeDeviceOptions();
         OnPropertyChanged(nameof(ComputeDeviceOptions));
         EnsureValidComputeDevice();
         if (value == "whisper" && Language == "ru")
@@ -268,12 +213,12 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnSelectedComputeDeviceChanged(ComputeDeviceOption? value)
     {
-        if (_isLoadingFromConfig)
+        if (_isLoadingFromConfig || value is null)
         {
             return;
         }
 
-        if (value?.Id == ExecutionProviderResolver.DirectMlDevice && _directMlInstaller is not null)
+        if (value.Id == ExecutionProviderResolver.DirectMlDevice && _directMlInstaller is not null)
         {
             _ = EnsureDirectMlThenApplyAsync();
             return;
@@ -284,11 +229,24 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnSelectedInputMethodChanged(InputMethodOption? value)
     {
+        if (value is null)
+        {
+            return;
+        }
+
         OnPropertyChanged(nameof(IsTypeInput));
         ScheduleApply();
     }
 
-    partial void OnSelectedTypeSpeedChanged(TypeSpeedOption? value) => ScheduleApply();
+    partial void OnSelectedTypeSpeedChanged(TypeSpeedOption? value)
+    {
+        if (value is null)
+        {
+            return;
+        }
+
+        ScheduleApply();
+    }
 
     partial void OnSelectedUiLanguageChanged(UiLanguageChoice? value)
     {
@@ -434,7 +392,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                SelectedComputeDevice = CpuDeviceOption;
+                SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
                 _status.SetStatusTemporary(
                     "Loc.Status.DirectMlFailed",
                     SettingsApplyService.StatusClearMs,
@@ -519,7 +477,7 @@ public partial class SettingsViewModel : ObservableObject
             UpdateModelStatus();
             OnPropertyChanged(nameof(ComputeDeviceOptions));
             EnsureValidComputeDevice();
-            OnPropertyChanged(nameof(SelectedEngine));
+            SyncSelectedEngine();
             OnPropertyChanged(nameof(IsTypeInput));
         }
         finally
@@ -530,6 +488,7 @@ public partial class SettingsViewModel : ObservableObject
 
     public void RefreshDeviceOptions()
     {
+        RebuildComputeDeviceOptions();
         OnPropertyChanged(nameof(ComputeDeviceOptions));
         EnsureValidComputeDevice();
     }
@@ -571,6 +530,72 @@ public partial class SettingsViewModel : ObservableObject
             .ToList();
     }
 
+    private void RebuildInputMethodOptions()
+    {
+        InputMethodOptions = OperatingSystem.IsLinux()
+            ? BuildLinuxInputMethodOptions()
+            :
+            [
+                new("clipboard", _loc.Get("Loc.Input.Clipboard"), _loc.Get("Loc.Input.Clipboard.Tooltip")),
+                new("type", _loc.Get("Loc.Input.Type"), _loc.Get("Loc.Input.Type.Tooltip")),
+            ];
+    }
+
+    private IReadOnlyList<InputMethodOption> BuildLinuxInputMethodOptions()
+    {
+        if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
+        {
+            return
+            [
+                new(
+                    "auto",
+                    _loc.Get("Loc.Input.Auto"),
+                    _loc.Get("Loc.Input.Linux.Auto.Gnome.Tooltip")),
+                new(
+                    "clipboard",
+                    _loc.Get("Loc.Input.Clipboard"),
+                    _loc.Get("Loc.Input.Linux.Clipboard.Gnome.Tooltip")),
+            ];
+        }
+
+        return
+        [
+            new(
+                "auto",
+                _loc.Get("Loc.Input.Auto"),
+                _loc.Get("Loc.Input.Linux.Auto.Tooltip")),
+            new(
+                "clipboard",
+                _loc.Get("Loc.Input.Clipboard"),
+                _loc.Get("Loc.Input.Linux.Clipboard.Tooltip")),
+        ];
+    }
+
+    private void RebuildComputeDeviceOptions()
+    {
+        var cpu = new ComputeDeviceOption(
+            ExecutionProviderResolver.CpuDevice,
+            _loc.Get("Loc.Device.Cpu"),
+            _loc.Get("Loc.Device.Cpu.Tooltip"));
+
+        if (IsWhisper)
+        {
+            ComputeDeviceOptions = [cpu];
+            return;
+        }
+
+        ComputeDeviceOptions = _directMlAvailability.IsAvailable
+            ?
+            [
+                cpu,
+                new(
+                    ExecutionProviderResolver.DirectMlDevice,
+                    _loc.Get("Loc.Device.DirectMl"),
+                    _loc.Get("Loc.Device.DirectMl.Tooltip")),
+            ]
+            : [cpu];
+    }
+
     private void RefreshLocalizedOptions()
     {
         var inputMethodId = SelectedInputMethod?.Id;
@@ -581,10 +606,18 @@ public partial class SettingsViewModel : ObservableObject
         RebuildEngineOptions();
         RebuildTypeSpeedOptions();
         RebuildUiLanguageChoices();
+        RebuildInputMethodOptions();
+        RebuildComputeDeviceOptions();
 
         _isLoadingFromConfig = true;
         try
         {
+            OnPropertyChanged(nameof(EngineOptions));
+            OnPropertyChanged(nameof(ComputeDeviceOptions));
+            OnPropertyChanged(nameof(InputMethodOptions));
+            OnPropertyChanged(nameof(TypeSpeedOptions));
+            OnPropertyChanged(nameof(UiLanguageChoices));
+
             SelectedInputMethod = InputMethodOptions.FirstOrDefault(o => o.Id == inputMethodId)
                 ?? InputMethodOptions.FirstOrDefault();
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == typeSpeedDelay)
@@ -594,13 +627,8 @@ public partial class SettingsViewModel : ObservableObject
             SelectedUiLanguage = UiLanguageChoices.FirstOrDefault(c =>
                 string.Equals(c.Code, uiLanguageCode, StringComparison.OrdinalIgnoreCase))
                 ?? UiLanguageChoices.FirstOrDefault();
+            SyncSelectedEngine();
 
-            OnPropertyChanged(nameof(EngineOptions));
-            OnPropertyChanged(nameof(SelectedEngine));
-            OnPropertyChanged(nameof(ComputeDeviceOptions));
-            OnPropertyChanged(nameof(InputMethodOptions));
-            OnPropertyChanged(nameof(TypeSpeedOptions));
-            OnPropertyChanged(nameof(UiLanguageChoices));
             OnPropertyChanged(nameof(ModelLoadedTooltip));
             OnPropertyChanged(nameof(ModelDownloadTooltip));
             OnPropertyChanged(nameof(ModelDeleteTooltip));
@@ -614,19 +642,36 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    private void SyncSelectedEngine()
+    {
+        var match = EngineOptions.FirstOrDefault(e => e.Id == Engine)
+            ?? EngineOptions.FirstOrDefault();
+        if (!ReferenceEquals(SelectedEngine, match))
+        {
+            SelectedEngine = match;
+        }
+    }
+
     private ComputeDeviceOption ResolveComputeDeviceOption(string deviceId)
     {
         var normalized = ExecutionProviderResolver.FromConfigDevice(deviceId);
         var id = ExecutionProviderResolver.ToConfigDevice(normalized);
-        return BuildComputeDeviceOptions().FirstOrDefault(o => o.Id == id) ?? CpuDeviceOption;
+        return ComputeDeviceOptions.FirstOrDefault(o => o.Id == id)
+            ?? ComputeDeviceOptions[0];
     }
 
     private void EnsureValidComputeDevice()
     {
-        var options = BuildComputeDeviceOptions();
-        if (SelectedComputeDevice is null || options.All(o => o.Id != SelectedComputeDevice.Id))
+        if (SelectedComputeDevice is null
+            || ComputeDeviceOptions.All(o => o.Id != SelectedComputeDevice.Id))
         {
-            SelectedComputeDevice = options[0];
+            SelectedComputeDevice = ComputeDeviceOptions[0];
+        }
+        else if (!ReferenceEquals(
+                     SelectedComputeDevice,
+                     ComputeDeviceOptions.First(o => o.Id == SelectedComputeDevice.Id)))
+        {
+            SelectedComputeDevice = ComputeDeviceOptions.First(o => o.Id == SelectedComputeDevice.Id);
         }
     }
 }

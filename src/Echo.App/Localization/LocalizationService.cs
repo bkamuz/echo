@@ -192,14 +192,20 @@ public sealed class LocalizationService
             return;
         }
 
-        var merged = root.MergedDictionaries;
-        if (_activeDictionary is not null)
+        var loaded = LoadDictionary(languageCode);
+        if (_activeDictionary is null)
         {
-            merged.Remove(_activeDictionary);
+            _activeDictionary = loaded;
+            root.MergedDictionaries.Add(_activeDictionary);
+            return;
         }
 
-        _activeDictionary = LoadDictionary(languageCode);
-        merged.Add(_activeDictionary);
+        // Replace keys in place so {DynamicResource} bindings re-evaluate.
+        _activeDictionary.Clear();
+        foreach (var key in loaded.Keys)
+        {
+            _activeDictionary[key] = loaded[key];
+        }
     }
 
     private static ResourceDictionary LoadDictionary(string languageCode)
