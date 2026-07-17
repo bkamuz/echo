@@ -16,6 +16,7 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="56">
 
+  <Border x:Name="ShellFrame" Classes="shell-frame">
   <Grid RowDefinitions="Auto,*,Auto">
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="{StaticResource ShellChromeGridLength}"/>
@@ -81,13 +82,15 @@
             x:Name="TitleBarHost"
             Classes="shell-header-main"
             Cursor="Arrow">
-      <Grid ColumnDefinitions="*,Auto,144"
+      <Grid ColumnDefinitions="*,Auto,168"
             x:Name="TitleBarGrid">
         <Border Grid.Column="0"
+                x:Name="TitleBarDragArea"
                 Background="Transparent"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Cursor="Arrow"
+                PointerPressed="OnTitleBarPointerPressed"
                 chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.TitleBar}">
           <StackPanel VerticalAlignment="Center"
                       Spacing="0"
@@ -120,18 +123,21 @@
                     HorizontalAlignment="Right"
                     VerticalAlignment="Stretch"
                     IsVisible="False">
-          <Button Classes="shell-caption-button"
+          <Button x:Name="MinimizeCaptionButton"
+                  Classes="shell-caption-button"
                   Content="&#x2212;"
                   ToolTip.Tip="Свернуть"
-                  chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.MinimizeButton}"/>
-          <Button Classes="shell-caption-button"
+                  Click="OnMinimizeClick"/>
+          <Button x:Name="MaximizeCaptionButton"
+                  Classes="shell-caption-button"
                   Content="&#x25A1;"
                   ToolTip.Tip="Развернуть"
-                  chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.MaximizeButton}"/>
-          <Button Classes="shell-caption-button shell-caption-button-close"
+                  Click="OnMaximizeClick"/>
+          <Button x:Name="CloseCaptionButton"
+                  Classes="shell-caption-button shell-caption-button-close"
                   Content="&#x00D7;"
                   ToolTip.Tip="Закрыть"
-                  chrome:WindowDecorationProperties.ElementRole="{x:Static input:WindowDecorationsElementRole.CloseButton}"/>
+                  Click="OnCloseClick"/>
         </StackPanel>
       </Grid>
     </Border>
@@ -179,4 +185,5 @@
       </DockPanel>
     </Border>
   </Grid>
+  </Border>
 </Window>

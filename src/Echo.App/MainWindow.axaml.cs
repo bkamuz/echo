@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using echo.App.Services;
 using echo.App.ViewModels;
@@ -92,10 +94,38 @@ public partial class MainWindow : Window
 
         _linuxChromeApplied = true;
 
-        // Linux window managers draw their own title bar; hide it and use the in-app chrome.
-        WindowDecorations = WindowDecorations.BorderOnly;
+        // Linux: no system frame; our gray outline matches in-app separators.
+        WindowDecorations = WindowDecorations.None;
         ExtendClientAreaToDecorationsHint = false;
         ClientCaptionButtons.IsVisible = true;
+        ShellFrame.BorderThickness = new Thickness(1);
+    }
+
+    private void OnMinimizeClick(object? sender, RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
+
+    private void OnMaximizeClick(object? sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        if (e.ClickCount == 2 && OperatingSystem.IsLinux())
+        {
+            OnMaximizeClick(sender, e);
+            e.Handled = true;
+            return;
+        }
+
+        BeginMoveDrag(e);
     }
 
     private void EnsureKeyboardFocus()
