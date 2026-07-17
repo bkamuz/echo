@@ -63,10 +63,11 @@ public partial class App : Application
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<ShellViewModel>();
+                services.AddSingleton<DictationCursorOverlayService>();
                 services.AddSingleton<ITrayStateService>(sp =>
                     new AvaloniaTrayService(
                         sp.GetRequiredService<LocalizationService>(),
-                        sp.GetService<ITaskbarIconSync>()));
+                        sp.GetRequiredService<DictationCursorOverlayService>()));
             })
             .Build();
 

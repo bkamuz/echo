@@ -11,6 +11,7 @@ public static class LinuxServiceCollectionExtensions
         services.AddSingleton<IHotkeyService, LinuxHotkeyService>();
         services.AddSingleton<ITextInjector, LinuxTextInjector>();
         services.AddSingleton<IFocusTarget, LinuxFocusTarget>();
+        services.AddSingleton<ICursorPosition, LinuxCursorPosition>();
         services.AddSingleton<IDirectMlAvailability, UnsupportedDirectMlAvailability>();
         services.AddSingleton<IAutoStartService, LinuxAutoStartService>();
         services.AddSingleton<IUpdateApplier, UnsupportedUpdateApplier>();

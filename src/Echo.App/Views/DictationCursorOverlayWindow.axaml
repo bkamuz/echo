@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="echo.App.Views.DictationCursorOverlayWindow"
+        Title="Echo"
+        Width="24"
+        Height="24"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        WindowDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        IsHitTestVisible="False"
+        WindowStartupLocation="Manual">
+
+  <Image x:Name="IconImage"
+         Width="24"
+         Height="24"
+         Stretch="Uniform"
+         IsHitTestVisible="False"/>
+</Window>

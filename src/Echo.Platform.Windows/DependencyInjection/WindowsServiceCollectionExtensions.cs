@@ -14,9 +14,9 @@ public static class WindowsServiceCollectionExtensions
         services.AddSingleton<IHotkeyService, WindowsHotkeyService>();
         services.AddSingleton<ITextInjector, WindowsTextInjector>();
         services.AddSingleton<IFocusTarget, WindowsFocusTarget>();
+        services.AddSingleton<ICursorPosition, WindowsCursorPosition>();
         services.AddSingleton<IDirectMlAvailability, WindowsDirectMlAvailability>();
         services.AddHttpClient<DirectMlRuntimeInstaller>();
-        services.AddSingleton<ITaskbarIconSync, WindowsTaskbarIconSync>();
         services.AddSingleton<IAutoStartService, WindowsAutoStartService>();
         services.AddHttpClient<IUpdateApplier, WindowsUpdateApplier>();
         return services;
