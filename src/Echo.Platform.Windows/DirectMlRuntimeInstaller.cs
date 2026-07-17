@@ -34,7 +34,7 @@ public sealed class DirectMlRuntimeInstaller
             return;
         }
 
-        progress?.Report("Скачивание DirectML…");
+        progress?.Report(ProgressMessages.Downloading("DirectML"));
         var version = ResolveRuntimeVersion();
         var tag = $"directml-runtime-{version}";
         var dest = AppPaths.DirectMlDir;
@@ -50,7 +50,7 @@ public sealed class DirectMlRuntimeInstaller
         foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            progress?.Report($"Скачивание {file}…");
+            progress?.Report(ProgressMessages.Downloading(file));
             var url =
                 $"https://github.com/{MaintainerRepo}/releases/download/{tag}/{file}";
             var target = Path.Combine(dest, file);
@@ -78,7 +78,7 @@ public sealed class DirectMlRuntimeInstaller
                 "DirectML runtime скачан, но не прошёл проверку. Попробуйте снова или используйте CPU.");
         }
 
-        progress?.Report("Готово: DirectML");
+        progress?.Report(ProgressMessages.Done("DirectML"));
         _logger.LogInformation("DirectML runtime installed to {Dir}", dest);
     }
 

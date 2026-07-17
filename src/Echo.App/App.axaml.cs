@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 using echo.App.DependencyInjection;
+using echo.App.Localization;
 using echo.App.Services;
 using echo.App.ViewModels;
 using echo.App.Views;
@@ -37,6 +38,7 @@ public partial class App : Application
                 services.UseEcho();
                 services.UsePlatform();
                 services.UseEchoEngines();
+                services.AddSingleton<LocalizationService>();
                 services.AddSingleton<AppStatusViewModel>();
                 services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();
                 services.AddSingleton<IDictationResultNotifier, DictationToastService>();
@@ -56,12 +58,15 @@ public partial class App : Application
                     sp.GetRequiredService<HotkeyCaptureController>(),
                     sp.GetRequiredService<ModelSettingsController>(),
                     sp.GetServices<echo.Abstractions.Engines.ITranscriptionEngine>(),
+                    sp.GetRequiredService<LocalizationService>(),
                     sp.GetService<DirectMlRuntimeInstaller>()));
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<ShellViewModel>();
                 services.AddSingleton<ITrayStateService>(sp =>
-                    new AvaloniaTrayService(sp.GetService<ITaskbarIconSync>()));
+                    new AvaloniaTrayService(
+                        sp.GetRequiredService<LocalizationService>(),
+                        sp.GetService<ITaskbarIconSync>()));
             })
             .Build();
 
@@ -70,6 +75,9 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var coordinator = Services.GetRequiredService<DictationCoordinator>();
+            var loc = Services.GetRequiredService<LocalizationService>();
+            loc.Apply(coordinator.Config.UiLanguage);
+
             var autoStart = Services.GetRequiredService<IAutoStartService>();
             if (autoStart.IsSupported && autoStart.IsEnabled != coordinator.Config.StartWithSystem)
             {

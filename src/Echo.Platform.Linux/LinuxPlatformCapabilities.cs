@@ -55,7 +55,7 @@ public static class LinuxPlatformCapabilities
                 false,
                 false,
                 false,
-                "Не удалось определить графическую сессию (нужен Wayland или X11).",
+                "Loc.Linux.Warn.NoSession",
                 []);
         }
 
@@ -69,30 +69,36 @@ public static class LinuxPlatformCapabilities
             && LinuxPackageManagerDetector.CanElevateInstall()
             && missing.Any(dependency => dependency.GetPackageName(LinuxPackageManagerDetector.Detect()) is not null);
 
-        string? warning = null;
+        var warningParts = new List<string>();
         if (!supportsHotkey)
         {
-            warning = LinuxHotkeySetup.GetSetupMessage();
+            var hotkeyMsg = LinuxHotkeySetup.GetSetupMessage();
+            if (!string.IsNullOrEmpty(hotkeyMsg))
+            {
+                warningParts.Add(hotkeyMsg);
+            }
         }
 
         if (!supportsInject)
         {
             var injectHint = LinuxDependencyCatalog.UsesGnomeWaylandYdotool
-                ? "Установите ydotool (с ydotoold) для автовставки на GNOME Wayland."
+                ? "Loc.Linux.Warn.Inject.Gnome"
                 : LinuxSession.IsWayland
-                    ? "Установите wl-clipboard и python3-gi для вставки текста."
-                    : "Установите xclip и xdotool для вставки текста.";
-            warning = string.IsNullOrWhiteSpace(warning)
-                ? injectHint
-                : warning + " " + injectHint;
+                    ? "Loc.Linux.Warn.Inject.Wayland"
+                    : "Loc.Linux.Warn.Inject.X11";
+            warningParts.Add(injectHint);
         }
 
         if (missing.Count > 0 && canAutoInstall)
         {
-            warning = string.IsNullOrWhiteSpace(warning)
-                ? "Для диктовки нужны системные компоненты — Echo может установить их при запуске."
-                : warning + " Echo может установить недостающие пакеты при запуске.";
+            warningParts.Add(warningParts.Count == 0
+                ? "Loc.Linux.Warn.MissingPackages"
+                : "Loc.Linux.Warn.MissingPackages.Suffix");
         }
+
+        string? warning = warningParts.Count == 0
+            ? null
+            : string.Join('\u001f', warningParts);
 
         return new CapabilitySnapshot(supportsHotkey, supportsInject, canAutoInstall, warning, missing);
     }

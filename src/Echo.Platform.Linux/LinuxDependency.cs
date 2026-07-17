@@ -104,8 +104,8 @@ public static class LinuxDependencyCatalog
         {
             new(
                 "arecord",
-                "Захват микрофона (arecord)",
-                "Нужен для записи голоса во время диктовки.",
+                "Loc.Linux.Dep.arecord.Title",
+                "Loc.Linux.Dep.arecord.Description",
                 "arecord",
                 AlsaPackages),
         };
@@ -114,14 +114,14 @@ public static class LinuxDependencyCatalog
         {
             dependencies.Add(new(
                 "python3-gi",
-                "Python AT-SPI (python3-gi)",
-                "Нужен для автоматической вставки текста через специальные возможности.",
+                "Loc.Linux.Dep.python3-gi.Title",
+                "Loc.Linux.Dep.python3-gi.Description",
                 "python3",
                 PythonGiPackages));
             dependencies.Add(new(
                 "atspi",
-                "AT-SPI (gir1.2-atspi-2.0)",
-                "Нужен для вставки текста в поля ввода других приложений.",
+                "Loc.Linux.Dep.atspi.Title",
+                "Loc.Linux.Dep.atspi.Description",
                 "python3",
                 AtspiPackages));
         }
@@ -130,24 +130,22 @@ public static class LinuxDependencyCatalog
         {
             dependencies.Add(new(
                 "wl-copy",
-                "Буфер обмена Wayland (wl-clipboard)",
-                "Нужен для копирования распознанного текста в буфер обмена.",
+                "Loc.Linux.Dep.wl-copy.Title",
+                "Loc.Linux.Dep.wl-copy.Description",
                 "wl-copy",
                 WlClipboardPackages));
             if (LinuxSession.IsGnome)
             {
                 dependencies.Add(new(
                     "ydotool",
-                    "Эмуляция клавиатуры GNOME Wayland (ydotool)",
-                    "Нужен для автовставки Ctrl+V в GNOME на Wayland (требуется ydotoold и группа input).",
+                    "Loc.Linux.Dep.ydotool.Title",
+                    "Loc.Linux.Dep.ydotool.Description",
                     "ydotool",
                     YdotoolPackages));
                 dependencies.Add(new(
                     "gpaste-client",
-                    "Буфер без мигания панели (GPaste)",
-                    "Рекомендуется на GNOME Wayland: автовставка без значка на панели. "
-                    + "Альтернатива: sudo apt install xclip. "
-                    + "После GPaste перезайдите в сессию и включите расширение.",
+                    "Loc.Linux.Dep.gpaste-client.Title",
+                    "Loc.Linux.Dep.gpaste-client.Description",
                     "gpaste-client",
                     GpastePackages));
             }
@@ -155,8 +153,8 @@ public static class LinuxDependencyCatalog
             {
                 dependencies.Add(new(
                     "wtype",
-                    "Эмуляция клавиатуры Wayland (wtype)",
-                    "Нужен для автовставки в Sway, Hyprland и других wlroots-композиторах.",
+                    "Loc.Linux.Dep.wtype.Title",
+                    "Loc.Linux.Dep.wtype.Description",
                     "wtype",
                     WtypePackages));
             }
@@ -166,22 +164,22 @@ public static class LinuxDependencyCatalog
         {
             dependencies.Add(new(
                 "xclip",
-                "Буфер обмена X11 (xclip)",
-                "Нужен для копирования распознанного текста в буфер обмена.",
+                "Loc.Linux.Dep.xclip.Title",
+                "Loc.Linux.Dep.xclip.Description",
                 "xclip",
                 XclipPackages));
             dependencies.Add(new(
                 "xdotool",
-                "Эмуляция клавиатуры X11 (xdotool)",
-                "Нужен для автоматической вставки текста в X11-сессии.",
+                "Loc.Linux.Dep.xdotool.Title",
+                "Loc.Linux.Dep.xdotool.Description",
                 "xdotool",
                 XdotoolPackages));
         }
 
         dependencies.Add(new(
             "sg",
-            "Группа input без перелогина (sg)",
-            "Нужен для глобального хоткея, если вы уже в группе input, но ещё не перезаходили в сессию.",
+            "Loc.Linux.Dep.sg.Title",
+            "Loc.Linux.Dep.sg.Description",
             "sg",
             SgPackages));
 

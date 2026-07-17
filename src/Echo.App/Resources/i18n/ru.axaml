@@ -1,0 +1,216 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+  <!-- UI language picker -->
+  <sys:String x:Key="Loc.UiLang.System">Как в системе</sys:String>
+  <sys:String x:Key="Loc.UiLang.Russian">Русский</sys:String>
+  <sys:String x:Key="Loc.UiLang.English">English</sys:String>
+
+  <!-- Shell / navigation -->
+  <sys:String x:Key="Loc.Nav.Home">Главная</sys:String>
+  <sys:String x:Key="Loc.Nav.Settings">Настройки</sys:String>
+  <sys:String x:Key="Loc.Nav.History">История</sys:String>
+  <sys:String x:Key="Loc.Shell.Home.Title">Главная</sys:String>
+  <sys:String x:Key="Loc.Shell.Home.Subtitle">Диктовка с локальным распознаванием речи</sys:String>
+  <sys:String x:Key="Loc.Shell.Settings.Title">Настройки</sys:String>
+  <sys:String x:Key="Loc.Shell.Settings.Subtitle">Хоткей, движок, микрофон и способ ввода текста</sys:String>
+  <sys:String x:Key="Loc.Shell.History.Title">История</sys:String>
+  <sys:String x:Key="Loc.Chrome.Update">Обновить</sys:String>
+  <sys:String x:Key="Loc.Chrome.Minimize">Свернуть</sys:String>
+  <sys:String x:Key="Loc.Chrome.Maximize">Развернуть</sys:String>
+  <sys:String x:Key="Loc.Chrome.Close">Закрыть</sys:String>
+
+  <!-- Home -->
+  <sys:String x:Key="Loc.Home.HotkeySection">ГОРЯЧАЯ КЛАВИША</sys:String>
+  <sys:String x:Key="Loc.Home.HotkeyHint">Удерживайте комбинацию для записи. Отпустите — текст вставится в активное поле.</sys:String>
+  <sys:String x:Key="Loc.Home.ModelSection">ТЕКУЩАЯ МОДЕЛЬ</sys:String>
+  <sys:String x:Key="Loc.Home.ModelNotSelected">Модель не выбрана</sys:String>
+  <sys:String x:Key="Loc.Home.Ready">Готово к диктовке</sys:String>
+  <sys:String x:Key="Loc.Home.ModelMissing">Модель не загружена — скачайте в настройках или в мастере первого запуска</sys:String>
+
+  <!-- Settings sections -->
+  <sys:String x:Key="Loc.Settings.Section.Control">УПРАВЛЕНИЕ</sys:String>
+  <sys:String x:Key="Loc.Settings.Section.Recognition">РАСПОЗНАВАНИЕ</sys:String>
+  <sys:String x:Key="Loc.Settings.Section.Audio">АУДИО</sys:String>
+  <sys:String x:Key="Loc.Settings.Hotkey">Хоткей</sys:String>
+  <sys:String x:Key="Loc.Settings.InputMethod">Метод ввода</sys:String>
+  <sys:String x:Key="Loc.Settings.TypeSpeed">Скорость печати</sys:String>
+  <sys:String x:Key="Loc.Settings.TypeSpeed.Tooltip">Задержка между символами при методе «Печать»</sys:String>
+  <sys:String x:Key="Loc.Settings.TrailingSpace">Пробел в конце фразы</sys:String>
+  <sys:String x:Key="Loc.Settings.ShowToast">Показывать текст после диктовки</sys:String>
+  <sys:String x:Key="Loc.Settings.ShowToast.Tooltip">Вспышка с распознанным текстом. Нажмите на неё, чтобы скопировать.</sys:String>
+  <sys:String x:Key="Loc.Settings.StartWithSystem">Запускать при старте системы</sys:String>
+  <sys:String x:Key="Loc.Settings.StartWithSystem.Tooltip">Echo запустится в фоне при входе в систему</sys:String>
+  <sys:String x:Key="Loc.Settings.UiLanguage">Язык интерфейса</sys:String>
+  <sys:String x:Key="Loc.Settings.Device">Устройство</sys:String>
+  <sys:String x:Key="Loc.Settings.SttLanguage">Язык</sys:String>
+  <sys:String x:Key="Loc.Settings.Engine">Движок</sys:String>
+  <sys:String x:Key="Loc.Settings.Model">Модель</sys:String>
+  <sys:String x:Key="Loc.Settings.Microphone">Микрофон</sys:String>
+  <sys:String x:Key="Loc.Settings.GigaAmHint">e2e — с пунктуацией и нормализацией, rnnt — только текст</sys:String>
+  <sys:String x:Key="Loc.Settings.WhisperHint">auto — автовыбор (рекомендуется для англ. слов). Whisper работает на CPU.</sys:String>
+  <sys:String x:Key="Loc.Settings.ModelLoaded.Tooltip">{0} скачана и готова к распознаванию</sys:String>
+  <sys:String x:Key="Loc.Settings.ModelDownload.Tooltip">Скачать {0} на устройство</sys:String>
+  <sys:String x:Key="Loc.Settings.ModelDelete.Tooltip">Удалить файлы {0} с устройства</sys:String>
+
+  <!-- Engine / device / input options -->
+  <sys:String x:Key="Loc.Engine.GigaAm">GigaAM (русский)</sys:String>
+  <sys:String x:Key="Loc.Engine.Whisper">Whisper (мультиязычный)</sys:String>
+  <sys:String x:Key="Loc.Engine.Omnilingual">Omnilingual (1600 языков)</sys:String>
+  <sys:String x:Key="Loc.Device.Cpu">Процессор</sys:String>
+  <sys:String x:Key="Loc.Device.Cpu.Tooltip">Универсальный режим. Работает на любом ПК.</sys:String>
+  <sys:String x:Key="Loc.Device.DirectMl">GPU (DirectML)</sys:String>
+  <sys:String x:Key="Loc.Device.DirectMl.Tooltip">Ускорение через DirectML на Windows (AMD Radeon, Intel, NVIDIA). При первом выборе скачается ~30 МБ.</sys:String>
+  <sys:String x:Key="Loc.Input.Clipboard">Вставка из буфера</sys:String>
+  <sys:String x:Key="Loc.Input.Clipboard.Tooltip">Быстрая вставка. Содержимое буфера обмена восстанавливается после вставки.</sys:String>
+  <sys:String x:Key="Loc.Input.Type">Печать</sys:String>
+  <sys:String x:Key="Loc.Input.Type.Tooltip">Посимвольный ввод через эмуляцию клавиатуры.</sys:String>
+  <sys:String x:Key="Loc.Input.Auto">Авто</sys:String>
+  <sys:String x:Key="Loc.Input.Linux.Auto.Gnome.Tooltip">На GNOME Wayland — вставка через буфер Echo и ydotool (Ctrl+V), без wl-copy. Если мигает панель — перезапустите Echo.</sys:String>
+  <sys:String x:Key="Loc.Input.Linux.Clipboard.Gnome.Tooltip">Мгновенная вставка всего текста через буфер и Ctrl+V (ydotool).</sys:String>
+  <sys:String x:Key="Loc.Input.Linux.Auto.Tooltip">Echo выберет лучший способ: AT-SPI, ydotool, xdotool или wtype. Если автовставка недоступна — текст копируется в буфер.</sys:String>
+  <sys:String x:Key="Loc.Input.Linux.Clipboard.Tooltip">Сначала AT-SPI; иначе эмуляция Ctrl+V через ydotool, xdotool или wtype.</sys:String>
+  <sys:String x:Key="Loc.TypeSpeed.Fast">Быстро</sys:String>
+  <sys:String x:Key="Loc.TypeSpeed.Normal">Нормально</sys:String>
+  <sys:String x:Key="Loc.TypeSpeed.Smooth">Плавно</sys:String>
+
+  <!-- Status / progress -->
+  <sys:String x:Key="Loc.Status.Done">Готово</sys:String>
+  <sys:String x:Key="Loc.Status.DoneWithDetail">Готово: {0}</sys:String>
+  <sys:String x:Key="Loc.Status.Downloading">Скачивание {0}…</sys:String>
+  <sys:String x:Key="Loc.Status.Saving">Сохранение…</sys:String>
+  <sys:String x:Key="Loc.Status.LoadingModel">Загрузка модели…</sys:String>
+  <sys:String x:Key="Loc.Status.PreparingDirectMl">Подготовка DirectML…</sys:String>
+  <sys:String x:Key="Loc.Status.DownloadingUpdate">Скачивание обновления…</sys:String>
+  <sys:String x:Key="Loc.Status.PreparingUpdate">Подготовка обновления…</sys:String>
+  <sys:String x:Key="Loc.Status.InstallingUpdate">Установка обновления…</sys:String>
+  <sys:String x:Key="Loc.Status.Ready">Echo {0} готов</sys:String>
+  <sys:String x:Key="Loc.Status.ModelMissing">Модель не загружена — скачайте в «Настройках»</sys:String>
+  <sys:String x:Key="Loc.Status.ApplyError">Ошибка применения настроек</sys:String>
+  <sys:String x:Key="Loc.Status.DirectMlFailed">Не удалось скачать DirectML — оставлен CPU</sys:String>
+  <sys:String x:Key="Loc.Status.HotkeyCapture">Удерживайте комбинацию и отпустите все клавиши…</sys:String>
+  <sys:String x:Key="Loc.Status.Copied">Скопировано</sys:String>
+  <sys:String x:Key="Loc.Status.Restarting">Перезапуск…</sys:String>
+  <sys:String x:Key="Loc.Status.UpdateCheckFailed">Не удалось проверить обновления</sys:String>
+  <sys:String x:Key="Loc.Status.UpToDate">Установлена последняя версия</sys:String>
+  <sys:String x:Key="Loc.Status.UpdateFailed">Не удалось обновить: {0}</sys:String>
+  <sys:String x:Key="Loc.Update.Tooltip">Обновить до v{0}</sys:String>
+
+  <!-- Model status -->
+  <sys:String x:Key="Loc.Model.Unknown">Неизвестная модель</sys:String>
+  <sys:String x:Key="Loc.Model.Loaded">{0} ✓ загружена</sys:String>
+  <sys:String x:Key="Loc.Model.NotLoaded">{0} — не загружена</sys:String>
+  <sys:String x:Key="Loc.Model.Deleted">{0} удалена</sys:String>
+  <sys:String x:Key="Loc.Model.DefaultTitle">Модель распознавания</sys:String>
+
+  <!-- History -->
+  <sys:String x:Key="Loc.History.Loading">Загрузка истории…</sys:String>
+  <sys:String x:Key="Loc.History.Empty">Пока нет диктовок</sys:String>
+  <sys:String x:Key="Loc.History.EmptyHint">Записи появятся здесь после первой диктовки</sys:String>
+  <sys:String x:Key="Loc.History.Copy">Скопировать</sys:String>
+  <sys:String x:Key="Loc.History.LoadingMore">Загрузка…</sys:String>
+  <sys:String x:Key="Loc.History.NoEntries">Пока нет записей</sys:String>
+  <sys:String x:Key="Loc.History.Count.One">{0} запись</sys:String>
+  <sys:String x:Key="Loc.History.Count.Few">{0} записи</sys:String>
+  <sys:String x:Key="Loc.History.Count.Many">{0} записей</sys:String>
+
+  <!-- Tray -->
+  <sys:String x:Key="Loc.Tray.Ready">Echo — готов</sys:String>
+  <sys:String x:Key="Loc.Tray.Listening">Echo — слушаю</sys:String>
+  <sys:String x:Key="Loc.Tray.Processing">Echo — обработка...</sys:String>
+  <sys:String x:Key="Loc.Tray.Open">Открыть</sys:String>
+  <sys:String x:Key="Loc.Tray.Settings">Настройки</sys:String>
+  <sys:String x:Key="Loc.Tray.History">История</sys:String>
+  <sys:String x:Key="Loc.Tray.Exit">Выход</sys:String>
+
+  <!-- First run -->
+  <sys:String x:Key="Loc.FirstRun.Title">Добро пожаловать в Echo</sys:String>
+  <sys:String x:Key="Loc.FirstRun.Heading">Начните диктовку</sys:String>
+  <sys:String x:Key="Loc.FirstRun.Body">Скачайте модель распознавания один раз — дальше Echo работает полностью офлайн.</sys:String>
+  <sys:String x:Key="Loc.FirstRun.Later">Позже</sys:String>
+  <sys:String x:Key="Loc.FirstRun.Download">Скачать модель</sys:String>
+  <sys:String x:Key="Loc.FirstRun.Downloading">Скачивание…</sys:String>
+  <sys:String x:Key="Loc.FirstRun.HotkeyHint">Горячая клавиша: {0} — удерживайте и говорите.</sys:String>
+
+  <!-- Toast -->
+  <sys:String x:Key="Loc.Toast.CopyHint">Нажмите, чтобы скопировать</sys:String>
+
+  <!-- Linux dialog -->
+  <sys:String x:Key="Loc.Linux.Dialog.Title">Настройка Linux</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.StepPackages.Title">Шаг {0} из {1} — Системные пакеты</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.StepA11y.Title">Шаг {0} из {1} — Специальные возможности</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.StepTest.Title">Шаг {0} из {1} — Проверка вставки</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Packages.Subtitle">Echo подберёт способ вставки автоматически.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Packages.Subtitle.Gnome">На GNOME Wayland Echo вставляет через буфер и ydotool.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.A11y.Subtitle">Для автоматической вставки через AT-SPI нужен доступ к специальным возможностям.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Test.Subtitle">Убедитесь, что вставка работает в вашем окружении.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Test.Hint">Поставьте курсор в поле ниже и нажмите «Проверить вставку».</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Test.Placeholder">Курсор сюда…</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Test.Button">Проверить вставку</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.OpenA11y">Открыть настройки спец. возможностей</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.DontAsk">Больше не показывать этот мастер</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Back">Назад</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Skip">Пропустить</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.InputGroup">Группа input</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Install">Установить пакеты</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Next">Далее</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Finish">Готово</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.FlatpakHint">В Flatpak зависимости ставятся вместе с пакетом Echo или через менеджер пакетов системы.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.ManualInstall">Автоустановка недоступна. Установите пакеты вручную через менеджер пакетов дистрибутива.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.TestPhrase">Echo — тест вставки.</sys:String>
+
+  <!-- Linux dependencies -->
+  <sys:String x:Key="Loc.Linux.Dep.arecord.Title">Захват микрофона (arecord)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.arecord.Description">Нужен для записи голоса во время диктовки.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.python3-gi.Title">Python AT-SPI (python3-gi)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.python3-gi.Description">Нужен для автоматической вставки текста через специальные возможности.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.atspi.Title">AT-SPI (gir1.2-atspi-2.0)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.atspi.Description">Нужен для вставки текста в поля ввода других приложений.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.wl-copy.Title">Буфер обмена Wayland (wl-clipboard)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.wl-copy.Description">Нужен для копирования распознанного текста в буфер обмена.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.ydotool.Title">Эмуляция клавиатуры GNOME Wayland (ydotool)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.ydotool.Description">Нужен для автовставки Ctrl+V в GNOME на Wayland (требуется ydotoold и группа input).</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.gpaste-client.Title">Буфер без мигания панели (GPaste)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.gpaste-client.Description">Рекомендуется на GNOME Wayland: автовставка без значка на панели. Альтернатива: sudo apt install xclip. После GPaste перезайдите в сессию и включите расширение.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.wtype.Title">Эмуляция клавиатуры Wayland (wtype)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.wtype.Description">Нужен для автовставки в Sway, Hyprland и других wlroots-композиторах.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.xclip.Title">Буфер обмена X11 (xclip)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.xclip.Description">Нужен для копирования распознанного текста в буфер обмена.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.xdotool.Title">Эмуляция клавиатуры X11 (xdotool)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.xdotool.Description">Нужен для автовставки в X11-сессии.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.sg.Title">Группа input без перелогина (sg)</sys:String>
+  <sys:String x:Key="Loc.Linux.Dep.sg.Description">Нужен для глобального хоткея, если вы уже в группе input, но ещё не перезаходили в сессию.</sys:String>
+
+  <!-- Linux warnings / guides -->
+  <sys:String x:Key="Loc.Linux.Warn.NoSession">Не удалось определить графическую сессию (нужен Wayland или X11).</sys:String>
+  <sys:String x:Key="Loc.Linux.Warn.Inject.Gnome">Установите ydotool (с ydotoold) для автовставки на GNOME Wayland.</sys:String>
+  <sys:String x:Key="Loc.Linux.Warn.Inject.Wayland">Установите wl-clipboard и python3-gi для вставки текста.</sys:String>
+  <sys:String x:Key="Loc.Linux.Warn.Inject.X11">Установите xclip и xdotool для вставки текста.</sys:String>
+  <sys:String x:Key="Loc.Linux.Warn.MissingPackages">Для диктовки нужны системные компоненты — Echo может установить их при запуске.</sys:String>
+  <sys:String x:Key="Loc.Linux.Warn.MissingPackages.Suffix">Echo может установить недостающие пакеты при запуске.</sys:String>
+  <sys:String x:Key="Loc.Linux.Hotkey.PendingReloginSg">Глобальный хоткей недоступен: вы в группе input, но сессия ещё не обновилась. Установите util-linux-extra (команда sg) через диалог зависимостей Echo или выйдите из учётной записи и войдите снова.</sys:String>
+  <sys:String x:Key="Loc.Linux.Hotkey.PendingRelogin">Глобальный хоткей недоступен: вы в группе input, но сессия ещё не обновилась. Выйдите из учётной записи и войдите снова, затем перезапустите Echo.</sys:String>
+  <sys:String x:Key="Loc.Linux.Hotkey.NotConfigured">Глобальный хоткей недоступен: добавьте пользователя в группу input (Настройки → «Группа input» или: sudo usermod -aG input $USER), затем перезайдите в сессию.</sys:String>
+  <sys:String x:Key="Loc.Linux.A11y.Instructions.Generic">Откройте настройки специальных возможностей и разрешите Echo управлять приложениями (AT-SPI).</sys:String>
+  <sys:String x:Key="Loc.Linux.A11y.Instructions.Gnome">GNOME: Параметры → Специальные возможности → Разрешить приложениям управлять вашим рабочим столом (или установите ydotool).</sys:String>
+  <sys:String x:Key="Loc.Linux.A11y.Instructions.GnomeWayland">GNOME Wayland: включите «Настройки» → «Специальные возможности» → «Вспомогательные технологии». Тогда Echo вставляет текст через AT-SPI без мигания панели. Если выключены — буфер + Ctrl+V (ydotool).</sys:String>
+  <sys:String x:Key="Loc.Linux.A11y.Instructions.Kde">KDE: откройте «Параметры системы» → «Специальные возможности» и включите поддержку AT-SPI.</sys:String>
+  <sys:String x:Key="Loc.Linux.A11y.Limitations">Хорошо работает в браузерах, офисных приложениях и большинстве полей ввода. В некоторых играх, ncurses-терминалах и sandbox-приложениях останется только копирование в буфер.</sys:String>
+  <sys:String x:Key="Loc.Linux.Inject.NeedWlClipboard">Установите wl-clipboard для вставки текста.</sys:String>
+  <sys:String x:Key="Loc.Linux.Inject.NeedXclip">Установите xclip или xsel для вставки текста.</sys:String>
+  <sys:String x:Key="Loc.Linux.Inject.ClipboardOnly">Текст скопирован — нажмите Ctrl+V.</sys:String>
+  <sys:String x:Key="Loc.Inject.Failed">Не удалось вставить текст — результат в истории</sys:String>
+  <sys:String x:Key="Loc.Status.RecognitionError">Ошибка распознавания</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.AdminInstall">Запрошены права администратора. Подтвердите установку в системном окне…</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.AdminInputGroup">Запрошены права администратора для добавления в группу input…</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.OpenA11yManual">Откройте настройки специальных возможностей вручную.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Testing">Проверка…</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Test.Success">Успех — текст вставлен автоматически.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Test.Partial">Частично — {0}</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Test.Fail">Не удалось: {0}</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Test.Error">Ошибка: {0}</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Packages.Subtitle.GnomeDetail">На GNOME Wayland Echo использует ydotool для автовставки. Установите ydotool, wl-clipboard и arecord.</sys:String>
+  <sys:String x:Key="Loc.Linux.Dialog.Packages.Subtitle.Detail">Echo подберёт способ вставки автоматически (AT-SPI, xdotool или wtype). Установите недостающие компоненты.</sys:String>
+
+</ResourceDictionary>

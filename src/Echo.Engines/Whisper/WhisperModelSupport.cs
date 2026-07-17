@@ -1,3 +1,4 @@
+using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
 using Microsoft.Extensions.Logging;
 
@@ -10,10 +11,10 @@ public sealed class WhisperModelSupport(ILogger<WhisperModelSupport> logger) : I
         IProgress<string>? progress,
         CancellationToken cancellationToken = default)
     {
-        progress?.Report($"Скачивание Whisper {modelSize}…");
+        progress?.Report(ProgressMessages.Downloading($"Whisper {modelSize}"));
         logger.LogInformation("Downloading Whisper ggml model {Size}", modelSize);
         await WhisperGgmlHelper.DownloadGgmlModelAsync(modelSize, logger, cancellationToken);
-        progress?.Report($"Готово: Whisper {modelSize}");
+        progress?.Report(ProgressMessages.Done($"Whisper {modelSize}"));
     }
 
     public void Delete(string modelSize)

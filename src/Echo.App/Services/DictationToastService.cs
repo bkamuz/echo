@@ -2,6 +2,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Threading;
 using echo.Abstractions.Platform;
+using echo.App.Localization;
 using echo.App.Views;
 using echo.Core;
 
@@ -12,6 +13,7 @@ public sealed class DictationToastService : IDictationResultNotifier, IDisposabl
     private const int AutoDismissMs = 7000;
 
     private readonly ConfigStore _configStore;
+    private readonly LocalizationService _loc;
     private readonly IUserStatusNotifier? _statusNotifier;
     private DictationToastWindow? _window;
     private CancellationTokenSource? _dismissCts;
@@ -19,9 +21,13 @@ public sealed class DictationToastService : IDictationResultNotifier, IDisposabl
     private EventHandler<ControlledApplicationLifetimeExitEventArgs>? _exitHandler;
     private bool _disposed;
 
-    public DictationToastService(ConfigStore configStore, IUserStatusNotifier? statusNotifier = null)
+    public DictationToastService(
+        ConfigStore configStore,
+        LocalizationService loc,
+        IUserStatusNotifier? statusNotifier = null)
     {
         _configStore = configStore;
+        _loc = loc;
         _statusNotifier = statusNotifier;
     }
 
@@ -104,7 +110,7 @@ public sealed class DictationToastService : IDictationResultNotifier, IDisposabl
             }
 
             await clipboard.SetTextAsync(text).ConfigureAwait(true);
-            _statusNotifier?.ShowTemporary("Скопировано");
+            _statusNotifier?.ShowTemporary(_loc.Get("Loc.Status.Copied"));
         }
         finally
         {

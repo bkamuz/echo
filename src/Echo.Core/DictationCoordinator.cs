@@ -73,7 +73,7 @@ public sealed class DictationCoordinator : IDisposable
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            progress?.Report("Сохранение…");
+            progress?.Report(ProgressMessages.Saving());
             _config = config;
             _config.Normalize();
             _configStore.Save(_config);
@@ -158,7 +158,7 @@ public sealed class DictationCoordinator : IDisposable
             return false;
         }
 
-        progress?.Report("Загрузка модели…");
+        progress?.Report(ProgressMessages.LoadingModel());
         cancellationToken.ThrowIfCancellationRequested();
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -284,7 +284,7 @@ public sealed class DictationCoordinator : IDisposable
                         "Text injection failed — result saved to history: {Message}",
                         injectResult.Message);
                     FinishDictation(
-                        injectResult.Message ?? "Не удалось вставить текст — результат в истории",
+                        injectResult.Message ?? "Loc.Inject.Failed",
                         alert: true);
                 }
                 else if (injectResult.Outcome == TextInjectionOutcome.ClipboardOnly)
@@ -296,7 +296,7 @@ public sealed class DictationCoordinator : IDisposable
                         text.Length,
                         injectResult.Message);
                     FinishDictation(
-                        injectResult.Message ?? "Текст скопирован — нажмите Ctrl+V.",
+                        injectResult.Message ?? "Loc.Linux.Inject.ClipboardOnly",
                         warning: true);
                 }
                 else
@@ -312,7 +312,7 @@ public sealed class DictationCoordinator : IDisposable
             catch (Exception injectEx)
             {
                 _logger.LogWarning(injectEx, "Text injection failed — result saved to history");
-                FinishDictation("Не удалось вставить текст — результат в истории", alert: true);
+                FinishDictation("Loc.Inject.Failed", alert: true);
             }
 
             _dictationToast.Show(text.TrimEnd());
@@ -322,7 +322,7 @@ public sealed class DictationCoordinator : IDisposable
             _logger.LogError(ex, "Transcription pipeline failed");
             var message = ex is InvalidOperationException
                 ? ex.Message
-                : "Ошибка распознавания";
+                : "Loc.Status.RecognitionError";
             FinishDictation(message, alert: true);
         }
         finally

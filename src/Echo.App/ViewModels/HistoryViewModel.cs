@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using echo.App.Localization;
 using echo.Core;
 
 namespace echo.App.ViewModels;
@@ -16,6 +18,7 @@ public partial class HistoryViewModel : ObservableObject
     private const int PageSize = 50;
 
     private readonly HistoryStore _history;
+    private readonly LocalizationService _loc;
     private int _loadedCount;
     private bool _isLoading;
 
@@ -30,9 +33,11 @@ public partial class HistoryViewModel : ObservableObject
     [ObservableProperty]
     private bool _isLoadingMore;
 
-    public HistoryViewModel(HistoryStore history)
+    public HistoryViewModel(HistoryStore history, LocalizationService loc)
     {
         _history = history;
+        _loc = loc;
+        _loc.LanguageChanged += (_, _) => NotifySummaryChanged();
     }
 
     public bool HasMore => _loadedCount < TotalCount;
@@ -43,7 +48,7 @@ public partial class HistoryViewModel : ObservableObject
         {
             if (TotalCount == 0)
             {
-                return "Пока нет записей";
+                return _loc.Get("Loc.History.NoEntries");
             }
 
             return FormatEntryCount(TotalCount);
@@ -155,23 +160,23 @@ public partial class HistoryViewModel : ObservableObject
     }
 
     private static HistoryItemView ToView(HistoryEntry entry) =>
-        new(entry.Timestamp.ToString("dd.MM.yyyy HH:mm"), entry.Engine, entry.Text);
+        new(entry.Timestamp.ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentUICulture), entry.Engine, entry.Text);
 
-    private static string FormatEntryCount(int count)
+    private string FormatEntryCount(int count)
     {
         var mod10 = count % 10;
         var mod100 = count % 100;
         if (mod10 == 1 && mod100 != 11)
         {
-            return $"{count} запись";
+            return _loc.Format("Loc.History.Count.One", count);
         }
 
         if (mod10 is >= 2 and <= 4 && (mod100 < 10 || mod100 >= 20))
         {
-            return $"{count} записи";
+            return _loc.Format("Loc.History.Count.Few", count);
         }
 
-        return $"{count} записей";
+        return _loc.Format("Loc.History.Count.Many", count);
     }
 
     private void NotifySummaryChanged()

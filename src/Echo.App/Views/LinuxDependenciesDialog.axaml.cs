@@ -1,18 +1,28 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using echo.Abstractions.Platform;
+using echo.App.Localization;
 using echo.Platform.Linux;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace echo.App.Views;
 
+public sealed record LinuxDependencyView(string DisplayName, string Description);
+
 public partial class LinuxDependenciesDialog : Window
 {
-    private const string TestPhrase = "Echo — тест вставки.";
-
     private readonly IReadOnlyList<LinuxDependency> _dependencies;
+    private readonly LocalizationService _loc;
     private readonly bool _needsInputGroup;
     private readonly bool _skipAccessibilityStep;
     private int _step;
+
+    public LinuxDependenciesDialog()
+    {
+        _dependencies = [];
+        _loc = null!;
+        InitializeComponent();
+    }
 
     public LinuxDependenciesDialog(
         IReadOnlyList<LinuxDependency> dependencies,
@@ -23,8 +33,12 @@ public partial class LinuxDependenciesDialog : Window
         _dependencies = dependencies;
         _needsInputGroup = needsInputGroup;
         _skipAccessibilityStep = LinuxDependencyCatalog.UsesGnomeWaylandYdotool;
+        _loc = App.Services.GetRequiredService<LocalizationService>();
         InitializeComponent();
-        DependenciesList.ItemsSource = dependencies;
+
+        DependenciesList.ItemsSource = dependencies
+            .Select(d => new LinuxDependencyView(_loc.Get(d.DisplayName), _loc.Get(d.Description)))
+            .ToList();
         DependenciesList.IsVisible = dependencies.Count > 0;
         InstallButton.IsEnabled = canInstall && dependencies.Count > 0;
         InstallButton.IsVisible = dependencies.Count > 0;
@@ -35,19 +49,20 @@ public partial class LinuxDependenciesDialog : Window
         if (!string.IsNullOrWhiteSpace(extraMessage))
         {
             StatusText.IsVisible = true;
-            StatusText.Text = extraMessage;
+            StatusText.Text = Localize(extraMessage);
         }
         else if (!canInstall && dependencies.Count > 0)
         {
             StatusText.IsVisible = true;
-            StatusText.Text = LinuxPlatformCapabilities.IsFlatpakSandbox
-                ? "В Flatpak зависимости ставятся вместе с пакетом Echo или через менеджер пакетов системы."
-                : "Автоустановка недоступна. Установите пакеты вручную через менеджер пакетов дистрибутива.";
+            StatusText.Text = _loc.Get(
+                LinuxPlatformCapabilities.IsFlatpakSandbox
+                    ? "Loc.Linux.Dialog.FlatpakHint"
+                    : "Loc.Linux.Dialog.ManualInstall");
         }
         else if (needsInputGroup)
         {
             StatusText.IsVisible = true;
-            StatusText.Text = LinuxHotkeySetup.GetSetupMessage();
+            StatusText.Text = Localize(LinuxHotkeySetup.GetSetupMessage());
         }
 
         ShowStep(0);
@@ -60,6 +75,8 @@ public partial class LinuxDependenciesDialog : Window
     public bool InstallAttempted { get; private set; }
 
     private int LastStep => _skipAccessibilityStep ? 1 : 2;
+
+    private string TestPhrase => _loc.Get("Loc.Linux.Dialog.TestPhrase");
 
     private void ShowStep(int step)
     {
@@ -76,36 +93,30 @@ public partial class LinuxDependenciesDialog : Window
         var totalSteps = LastStep + 1;
         StepTitle.Text = step switch
         {
-            0 => $"Шаг 1 из {totalSteps} — Системные пакеты",
-            _ when step == LastStep => $"Шаг {totalSteps} из {totalSteps} — Проверка вставки",
-            _ => $"Шаг 2 из {totalSteps} — Специальные возможности",
+            0 => _loc.Format("Loc.Linux.Dialog.StepPackages.Title", 1, totalSteps),
+            _ when step == LastStep => _loc.Format("Loc.Linux.Dialog.StepTest.Title", totalSteps, totalSteps),
+            _ => _loc.Format("Loc.Linux.Dialog.StepA11y.Title", 2, totalSteps),
         };
 
         StepSubtitle.Text = step switch
         {
             0 => GetPackagesStepSubtitle(),
-            _ when step == LastStep => "Убедитесь, что вставка работает в вашем окружении.",
-            _ => "Для автоматической вставки через AT-SPI нужен доступ к специальным возможностям.",
+            _ when step == LastStep => _loc.Get("Loc.Linux.Dialog.Test.Subtitle"),
+            _ => _loc.Get("Loc.Linux.Dialog.A11y.Subtitle"),
         };
 
         if (!_skipAccessibilityStep && step == 1)
         {
-            AccessibilityInstructions.Text = LinuxAccessibilityGuide.GetInstructions();
-            LimitationsText.Text = LinuxAccessibilityGuide.Limitations;
+            AccessibilityInstructions.Text = Localize(LinuxAccessibilityGuide.GetInstructions());
+            LimitationsText.Text = Localize(LinuxAccessibilityGuide.Limitations);
         }
     }
 
-    private static string GetPackagesStepSubtitle()
-    {
-        if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
-        {
-            return "На GNOME Wayland Echo использует ydotool для автовставки. "
-                + "Установите ydotool, wl-clipboard и arecord.";
-        }
-
-        return "Echo подберёт способ вставки автоматически (AT-SPI, xdotool или wtype). "
-            + "Установите недостающие компоненты.";
-    }
+    private string GetPackagesStepSubtitle() =>
+        _loc.Get(
+            LinuxDependencyCatalog.UsesGnomeWaylandYdotool
+                ? "Loc.Linux.Dialog.Packages.Subtitle.GnomeDetail"
+                : "Loc.Linux.Dialog.Packages.Subtitle.Detail");
 
     private void OnBackClick(object? sender, RoutedEventArgs e) => ShowStep(_step - 1);
 
@@ -129,12 +140,12 @@ public partial class LinuxDependenciesDialog : Window
         SkipButton.IsEnabled = false;
         InputGroupButton.IsEnabled = false;
         StatusText.IsVisible = true;
-        StatusText.Text = "Запрошены права администратора. Подтвердите установку в системном окне…";
+        StatusText.Text = _loc.Get("Loc.Linux.Dialog.AdminInstall");
 
         InstallAttempted = true;
         var result = await LinuxDependencyInstaller.TryInstallAsync(_dependencies).ConfigureAwait(true);
 
-        StatusText.Text = result.Message;
+        StatusText.Text = Localize(result.Message);
         SkipButton.IsEnabled = true;
         InputGroupButton.IsEnabled = _needsInputGroup;
         LinuxPlatformCapabilities.Refresh();
@@ -155,12 +166,12 @@ public partial class LinuxDependenciesDialog : Window
         SkipButton.IsEnabled = false;
         InputGroupButton.IsEnabled = false;
         StatusText.IsVisible = true;
-        StatusText.Text = "Запрошены права администратора для добавления в группу input…";
+        StatusText.Text = _loc.Get("Loc.Linux.Dialog.AdminInputGroup");
 
         InstallAttempted = true;
         var result = await LinuxInputGroupInstaller.TryAddCurrentUserAsync().ConfigureAwait(true);
 
-        StatusText.Text = result.Message;
+        StatusText.Text = Localize(result.Message);
         SkipButton.IsEnabled = true;
         InputGroupButton.IsEnabled = _needsInputGroup;
         InstallButton.IsEnabled = LinuxPlatformCapabilities.CanAutoInstall
@@ -177,7 +188,7 @@ public partial class LinuxDependenciesDialog : Window
         if (!LinuxAccessibilityGuide.TryOpenSettings())
         {
             StatusText.IsVisible = true;
-            StatusText.Text = "Откройте настройки специальных возможностей вручную.";
+            StatusText.Text = _loc.Get("Loc.Linux.Dialog.OpenA11yManual");
         }
     }
 
@@ -185,7 +196,7 @@ public partial class LinuxDependenciesDialog : Window
     {
         TestButton.IsEnabled = false;
         TestResultText.IsVisible = true;
-        TestResultText.Text = "Проверка…";
+        TestResultText.Text = _loc.Get("Loc.Linux.Dialog.Testing");
 
         try
         {
@@ -193,19 +204,25 @@ public partial class LinuxDependenciesDialog : Window
             var result = await injector.InjectAsync(TestPhrase, "auto", 0).ConfigureAwait(true);
             TestResultText.Text = result.Outcome switch
             {
-                TextInjectionOutcome.AutoPasted => "Успех — текст вставлен автоматически.",
+                TextInjectionOutcome.AutoPasted => _loc.Get("Loc.Linux.Dialog.Test.Success"),
                 TextInjectionOutcome.ClipboardOnly =>
-                    $"Частично — {result.Message ?? "текст скопирован в буфер."}",
-                _ => $"Не удалось: {result.Message ?? "неизвестная ошибка"}",
+                    _loc.Format(
+                        "Loc.Linux.Dialog.Test.Partial",
+                        Localize(result.Message ?? "Loc.Linux.Inject.ClipboardOnly")),
+                _ => _loc.Format(
+                    "Loc.Linux.Dialog.Test.Fail",
+                    Localize(result.Message ?? "Loc.Inject.Failed")),
             };
         }
         catch (Exception ex)
         {
-            TestResultText.Text = $"Ошибка: {ex.Message}";
+            TestResultText.Text = _loc.Format("Loc.Linux.Dialog.Test.Error", ex.Message);
         }
         finally
         {
             TestButton.IsEnabled = true;
         }
     }
+
+    private string Localize(string? keyOrText) => _loc.LocText(keyOrText);
 }

@@ -8,30 +8,23 @@ public static class LinuxAccessibilityGuide
     {
         if (LinuxSession.IsGnome && LinuxSession.IsWayland)
         {
-            return "GNOME Wayland: включите «Настройки» → «Специальные возможности» → "
-                + "«Вспомогательные технологии» (Assistive Technology Support). "
-                + "Тогда Echo вставляет текст напрямую через AT-SPI — без буфера обмена и без мигания индикатора на панели. "
-                + "Если спец. возможности выключены, используется буфер + Ctrl+V (ydotool) — появится значок буфера.";
+            return "Loc.Linux.A11y.Instructions.GnomeWayland";
         }
 
         if (LinuxSession.IsGnome)
         {
-            return "GNOME: откройте «Настройки» → «Специальные возможности» и включите доступ для приложений. "
-                + "Без этого AT-SPI не сможет вставлять текст в другие окна.";
+            return "Loc.Linux.A11y.Instructions.Gnome";
         }
 
         if (LinuxSession.IsKde)
         {
-            return "KDE: откройте «Параметры системы» → «Специальные возможности» и включите поддержку AT-SPI.";
+            return "Loc.Linux.A11y.Instructions.Kde";
         }
 
-        return "Включите специальные возможности (Accessibility / Assistive Technologies) в настройках вашего окружения. "
-            + "Echo использует AT-SPI для автоматической вставки текста.";
+        return "Loc.Linux.A11y.Instructions.Generic";
     }
 
-    public static string Limitations =>
-        "Хорошо работает в браузерах, офисных приложениях и большинстве полей ввода. "
-        + "В некоторых играх, ncurses-терминалах и sandbox-приложениях останется только копирование в буфер.";
+    public static string Limitations => "Loc.Linux.A11y.Limitations";
 
     public static bool TryOpenSettings()
     {

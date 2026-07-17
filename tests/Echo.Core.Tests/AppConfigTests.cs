@@ -33,6 +33,7 @@ public class AppConfigTests
         Assert.Equal("ctrl+cmd", clone.Hotkey);
         Assert.Equal("omnilingual", clone.Engine);
         Assert.Equal("directml", clone.Device);
+        Assert.Equal(original.UiLanguage, clone.UiLanguage);
     }
 
     [Fact]
@@ -49,6 +50,24 @@ public class AppConfigTests
     {
         var config = new AppConfig();
         Assert.False(config.StartWithSystem);
+    }
+
+    [Fact]
+    public void UiLanguage_DefaultsToSystem()
+    {
+        var config = new AppConfig();
+        Assert.Equal("system", config.UiLanguage);
+    }
+
+    [Theory]
+    [InlineData("de", "system")]
+    [InlineData("EN", "en")]
+    [InlineData("ru", "ru")]
+    public void Normalize_UiLanguage(string input, string expected)
+    {
+        var config = new AppConfig { UiLanguage = input };
+        config.Normalize();
+        Assert.Equal(expected, config.UiLanguage);
     }
 
     [Theory]

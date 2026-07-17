@@ -16,14 +16,14 @@ internal sealed class ClipboardFallbackBackend : ILinuxInjectionBackend
         {
             return TextInjectionResult.Failed(
                 LinuxSession.IsWayland
-                    ? "Установите wl-clipboard для вставки текста."
-                    : "Установите xclip или xsel для вставки текста.");
+                    ? "Loc.Linux.Inject.NeedWlClipboard"
+                    : "Loc.Linux.Inject.NeedXclip");
         }
 
         try
         {
             LinuxClipboard.Write(text, cancellationToken);
-            return TextInjectionResult.ClipboardOnly("Текст скопирован — нажмите Ctrl+V.");
+            return TextInjectionResult.ClipboardOnly("Loc.Linux.Inject.ClipboardOnly");
         }
         catch (Exception ex)
         {

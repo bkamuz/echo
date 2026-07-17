@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using echo.Abstractions.Core;
+using echo.App.Localization;
 using echo.Core;
 
 namespace echo.App.ViewModels;
@@ -8,6 +9,7 @@ public partial class HomeViewModel : ObservableObject
 {
     private readonly DictationCoordinator _coordinator;
     private readonly TranscriptionService _transcription;
+    private readonly LocalizationService _loc;
 
     [ObservableProperty]
     private string _modelInfo = string.Empty;
@@ -21,11 +23,20 @@ public partial class HomeViewModel : ObservableObject
 
     public bool ShowLastOutcome => !string.IsNullOrWhiteSpace(LastOutcome);
 
-    public HomeViewModel(DictationCoordinator coordinator, TranscriptionService transcription)
+    public HomeViewModel(
+        DictationCoordinator coordinator,
+        TranscriptionService transcription,
+        LocalizationService loc)
     {
         _coordinator = coordinator;
         _transcription = transcription;
+        _loc = loc;
         _coordinator.OutcomeChanged += OnOutcomeChanged;
+        _loc.LanguageChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HotkeyHint));
+            UpdateModelInfo();
+        };
         UpdateModelInfo();
     }
 
@@ -39,7 +50,8 @@ public partial class HomeViewModel : ObservableObject
 
     private void OnOutcomeChanged()
     {
-        LastOutcome = _coordinator.LastOutcomeMessage ?? string.Empty;
+        var raw = _coordinator.LastOutcomeMessage ?? string.Empty;
+        LastOutcome = _loc.LocText(raw);
     }
 
     private void UpdateModelInfo()
@@ -58,9 +70,9 @@ public partial class HomeViewModel : ObservableObject
             _coordinator.Config.WhisperModelSize,
             _coordinator.Config.GigaAmModelSize);
         ReadinessText = spec is null
-            ? "Модель не выбрана"
+            ? _loc.Get("Loc.Home.ModelNotSelected")
             : spec.IsDownloaded()
-                ? "Готово к диктовке"
-                : "Модель не загружена — скачайте в настройках или в мастере первого запуска";
+                ? _loc.Get("Loc.Home.Ready")
+                : _loc.Get("Loc.Home.ModelMissing");
     }
 }

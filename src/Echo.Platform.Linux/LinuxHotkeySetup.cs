@@ -84,14 +84,10 @@ public static class LinuxHotkeySetup
             LinuxInputAccessState.Granted => string.Empty,
             LinuxInputAccessState.PendingRelogin =>
                 NeedsSgBridge()
-                    ? "Глобальный хоткей недоступен: вы в группе input, но сессия ещё не обновилась. "
-                      + "Установите util-linux-extra (команда sg) через диалог зависимостей Echo "
-                      + "или выйдите из учётной записи и войдите снова."
-                    : "Глобальный хоткей недоступен: вы в группе input, но сессия ещё не обновилась. "
-                      + "Выйдите из учётной записи и войдите снова, затем перезапустите Echo.",
+                    ? "Loc.Linux.Hotkey.PendingReloginSg"
+                    : "Loc.Linux.Hotkey.PendingRelogin",
             LinuxInputAccessState.NotConfigured =>
-                "Глобальный хоткей недоступен: добавьте пользователя в группу input "
-                + "(Настройки → «Группа input» или: sudo usermod -aG input $USER), затем перезайдите в сессию.",
+                "Loc.Linux.Hotkey.NotConfigured",
             _ => throw new ArgumentOutOfRangeException(),
         };
     }

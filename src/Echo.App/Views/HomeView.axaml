@@ -9,7 +9,7 @@
       <Border Classes="tile">
         <DockPanel>
           <Border DockPanel.Dock="Top" Classes="tile-header">
-            <TextBlock Classes="section-title" Text="ГОРЯЧАЯ КЛАВИША"/>
+            <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.HotkeySection}"/>
           </Border>
           <StackPanel Classes="tile-body" Spacing="8">
             <TextBlock Text="{Binding HotkeyHint}"
@@ -18,7 +18,7 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource LinkBrush}"/>
             <TextBlock Classes="page-subtitle"
-                       Text="Удерживайте комбинацию для записи. Отпустите — текст вставится в активное поле."/>
+                       Text="{DynamicResource Loc.Home.HotkeyHint}"/>
           </StackPanel>
         </DockPanel>
       </Border>
@@ -26,7 +26,7 @@
       <Border Classes="tile">
         <DockPanel>
           <Border DockPanel.Dock="Top" Classes="tile-header">
-            <TextBlock Classes="section-title" Text="ТЕКУЩАЯ МОДЕЛЬ"/>
+            <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.ModelSection}"/>
           </Border>
           <StackPanel Classes="tile-body" Spacing="8">
             <TextBlock Text="{Binding ModelInfo}"

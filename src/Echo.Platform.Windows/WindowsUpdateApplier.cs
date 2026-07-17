@@ -49,10 +49,10 @@ public sealed class WindowsUpdateApplier : IUpdateApplier
 
         try
         {
-            progress?.Report("Скачивание обновления…");
+            progress?.Report(ProgressMessages.DownloadingUpdate());
             await DownloadFileAsync(update.DownloadUrl, zipPath, cancellationToken).ConfigureAwait(false);
 
-            progress?.Report("Подготовка обновления…");
+            progress?.Report(ProgressMessages.PreparingUpdate());
             if (Directory.Exists(stagingDir))
             {
                 Directory.Delete(stagingDir, recursive: true);
@@ -67,7 +67,7 @@ public sealed class WindowsUpdateApplier : IUpdateApplier
                 stagingDir);
             await File.WriteAllTextAsync(scriptPath, updaterScript, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
 
-            progress?.Report("Установка обновления…");
+            progress?.Report(ProgressMessages.InstallingUpdate());
             LaunchUpdater(scriptPath);
         }
         catch

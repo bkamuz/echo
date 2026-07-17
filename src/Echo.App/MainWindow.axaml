@@ -47,7 +47,7 @@
                     Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Home}}"
                     Command="{Binding NavigateCommand}"
                     CommandParameter="{x:Static vm:AppPage.Home}"
-                    ToolTip.Tip="Главная">
+                    ToolTip.Tip="{DynamicResource Loc.Nav.Home}">
               <PathIcon Data="{StaticResource IconHome}"
                         Width="16"
                         Height="16"/>
@@ -57,7 +57,7 @@
                     Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Settings}}"
                     Command="{Binding NavigateCommand}"
                     CommandParameter="{x:Static vm:AppPage.Settings}"
-                    ToolTip.Tip="Настройки">
+                    ToolTip.Tip="{DynamicResource Loc.Nav.Settings}">
               <PathIcon Data="{StaticResource IconSettings}"
                         Width="16"
                         Height="16"/>
@@ -67,7 +67,7 @@
                     Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.History}}"
                     Command="{Binding NavigateCommand}"
                     CommandParameter="{x:Static vm:AppPage.History}"
-                    ToolTip.Tip="История">
+                    ToolTip.Tip="{DynamicResource Loc.Nav.History}">
               <PathIcon Data="{StaticResource IconHistory}"
                         Width="16"
                         Height="16"/>
@@ -110,7 +110,7 @@
                     Panel.ZIndex="1"
                     IsVisible="{Binding Update.IsAvailable}">
           <Button Classes="primary"
-                  Content="Обновить"
+                  Content="{DynamicResource Loc.Chrome.Update}"
                   Command="{Binding Update.ApplyCommand}"
                   IsEnabled="{Binding !Update.IsApplying}"
                   ToolTip.Tip="{Binding Update.Tooltip}"
@@ -126,17 +126,17 @@
           <Button x:Name="MinimizeCaptionButton"
                   Classes="shell-caption-button"
                   Content="&#x2212;"
-                  ToolTip.Tip="Свернуть"
+                  ToolTip.Tip="{DynamicResource Loc.Chrome.Minimize}"
                   Click="OnMinimizeClick"/>
           <Button x:Name="MaximizeCaptionButton"
                   Classes="shell-caption-button"
                   Content="&#x25A1;"
-                  ToolTip.Tip="Развернуть"
+                  ToolTip.Tip="{DynamicResource Loc.Chrome.Maximize}"
                   Click="OnMaximizeClick"/>
           <Button x:Name="CloseCaptionButton"
                   Classes="shell-caption-button shell-caption-button-close"
                   Content="&#x00D7;"
-                  ToolTip.Tip="Закрыть"
+                  ToolTip.Tip="{DynamicResource Loc.Chrome.Close}"
                   Click="OnCloseClick"/>
         </StackPanel>
       </Grid>

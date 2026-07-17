@@ -16,12 +16,12 @@
         <Border Classes="tile">
           <DockPanel>
             <Border DockPanel.Dock="Top" Classes="tile-header">
-              <TextBlock Classes="section-title" Text="УПРАВЛЕНИЕ"/>
+              <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Section.Control}"/>
             </Border>
             <StackPanel Classes="tile-body" Spacing="10">
               <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="12">
                 <StackPanel Grid.Column="0" Classes="settings-field">
-                  <TextBlock Classes="field-label" Text="Хоткей"/>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Hotkey}"/>
                   <Button Classes="hotkey-field"
                           Classes.capturing="{Binding IsCapturingHotkey}"
                           Content="{Binding HotkeyDisplay}"
@@ -29,7 +29,7 @@
                           HorizontalAlignment="Stretch"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Classes="settings-field">
-                  <TextBlock Classes="field-label" Text="Метод ввода"/>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.InputMethod}"/>
                   <ComboBox ItemsSource="{Binding InputMethodOptions}"
                             SelectedItem="{Binding SelectedInputMethod}"
                             HorizontalAlignment="Stretch">
@@ -45,7 +45,7 @@
                             Classes="settings-field"
                             MinWidth="140"
                             IsVisible="{Binding IsTypeInput}">
-                  <TextBlock Classes="field-label" Text="Скорость печати"
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.TypeSpeed}"
                              ToolTip.Tip="{Binding TypeSpeedTooltip}"/>
                   <ComboBox ItemsSource="{Binding TypeSpeedOptions}"
                             SelectedItem="{Binding SelectedTypeSpeed}"
@@ -53,15 +53,27 @@
                 </StackPanel>
               </Grid>
               <StackPanel Orientation="Horizontal" Spacing="16">
-                <CheckBox Content="Пробел в конце фразы"
+                <CheckBox Content="{DynamicResource Loc.Settings.TrailingSpace}"
                           IsChecked="{Binding AddTrailingSpace}"/>
-                <CheckBox Content="Показывать текст после диктовки"
+                <CheckBox Content="{DynamicResource Loc.Settings.ShowToast}"
                           IsChecked="{Binding ShowDictationToast}"
-                          ToolTip.Tip="Вспышка с распознанным текстом. Нажмите на неё, чтобы скопировать."/>
-                <CheckBox Content="Запускать при старте системы"
+                          ToolTip.Tip="{DynamicResource Loc.Settings.ShowToast.Tooltip}"/>
+                <CheckBox Content="{DynamicResource Loc.Settings.StartWithSystem}"
                           IsChecked="{Binding StartWithSystem}"
                           IsVisible="{Binding IsAutoStartSupported}"
-                          ToolTip.Tip="Echo запустится в фоне при входе в систему"/>
+                          ToolTip.Tip="{DynamicResource Loc.Settings.StartWithSystem.Tooltip}"/>
+              </StackPanel>
+              <StackPanel Classes="settings-field" MaxWidth="280" HorizontalAlignment="Left">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.UiLanguage}"/>
+                <ComboBox ItemsSource="{Binding UiLanguageChoices}"
+                          SelectedItem="{Binding SelectedUiLanguage}"
+                          HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:UiLanguageChoice">
+                      <TextBlock Text="{Binding Label}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
               </StackPanel>
             </StackPanel>
           </DockPanel>
@@ -70,14 +82,14 @@
         <Border Classes="tile">
           <DockPanel>
             <Border DockPanel.Dock="Top" Classes="tile-header">
-              <TextBlock Classes="section-title" Text="РАСПОЗНАВАНИЕ"/>
+              <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Section.Recognition}"/>
             </Border>
             <StackPanel Classes="tile-body" Spacing="10">
               <Grid ColumnDefinitions="*,*,*,Auto,Auto" ColumnSpacing="8">
                 <StackPanel Grid.Column="0"
                             Classes="settings-field"
                             IsVisible="{Binding IsDeviceVisible}">
-                  <TextBlock Classes="field-label" Text="Устройство"/>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Device}"/>
                   <ComboBox ItemsSource="{Binding ComputeDeviceOptions}"
                             SelectedItem="{Binding SelectedComputeDevice}"
                             HorizontalAlignment="Stretch">
@@ -93,14 +105,14 @@
                 <StackPanel Grid.Column="0"
                             Classes="settings-field"
                             IsVisible="{Binding IsWhisper}">
-                  <TextBlock Classes="field-label" Text="Язык"/>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.SttLanguage}"/>
                   <ComboBox ItemsSource="{Binding Languages}"
                             SelectedItem="{Binding Language}"
                             HorizontalAlignment="Stretch"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Classes="settings-field">
-                  <TextBlock Classes="field-label" Text="Движок"/>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Engine}"/>
                   <ComboBox ItemsSource="{Binding EngineOptions}"
                             SelectedItem="{Binding SelectedEngine}"
                             HorizontalAlignment="Stretch">
@@ -115,7 +127,7 @@
                 <StackPanel Grid.Column="2"
                             Classes="settings-field"
                             IsVisible="{Binding IsGigaAm}">
-                  <TextBlock Classes="field-label" Text="Модель"/>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Model}"/>
                   <ComboBox ItemsSource="{Binding GigaAmSizes}"
                             SelectedItem="{Binding GigaAmModelSize}"
                             HorizontalAlignment="Stretch"/>
@@ -124,7 +136,7 @@
                 <StackPanel Grid.Column="2"
                             Classes="settings-field"
                             IsVisible="{Binding IsWhisper}">
-                  <TextBlock Classes="field-label" Text="Модель"/>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Model}"/>
                   <ComboBox ItemsSource="{Binding WhisperSizes}"
                             SelectedItem="{Binding WhisperModelSize}"
                             HorizontalAlignment="Stretch"/>
@@ -133,7 +145,7 @@
                 <StackPanel Grid.Column="2"
                             Classes="settings-field"
                             IsVisible="{Binding IsOmnilingual}">
-                  <TextBlock Classes="field-label" Text="Модель"/>
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Model}"/>
                   <TextBlock Text="Omnilingual ASR 300M"
                              FontSize="13"
                              MinHeight="32"
@@ -180,12 +192,12 @@
                 </StackPanel>
               </Grid>
 
-              <TextBlock Text="e2e — с пунктуацией и нормализацией, rnnt — только текст"
+              <TextBlock Text="{DynamicResource Loc.Settings.GigaAmHint}"
                          IsVisible="{Binding IsGigaAm}"
                          FontSize="11"
                          TextTrimming="CharacterEllipsis"
                          Foreground="{DynamicResource TextSecondaryBrush}"/>
-              <TextBlock Text="auto — автовыбор (рекомендуется для англ. слов). Whisper работает на CPU."
+              <TextBlock Text="{DynamicResource Loc.Settings.WhisperHint}"
                          IsVisible="{Binding IsWhisper}"
                          FontSize="11"
                          TextTrimming="CharacterEllipsis"
@@ -197,10 +209,10 @@
         <Border Classes="tile">
           <DockPanel>
             <Border DockPanel.Dock="Top" Classes="tile-header">
-              <TextBlock Classes="section-title" Text="АУДИО"/>
+              <TextBlock Classes="section-title" Text="{DynamicResource Loc.Settings.Section.Audio}"/>
             </Border>
             <StackPanel Classes="tile-body settings-field">
-              <TextBlock Classes="field-label" Text="Микрофон"/>
+              <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Microphone}"/>
               <ComboBox ItemsSource="{Binding InputDevices}"
                         SelectedItem="{Binding InputDevice}"
                         HorizontalAlignment="Stretch">

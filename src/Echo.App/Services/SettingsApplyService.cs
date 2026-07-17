@@ -1,4 +1,5 @@
 using Avalonia.Threading;
+using echo.Abstractions.Core;
 using echo.App.ViewModels;
 using echo.Core;
 
@@ -15,7 +16,9 @@ public sealed class SettingsApplyService
     private CancellationTokenSource? _debounceCts;
     private CancellationTokenSource? _applyCts;
 
-    public SettingsApplyService(DictationCoordinator coordinator, AppStatusViewModel status)
+    public SettingsApplyService(
+        DictationCoordinator coordinator,
+        AppStatusViewModel status)
     {
         _coordinator = coordinator;
         _status = status;
@@ -58,7 +61,7 @@ public sealed class SettingsApplyService
                 }
 
                 onSuccess();
-                _status.SetStatusTemporary("Готово", StatusClearMs);
+                _status.SetStatusTemporary("Loc.Status.Done", StatusClearMs);
             });
         }
         catch (OperationCanceledException)
@@ -74,7 +77,7 @@ public sealed class SettingsApplyService
                     return;
                 }
 
-                _status.SetStatusTemporary(AppStatusViewModel.ModelMissingStatus, StatusClearMs, alert: true);
+                _status.SetStatusTemporary("Loc.Status.ModelMissing", StatusClearMs, alert: true);
             });
         }
         catch (Exception)
@@ -86,7 +89,7 @@ public sealed class SettingsApplyService
                     return;
                 }
 
-                _status.SetStatusTemporary("Ошибка применения настроек", StatusClearMs, alert: true);
+                _status.SetStatusTemporary("Loc.Status.ApplyError", StatusClearMs, alert: true);
             });
         }
         finally
@@ -143,12 +146,11 @@ public sealed class SettingsApplyService
 
     private void ReportApplyProgress(string status)
     {
-        var normalized = status.Trim();
-        if (normalized.StartsWith("Готово", StringComparison.Ordinal))
+        if (ProgressMessages.IsDone(status))
         {
             return;
         }
 
-        _status.SetStatus(normalized, busy: true);
+        _status.SetStatus(status, busy: true);
     }
 }

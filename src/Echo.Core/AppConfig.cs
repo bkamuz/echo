@@ -28,6 +28,10 @@ public sealed class AppConfig
     [JsonPropertyName("language")]
     public string Language { get; set; } = "ru";
 
+    /// <summary>UI language: system | ru | en (STT language is <see cref="Language"/>).</summary>
+    [JsonPropertyName("ui_language")]
+    public string UiLanguage { get; set; } = "system";
+
     [JsonPropertyName("device")]
     public string Device { get; set; } = "cpu";
 
@@ -79,6 +83,7 @@ public sealed class AppConfig
             WhisperModelSize = WhisperModelSize,
             GigaAmModelSize = GigaAmModelSize,
             Language = Language,
+            UiLanguage = UiLanguage,
             Device = Device,
             InputDevice = InputDevice,
             InputMethod = InputMethod,
@@ -125,6 +130,16 @@ public sealed class AppConfig
         if (!Devices.Contains(Device))
         {
             Device = ExecutionProviderResolver.CpuDevice;
+        }
+
+        if (string.IsNullOrWhiteSpace(UiLanguage))
+        {
+            UiLanguage = "system";
+        }
+        else
+        {
+            var ui = UiLanguage.Trim().ToLowerInvariant();
+            UiLanguage = ui is "system" or "ru" or "en" ? ui : "system";
         }
 
         TypeDelayMs = Math.Clamp(TypeDelayMs, 0, 50);

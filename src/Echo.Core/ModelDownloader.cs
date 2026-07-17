@@ -35,13 +35,13 @@ public sealed class ModelDownloader
             return;
         }
 
-        progress?.Report($"Скачивание {spec.Title}…");
+        progress?.Report(ProgressMessages.Downloading(spec.Title));
         _logger.LogInformation("Downloading {Title} from {Repo}", spec.Title, spec.RepoId);
 
         Directory.CreateDirectory(spec.LocalDir);
         await DownloadHuggingFaceFolderAsync(spec.RepoId, spec.LocalDir, spec.AllowPatterns, progress, cancellationToken);
 
-        progress?.Report($"Готово: {spec.Title}");
+        progress?.Report(ProgressMessages.Done(spec.Title));
     }
 
     public void Delete(ModelSpec spec)
@@ -110,7 +110,7 @@ public sealed class ModelDownloader
                 continue;
             }
 
-            progress?.Report($"Скачивание {path}…");
+            progress?.Report(ProgressMessages.Downloading(path));
             var fileUrl = $"https://huggingface.co/{repoId}/resolve/main/{path}";
 
             var attempt = 0;

@@ -5,13 +5,13 @@ namespace echo.App.Services;
 
 public sealed class HotkeyCaptureController
 {
-    public const string CaptureStatus = "Удерживайте комбинацию и отпустите все клавиши…";
-
     private readonly IHotkeyService _hotkeyService;
     private readonly DictationCoordinator _coordinator;
     private string _savedHotkey = string.Empty;
 
-    public HotkeyCaptureController(IHotkeyService hotkeyService, DictationCoordinator coordinator)
+    public HotkeyCaptureController(
+        IHotkeyService hotkeyService,
+        DictationCoordinator coordinator)
     {
         _hotkeyService = hotkeyService;
         _coordinator = coordinator;

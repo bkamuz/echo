@@ -21,7 +21,7 @@
           PointerPressed="OnRootPointerPressed">
     <StackPanel Spacing="4" Margin="14,12">
       <TextBlock Classes="dictation-toast-hint"
-                 Text="Нажмите, чтобы скопировать"/>
+                 Text="{DynamicResource Loc.Toast.CopyHint}"/>
       <TextBlock x:Name="PreviewText"
                  Classes="dictation-toast-text"
                  TextWrapping="Wrap"

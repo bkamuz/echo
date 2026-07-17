@@ -1,8 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:linux="using:echo.Platform.Linux"
+        xmlns:views="using:echo.App.Views"
         x:Class="echo.App.Views.LinuxDependenciesDialog"
-        Title="Настройка Linux"
+        Title="{DynamicResource Loc.Linux.Dialog.Title}"
         Width="560"
         SizeToContent="Height"
         MinHeight="320"
@@ -16,12 +17,12 @@
       <TextBlock x:Name="StepSubtitle"
                  Classes="page-subtitle"
                  TextWrapping="Wrap"
-                 Text="Echo подберёт способ вставки автоматически."/>
+                 Text="{DynamicResource Loc.Linux.Dialog.Packages.Subtitle}"/>
 
       <StackPanel x:Name="PackagesPanel" Spacing="8">
         <ItemsControl x:Name="DependenciesList">
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="linux:LinuxDependency">
+            <DataTemplate x:DataType="views:LinuxDependencyView">
               <StackPanel Margin="0,0,0,8" Spacing="2">
                 <TextBlock FontWeight="SemiBold" Text="{Binding DisplayName}"/>
                 <TextBlock Classes="page-subtitle" TextWrapping="Wrap" Text="{Binding Description}"/>
@@ -39,7 +40,7 @@
                    Classes="page-subtitle"
                    TextWrapping="Wrap"/>
         <Button x:Name="OpenAccessibilityButton"
-                Content="Открыть настройки спец. возможностей"
+                Content="{DynamicResource Loc.Linux.Dialog.OpenA11y}"
                 HorizontalAlignment="Left"
                 Click="OnOpenAccessibilityClick"/>
       </StackPanel>
@@ -47,12 +48,12 @@
       <StackPanel x:Name="TestPanel" Spacing="8" IsVisible="False">
         <TextBlock Classes="page-subtitle"
                    TextWrapping="Wrap"
-                   Text="Поставьте курсор в поле ниже и нажмите «Проверить вставку»."/>
+                   Text="{DynamicResource Loc.Linux.Dialog.Test.Hint}"/>
         <TextBox x:Name="TestInput"
-                 PlaceholderText="Курсор сюда…"
+                 PlaceholderText="{DynamicResource Loc.Linux.Dialog.Test.Placeholder}"
                  MinHeight="36"/>
         <Button x:Name="TestButton"
-                Content="Проверить вставку"
+                Content="{DynamicResource Loc.Linux.Dialog.Test.Button}"
                 HorizontalAlignment="Left"
                 Click="OnTestClick"/>
         <TextBlock x:Name="TestResultText"
@@ -67,34 +68,34 @@
                  IsVisible="False"/>
 
       <CheckBox x:Name="DontAskAgainCheckBox"
-                Content="Больше не показывать этот мастер"/>
+                Content="{DynamicResource Loc.Linux.Dialog.DontAsk}"/>
 
       <StackPanel Orientation="Horizontal"
                   HorizontalAlignment="Right"
                   Spacing="8">
         <Button x:Name="BackButton"
-                Content="Назад"
+                Content="{DynamicResource Loc.Linux.Dialog.Back}"
                 IsVisible="False"
                 Click="OnBackClick"/>
         <Button x:Name="SkipButton"
-                Content="Пропустить"
+                Content="{DynamicResource Loc.Linux.Dialog.Skip}"
                 Click="OnSkipClick"/>
         <Button x:Name="InputGroupButton"
-                Content="Группа input"
+                Content="{DynamicResource Loc.Linux.Dialog.InputGroup}"
                 IsVisible="False"
                 Click="OnInputGroupClick"/>
         <Button x:Name="InstallButton"
                 Classes="primary"
-                Content="Установить пакеты"
+                Content="{DynamicResource Loc.Linux.Dialog.Install}"
                 Click="OnInstallClick"/>
         <Button x:Name="NextButton"
                 Classes="primary"
-                Content="Далее"
+                Content="{DynamicResource Loc.Linux.Dialog.Next}"
                 IsVisible="False"
                 Click="OnNextClick"/>
         <Button x:Name="FinishButton"
                 Classes="primary"
-                Content="Готово"
+                Content="{DynamicResource Loc.Linux.Dialog.Finish}"
                 IsVisible="False"
                 Click="OnFinishClick"/>
       </StackPanel>

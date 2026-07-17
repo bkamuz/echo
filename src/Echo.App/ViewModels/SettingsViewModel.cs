@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using echo.App.Localization;
 using echo.App.Services;
 using echo.Core;
 using echo.Platform.Linux;
@@ -16,8 +17,15 @@ public sealed record TypeSpeedOption(string Label, int DelayMs)
     public override string ToString() => Label;
 }
 
+public sealed record UiLanguageChoice(string Code, string Label)
+{
+    public override string ToString() => Label;
+}
+
 public partial class SettingsViewModel : ObservableObject
 {
+    private static readonly string[] AllEngineIds = ["gigaam", "whisper", "omnilingual"];
+
     private readonly DictationCoordinator _coordinator;
     private readonly IAudioCapture _audio;
     private readonly HomeViewModel _home;
@@ -27,8 +35,9 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IAutoStartService _autoStartService;
     private readonly HotkeyCaptureController _hotkeyCapture;
     private readonly ModelSettingsController _models;
+    private readonly LocalizationService _loc;
     private readonly DirectMlRuntimeInstaller? _directMlInstaller;
-    private readonly IReadOnlyList<EngineOption> _allEngineOptions;
+    private readonly HashSet<string> _registeredEngineIds;
     private bool _isLoadingFromConfig;
 
     [ObservableProperty] private string _hotkey = string.Empty;
@@ -40,6 +49,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private AudioDeviceInfo? _inputDevice;
     [ObservableProperty] private InputMethodOption? _selectedInputMethod;
     [ObservableProperty] private TypeSpeedOption? _selectedTypeSpeed;
+    [ObservableProperty] private UiLanguageChoice? _selectedUiLanguage;
     [ObservableProperty] private bool _addTrailingSpace;
     [ObservableProperty] private bool _showDictationToast;
     [ObservableProperty] private bool _startWithSystem;
@@ -67,13 +77,13 @@ public partial class SettingsViewModel : ObservableObject
     public bool ShowModelDownloadButton => HasCurrentModel && !IsModelDownloaded;
 
     public string ModelLoadedTooltip =>
-        HasCurrentModel ? $"{ModelTitle} скачана и готова к распознаванию" : string.Empty;
+        HasCurrentModel ? _loc.Format("Loc.Settings.ModelLoaded.Tooltip", ModelTitle) : string.Empty;
 
     public string ModelDownloadTooltip =>
-        HasCurrentModel ? $"Скачать {ModelTitle} на устройство" : string.Empty;
+        HasCurrentModel ? _loc.Format("Loc.Settings.ModelDownload.Tooltip", ModelTitle) : string.Empty;
 
     public string ModelDeleteTooltip =>
-        HasCurrentModel ? $"Удалить файлы {ModelTitle} с устройства" : string.Empty;
+        HasCurrentModel ? _loc.Format("Loc.Settings.ModelDelete.Tooltip", ModelTitle) : string.Empty;
 
     public SettingsViewModel(
         DictationCoordinator coordinator,
@@ -86,6 +96,7 @@ public partial class SettingsViewModel : ObservableObject
         HotkeyCaptureController hotkeyCapture,
         ModelSettingsController models,
         IEnumerable<ITranscriptionEngine> engines,
+        LocalizationService loc,
         DirectMlRuntimeInstaller? directMlInstaller = null)
     {
         _coordinator = coordinator;
@@ -97,38 +108,35 @@ public partial class SettingsViewModel : ObservableObject
         _autoStartService = autoStartService;
         _hotkeyCapture = hotkeyCapture;
         _models = models;
+        _loc = loc;
         _directMlInstaller = directMlInstaller;
 
-        var registered = engines.Select(e => e.EngineId).ToHashSet(StringComparer.Ordinal);
-        _allEngineOptions =
-        [
-            new("gigaam", "GigaAM (русский)"),
-            new("whisper", "Whisper (мультиязычный)"),
-            new("omnilingual", "Omnilingual (1600 языков)"),
-        ];
-        EngineOptions = _allEngineOptions.Where(o => registered.Contains(o.Id)).ToList();
-        if (EngineOptions.Count == 0)
-        {
-            EngineOptions = _allEngineOptions.Where(o => o.Id == "gigaam").ToList();
-        }
+        _registeredEngineIds = engines.Select(e => e.EngineId).ToHashSet(StringComparer.Ordinal);
+        RebuildEngineOptions();
+        RebuildTypeSpeedOptions();
+        RebuildUiLanguageChoices();
+
+        _loc.LanguageChanged += (_, _) => RefreshLocalizedOptions();
 
         LoadFromConfig();
     }
 
     public bool IsAutoStartSupported => _autoStartService.IsSupported;
 
-    private static readonly ComputeDeviceOption CpuDeviceOption = new(
+    private ComputeDeviceOption CpuDeviceOption => new(
         ExecutionProviderResolver.CpuDevice,
-        "Процессор",
-        "Универсальный режим. Работает на любом ПК.");
+        _loc.Get("Loc.Device.Cpu"),
+        _loc.Get("Loc.Device.Cpu.Tooltip"));
 
-    private static readonly ComputeDeviceOption DirectMlDeviceOption = new(
+    private ComputeDeviceOption DirectMlDeviceOption => new(
         ExecutionProviderResolver.DirectMlDevice,
-        "GPU (DirectML)",
-        "Ускорение через DirectML на Windows (AMD Radeon, Intel, NVIDIA). При первом выборе скачается ~30 МБ.");
+        _loc.Get("Loc.Device.DirectMl"),
+        _loc.Get("Loc.Device.DirectMl.Tooltip"));
 
-    public IReadOnlyList<EngineOption> EngineOptions { get; private set; }
+    public IReadOnlyList<EngineOption> EngineOptions { get; private set; } = [];
     public IReadOnlyList<ComputeDeviceOption> ComputeDeviceOptions => BuildComputeDeviceOptions();
+    public IReadOnlyList<TypeSpeedOption> TypeSpeedOptions { get; private set; } = [];
+    public IReadOnlyList<UiLanguageChoice> UiLanguageChoices { get; private set; } = [];
 
     private IReadOnlyList<ComputeDeviceOption> BuildComputeDeviceOptions()
     {
@@ -150,11 +158,11 @@ public partial class SettingsViewModel : ObservableObject
             ? BuildLinuxInputMethodOptions()
             :
             [
-                new("clipboard", "Вставка из буфера", "Быстрая вставка. Содержимое буфера обмена восстанавливается после вставки."),
-                new("type", "Печать", "Посимвольный ввод через эмуляцию клавиатуры."),
+                new("clipboard", _loc.Get("Loc.Input.Clipboard"), _loc.Get("Loc.Input.Clipboard.Tooltip")),
+                new("type", _loc.Get("Loc.Input.Type"), _loc.Get("Loc.Input.Type.Tooltip")),
             ];
 
-    private static IReadOnlyList<InputMethodOption> BuildLinuxInputMethodOptions()
+    private IReadOnlyList<InputMethodOption> BuildLinuxInputMethodOptions()
     {
         if (LinuxDependencyCatalog.UsesGnomeWaylandYdotool)
         {
@@ -162,13 +170,12 @@ public partial class SettingsViewModel : ObservableObject
             [
                 new(
                     "auto",
-                    "Авто",
-                    "На GNOME Wayland — вставка через буфер Echo и ydotool (Ctrl+V), без wl-copy. "
-                    + "Если мигает панель — перезапустите Echo."),
+                    _loc.Get("Loc.Input.Auto"),
+                    _loc.Get("Loc.Input.Linux.Auto.Gnome.Tooltip")),
                 new(
                     "clipboard",
-                    "Вставка из буфера",
-                    "Мгновенная вставка всего текста через буфер и Ctrl+V (ydotool)."),
+                    _loc.Get("Loc.Input.Clipboard"),
+                    _loc.Get("Loc.Input.Linux.Clipboard.Gnome.Tooltip")),
             ];
         }
 
@@ -176,28 +183,21 @@ public partial class SettingsViewModel : ObservableObject
         [
             new(
                 "auto",
-                "Авто",
-                "Echo выберет лучший способ: AT-SPI, ydotool, xdotool или wtype. "
-                + "Если автовставка недоступна — текст копируется в буфер."),
+                _loc.Get("Loc.Input.Auto"),
+                _loc.Get("Loc.Input.Linux.Auto.Tooltip")),
             new(
                 "clipboard",
-                "Вставка из буфера",
-                "Сначала AT-SPI; иначе эмуляция Ctrl+V через ydotool, xdotool или wtype."),
+                _loc.Get("Loc.Input.Clipboard"),
+                _loc.Get("Loc.Input.Linux.Clipboard.Tooltip")),
         ];
     }
 
-    public IReadOnlyList<TypeSpeedOption> TypeSpeedOptions { get; } =
-    [
-        new("Быстро", 0),
-        new("Нормально", 1),
-        new("Плавно", 5),
-    ];
     public IReadOnlyList<string> Languages { get; } = ["auto", "ru", "en"];
 
     public bool IsTypeInput =>
         !OperatingSystem.IsLinux() && SelectedInputMethod?.Id == "type";
 
-    public string TypeSpeedTooltip => "Задержка между символами при методе «Печать»";
+    public string TypeSpeedTooltip => _loc.Get("Loc.Settings.TypeSpeed.Tooltip");
 
     public string HotkeyDisplay =>
         IsCapturingHotkey && !string.IsNullOrEmpty(HotkeyPreview)
@@ -290,6 +290,17 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnSelectedTypeSpeedChanged(TypeSpeedOption? value) => ScheduleApply();
 
+    partial void OnSelectedUiLanguageChanged(UiLanguageChoice? value)
+    {
+        if (_isLoadingFromConfig || value is null)
+        {
+            return;
+        }
+
+        _loc.Apply(value.Code);
+        ScheduleApply();
+    }
+
     partial void OnAddTrailingSpaceChanged(bool value) => ScheduleApply();
 
     partial void OnShowDictationToastChanged(bool value) => ScheduleApply();
@@ -354,7 +365,7 @@ public partial class SettingsViewModel : ObservableObject
         _hotkeyCapture.Begin(Hotkey);
         IsCapturingHotkey = true;
         HotkeyPreview = string.Empty;
-        _status.SetStatus(HotkeyCaptureController.CaptureStatus);
+        _status.SetStatus("Loc.Status.HotkeyCapture");
     }
 
     public void UpdateHotkeyPreview(string preview)
@@ -410,10 +421,12 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         IsApplying = true;
-        _status.SetStatus("Подготовка DirectML…", busy: true);
+        _status.SetStatus("Loc.Status.PreparingDirectMl", busy: true);
         try
         {
-            var progress = _applyService.CreateProgressReporter(null, s => _status.SetStatus(s, busy: true));
+            var progress = _applyService.CreateProgressReporter(
+                null,
+                s => _status.SetStatus(s, busy: true));
             await _directMlInstaller.EnsureInstalledAsync(progress).ConfigureAwait(false);
             await Dispatcher.UIThread.InvokeAsync(ScheduleApply);
         }
@@ -423,7 +436,7 @@ public partial class SettingsViewModel : ObservableObject
             {
                 SelectedComputeDevice = CpuDeviceOption;
                 _status.SetStatusTemporary(
-                    "Не удалось скачать DirectML — оставлен CPU",
+                    "Loc.Status.DirectMlFailed",
                     SettingsApplyService.StatusClearMs,
                     alert: true);
                 IsApplying = false;
@@ -441,7 +454,7 @@ public partial class SettingsViewModel : ObservableObject
             }
 
             IsApplying = true;
-            _status.SetStatus("Сохранение…", busy: true);
+            _status.SetStatus("Loc.Status.Saving", busy: true);
             return BuildConfigFromViewModel();
         });
     }
@@ -472,6 +485,7 @@ public partial class SettingsViewModel : ObservableObject
         config.AddTrailingSpace = AddTrailingSpace;
         config.ShowDictationToast = ShowDictationToast;
         config.StartWithSystem = StartWithSystem;
+        config.UiLanguage = SelectedUiLanguage?.Code ?? "system";
         return config;
     }
 
@@ -493,6 +507,9 @@ public partial class SettingsViewModel : ObservableObject
                 ?? InputMethodOptions.First();
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == config.TypeDelayMs)
                 ?? TypeSpeedOptions[1];
+            SelectedUiLanguage = UiLanguageChoices.FirstOrDefault(c =>
+                string.Equals(c.Code, config.UiLanguage, StringComparison.OrdinalIgnoreCase))
+                ?? UiLanguageChoices.FirstOrDefault();
             AddTrailingSpace = config.AddTrailingSpace;
             ShowDictationToast = config.ShowDictationToast;
             StartWithSystem = config.StartWithSystem;
@@ -515,6 +532,86 @@ public partial class SettingsViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ComputeDeviceOptions));
         EnsureValidComputeDevice();
+    }
+
+    private void RebuildEngineOptions()
+    {
+        var localized = AllEngineIds
+            .Select(id => new EngineOption(id, GetEngineDisplayName(id)))
+            .ToList();
+        EngineOptions = localized.Where(o => _registeredEngineIds.Contains(o.Id)).ToList();
+        if (EngineOptions.Count == 0)
+        {
+            EngineOptions = localized.Where(o => o.Id == "gigaam").ToList();
+        }
+    }
+
+    private string GetEngineDisplayName(string id) => id switch
+    {
+        "gigaam" => _loc.Get("Loc.Engine.GigaAm"),
+        "whisper" => _loc.Get("Loc.Engine.Whisper"),
+        "omnilingual" => _loc.Get("Loc.Engine.Omnilingual"),
+        _ => id,
+    };
+
+    private void RebuildTypeSpeedOptions()
+    {
+        TypeSpeedOptions =
+        [
+            new(_loc.Get("Loc.TypeSpeed.Fast"), 0),
+            new(_loc.Get("Loc.TypeSpeed.Normal"), 1),
+            new(_loc.Get("Loc.TypeSpeed.Smooth"), 5),
+        ];
+    }
+
+    private void RebuildUiLanguageChoices()
+    {
+        UiLanguageChoices = _loc.LanguageOptions
+            .Select(o => new UiLanguageChoice(o.Code, _loc.Get(o.DisplayNameKey)))
+            .ToList();
+    }
+
+    private void RefreshLocalizedOptions()
+    {
+        var inputMethodId = SelectedInputMethod?.Id;
+        var typeSpeedDelay = SelectedTypeSpeed?.DelayMs ?? 1;
+        var computeDeviceId = SelectedComputeDevice?.Id;
+        var uiLanguageCode = SelectedUiLanguage?.Code ?? _loc.Preference;
+
+        RebuildEngineOptions();
+        RebuildTypeSpeedOptions();
+        RebuildUiLanguageChoices();
+
+        _isLoadingFromConfig = true;
+        try
+        {
+            SelectedInputMethod = InputMethodOptions.FirstOrDefault(o => o.Id == inputMethodId)
+                ?? InputMethodOptions.FirstOrDefault();
+            SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == typeSpeedDelay)
+                ?? TypeSpeedOptions.ElementAtOrDefault(1);
+            SelectedComputeDevice = ResolveComputeDeviceOption(
+                computeDeviceId ?? ExecutionProviderResolver.CpuDevice);
+            SelectedUiLanguage = UiLanguageChoices.FirstOrDefault(c =>
+                string.Equals(c.Code, uiLanguageCode, StringComparison.OrdinalIgnoreCase))
+                ?? UiLanguageChoices.FirstOrDefault();
+
+            OnPropertyChanged(nameof(EngineOptions));
+            OnPropertyChanged(nameof(SelectedEngine));
+            OnPropertyChanged(nameof(ComputeDeviceOptions));
+            OnPropertyChanged(nameof(InputMethodOptions));
+            OnPropertyChanged(nameof(TypeSpeedOptions));
+            OnPropertyChanged(nameof(UiLanguageChoices));
+            OnPropertyChanged(nameof(ModelLoadedTooltip));
+            OnPropertyChanged(nameof(ModelDownloadTooltip));
+            OnPropertyChanged(nameof(ModelDeleteTooltip));
+            OnPropertyChanged(nameof(TypeSpeedTooltip));
+            OnPropertyChanged(nameof(IsTypeInput));
+            UpdateModelStatus();
+        }
+        finally
+        {
+            _isLoadingFromConfig = false;
+        }
     }
 
     private ComputeDeviceOption ResolveComputeDeviceOption(string deviceId)

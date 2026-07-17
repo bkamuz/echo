@@ -1,7 +1,8 @@
 using Avalonia.Threading;
 using echo.Abstractions.Core;
-using echo.Core;
+using echo.App.Localization;
 using echo.App.ViewModels;
+using echo.Core;
 
 namespace echo.App.Services;
 
@@ -12,19 +13,22 @@ public sealed class ModelSettingsController
     private readonly SettingsApplyService _applyService;
     private readonly AppStatusViewModel _status;
     private readonly HomeViewModel _home;
+    private readonly LocalizationService _loc;
 
     public ModelSettingsController(
         ModelDownloader downloader,
         DictationCoordinator coordinator,
         SettingsApplyService applyService,
         AppStatusViewModel status,
-        HomeViewModel home)
+        HomeViewModel home,
+        LocalizationService loc)
     {
         _downloader = downloader;
         _coordinator = coordinator;
         _applyService = applyService;
         _status = status;
         _home = home;
+        _loc = loc;
     }
 
     public ModelSpec? ResolveSpec(string engine, string whisperSize, string gigaAmSize) =>
@@ -37,7 +41,7 @@ public sealed class ModelSettingsController
         {
             return new ModelStatusSnapshot(
                 Title: string.Empty,
-                StatusText: "Неизвестная модель",
+                StatusText: _loc.Get("Loc.Model.Unknown"),
                 IsDownloaded: false,
                 HasModel: false);
         }
@@ -46,8 +50,8 @@ public sealed class ModelSettingsController
         return new ModelStatusSnapshot(
             Title: spec.Title,
             StatusText: downloaded
-                ? $"{spec.Title} ✓ загружена"
-                : $"{spec.Title} — не загружена",
+                ? _loc.Format("Loc.Model.Loaded", spec.Title)
+                : _loc.Format("Loc.Model.NotLoaded", spec.Title),
             IsDownloaded: downloaded,
             HasModel: true);
     }
@@ -67,20 +71,20 @@ public sealed class ModelSettingsController
         }
 
         setApplying(true);
-        var downloadLabel = $"Скачивание {spec.Title}…";
-        setModelStatus(downloadLabel);
-        _status.SetStatus(downloadLabel, busy: true);
+        var downloadRaw = ProgressMessages.Downloading(spec.Title);
+        setModelStatus(_loc.LocalizeProgress(downloadRaw));
+        _status.SetStatus(downloadRaw, busy: true);
         try
         {
             var progress = _applyService.CreateProgressReporter(null, status =>
             {
-                var normalized = status.Trim();
-                var isTerminal = normalized.StartsWith("Готово", StringComparison.Ordinal);
-                setModelStatus(normalized);
-                _status.SetStatus(normalized, busy: !isTerminal);
+                var isTerminal = ProgressMessages.IsDone(status);
+                setModelStatus(_loc.LocalizeProgress(status));
+                _status.SetStatus(status, busy: !isTerminal);
             });
             await _downloader.DownloadAsync(spec, progress, cancellationToken).ConfigureAwait(false);
-            await Dispatcher.UIThread.InvokeAsync(() => setModelStatus($"{spec.Title} ✓ загружена"));
+            await Dispatcher.UIThread.InvokeAsync(() =>
+                setModelStatus(_loc.Format("Loc.Model.Loaded", spec.Title)));
 
             var warmupProgress = _applyService.CreateStatusProgress(_applyService.ApplyGeneration);
             await _coordinator.TryWarmupCurrentModelAsync(warmupProgress, cancellationToken)
@@ -89,7 +93,10 @@ public sealed class ModelSettingsController
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 _home.NotifyConfigChanged();
-                _status.SetStatusTemporary($"{spec.Title} ✓ загружена", SettingsApplyService.StatusClearMs);
+                // ponytail: Format args baked in; rare to switch UI lang mid-download toast
+                _status.SetStatusTemporary(
+                    _loc.Format("Loc.Model.Loaded", spec.Title),
+                    SettingsApplyService.StatusClearMs);
             });
             return true;
         }
@@ -108,8 +115,9 @@ public sealed class ModelSettingsController
         }
 
         _downloader.Delete(spec);
-        setModelStatus($"{spec.Title} удалена");
-        _status.SetStatusTemporary($"{spec.Title} удалена", SettingsApplyService.StatusClearMs);
+        var deleted = _loc.Format("Loc.Model.Deleted", spec.Title);
+        setModelStatus(deleted);
+        _status.SetStatusTemporary(deleted, SettingsApplyService.StatusClearMs);
         return true;
     }
 }
