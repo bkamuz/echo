@@ -4,6 +4,8 @@
 
 Echo runs entirely on your machine. Speech is captured from your microphone, recognized locally, and pasted into the active window. No cloud upload, no subscription, no account required.
 
+Echo is **open source** under the [MIT License](LICENSE).
+
 ## What it does
 
 Echo is a system-wide dictation assistant. It works in any app where you can type: email, chat, documents, code editors, browsers, and more.
@@ -93,3 +95,7 @@ Requires [.NET 10 SDK](https://dotnet.microsoft.com/download) or newer.
 ## Contributing
 
 Bug reports, platform test results, and pull requests are welcome. Please include your OS, desktop environment (on Linux), and Echo version when reporting issues.
+
+## License
+
+Echo is released under the [MIT License](LICENSE).

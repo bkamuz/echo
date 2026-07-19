@@ -142,11 +142,11 @@ jobs:
             dist/releases/Echo-${{ env.VERSION }}-linux-x64.flatpak
             dist/releases/Echo-${{ env.VERSION }}-osx-arm64-portable.tar.gz
 
-      - name: Publish public update channel
+      - name: Publish update manifest
         env:
-          GH_TOKEN: ${{ secrets.ECHO_UPDATES_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ env.VERSION }}
-          UPDATES_REPO: bkamuz/echo-updates
+          UPDATES_REPO: ${{ github.repository }}
         run: |
           chmod +x scripts/publish-update-channel.sh
-          ./scripts/publish-update-channel.sh "dist/releases/Echo-${VERSION}-win-x64-portable.zip"
+          ./scripts/publish-update-channel.sh

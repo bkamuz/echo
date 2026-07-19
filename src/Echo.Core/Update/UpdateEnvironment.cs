@@ -8,11 +8,10 @@ public static class UpdateEnvironment
 {
     public const string GitHubOwner = "bkamuz";
     public const string GitHubRepo = "echo";
-    public const string UpdatesRepo = "echo-updates";
     public const string WindowsPortableAssetSuffix = "-win-x64-portable.zip";
 
     public static string UpdateManifestUrl =>
-        $"https://raw.githubusercontent.com/{GitHubOwner}/{UpdatesRepo}/main/latest.json";
+        $"https://raw.githubusercontent.com/{GitHubOwner}/{GitHubRepo}/main/latest.json";
 
     public static Version CurrentVersion =>
         Assembly.GetEntryAssembly()?.GetName().Version
