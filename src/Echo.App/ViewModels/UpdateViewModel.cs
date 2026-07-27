@@ -160,10 +160,8 @@ public partial class UpdateViewModel : ObservableObject
                     {
                         mainWindow.ForceClose();
                     }
-                    else
-                    {
-                        desktop.Shutdown();
-                    }
+
+                    desktop.Shutdown();
                 }
             });
         }

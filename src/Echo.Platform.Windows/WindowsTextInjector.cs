@@ -23,9 +23,14 @@ public sealed class WindowsTextInjector : ITextInjector
             return Task.FromResult(TextInjectionResult.AutoPasted);
         }
 
-        if (method is "clipboard" or "auto" && TryInjectViaClipboard(text))
+        if (method is "clipboard" or "auto")
         {
-            return Task.FromResult(TextInjectionResult.AutoPasted);
+            var outcome = TryInjectViaClipboard(text);
+            var resolved = WindowsClipboardInjectPolicy.Resolve(method, outcome);
+            if (resolved is not null)
+            {
+                return Task.FromResult(resolved);
+            }
         }
 
         TypeText(text, typeDelayMs);
@@ -116,15 +121,16 @@ public sealed class WindowsTextInjector : ITextInjector
     /// <summary>
     /// Saves text clipboard (CF_UNICODETEXT only), pastes dictation text, then restores the saved content.
     /// Images and other formats are not preserved.
+    /// Success is paste itself; restore/clear is best-effort and must not trigger type fallback.
     /// </summary>
-    private static bool TryInjectViaClipboard(string text)
+    private static ClipboardPasteOutcome TryInjectViaClipboard(string text)
     {
         string? savedText = null;
         var hadText = false;
 
         if (!OpenClipboard(IntPtr.Zero))
         {
-            return false;
+            return ClipboardPasteOutcome.FailedBeforePaste;
         }
 
         try
@@ -142,25 +148,48 @@ public sealed class WindowsTextInjector : ITextInjector
 
         if (!TrySetClipboardText(text))
         {
-            return false;
+            return ClipboardPasteOutcome.FailedBeforePaste;
         }
 
-        try
-        {
-            Thread.Sleep(30);
-            SendCtrlV();
-            Thread.Sleep(50);
+        Thread.Sleep(30);
+        SendCtrlV();
+        Thread.Sleep(50);
 
-            if (hadText)
+        if (hadText)
+        {
+            TryRestoreClipboardWithRetry(savedText!);
+        }
+        else
+        {
+            TryClearClipboardWithRetry();
+        }
+
+        return ClipboardPasteOutcome.Pasted;
+    }
+
+    private static void TryRestoreClipboardWithRetry(string savedText)
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            if (TrySetClipboardText(savedText))
             {
-                return TrySetClipboardText(savedText!);
+                return;
             }
 
-            return TryClearClipboard();
+            Thread.Sleep(20);
         }
-        catch
+    }
+
+    private static void TryClearClipboardWithRetry()
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
         {
-            return false;
+            if (TryClearClipboard())
+            {
+                return;
+            }
+
+            Thread.Sleep(20);
         }
     }
 

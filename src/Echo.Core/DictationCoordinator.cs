@@ -171,6 +171,21 @@ public sealed class DictationCoordinator : IDisposable
     {
         _hotkey.Activated -= OnHotkeyActivated;
         _hotkey.Stop();
+
+        if (_isRecording)
+        {
+            _isRecording = false;
+            try
+            {
+                _audio.StopRecording();
+            }
+            catch
+            {
+                // Ignore audio stop failures during shutdown.
+            }
+
+            _tray.SetState(DictationOverlayState.Hidden);
+        }
     }
 
     public void RestartHotkey()

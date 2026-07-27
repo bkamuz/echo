@@ -129,9 +129,33 @@ public partial class App : Application
 
             desktop.Exit += (_, _) =>
             {
-                coordinator.Stop();
-                coordinator.Dispose();
-                host.Dispose();
+                try
+                {
+                    coordinator.Stop();
+                    coordinator.Dispose();
+                }
+                catch
+                {
+                    // Best-effort stop before host dispose.
+                }
+
+                // Native engine dispose (DirectML/Sherpa) can block for minutes on the UI thread.
+                var disposeTask = Task.Run(() =>
+                {
+                    try
+                    {
+                        host.Dispose();
+                    }
+                    catch
+                    {
+                        // Ignore dispose failures on shutdown.
+                    }
+                });
+
+                if (!disposeTask.Wait(TimeSpan.FromSeconds(5)))
+                {
+                    Environment.Exit(0);
+                }
             };
         }
 

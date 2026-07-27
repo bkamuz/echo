@@ -92,6 +92,7 @@
   <sys:String x:Key="Loc.Status.HotkeyCapture">Удерживайте комбинацию и отпустите все клавиши…</sys:String>
   <sys:String x:Key="Loc.Status.Copied">Скопировано</sys:String>
   <sys:String x:Key="Loc.Status.Restarting">Перезапуск…</sys:String>
+  <sys:String x:Key="Loc.Status.Closing">Закрытие…</sys:String>
   <sys:String x:Key="Loc.Status.UpdateCheckFailed">Не удалось проверить обновления</sys:String>
   <sys:String x:Key="Loc.Status.UpToDate">Установлена последняя версия</sys:String>
   <sys:String x:Key="Loc.Status.UpdateFailed">Не удалось обновить: {0}</sys:String>
@@ -123,6 +124,7 @@
   <sys:String x:Key="Loc.Tray.Settings">Настройки</sys:String>
   <sys:String x:Key="Loc.Tray.History">История</sys:String>
   <sys:String x:Key="Loc.Tray.Exit">Выход</sys:String>
+  <sys:String x:Key="Loc.Tray.Closing">Echo — закрытие…</sys:String>
 
   <!-- First run -->
   <sys:String x:Key="Loc.FirstRun.Title">Добро пожаловать в Echo</sys:String>

@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\Echo.Abstractions\Echo.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Echo.Core\Echo.Core.csproj" />
     <ProjectReference Include="..\..\src\Echo.Engines\Echo.Engines.csproj" />
+    <ProjectReference Include="..\..\src\Echo.Platform.Windows\Echo.Platform.Windows.csproj" />
   </ItemGroup>
 
 </Project>

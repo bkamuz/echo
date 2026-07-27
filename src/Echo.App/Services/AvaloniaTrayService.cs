@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using echo.Abstractions.Platform;
 using echo.App.Localization;
 using echo.App.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace echo.App.Services;
 
@@ -19,6 +20,7 @@ public sealed class AvaloniaTrayService : ITrayStateService
     private readonly LocalizationService _loc;
     private Window? _mainWindow;
     private DictationOverlayState _currentState = DictationOverlayState.Hidden;
+    private bool _isExiting;
 
     public AvaloniaTrayService(
         LocalizationService loc,
@@ -42,6 +44,11 @@ public sealed class AvaloniaTrayService : ITrayStateService
         {
             Dispatcher.UIThread.Post(() =>
             {
+                if (_isExiting)
+                {
+                    return;
+                }
+
                 _tray.Menu = BuildMenu();
                 ApplyTooltipForCurrentState();
             });
@@ -71,6 +78,11 @@ public sealed class AvaloniaTrayService : ITrayStateService
 
     private void ApplyState(DictationOverlayState state)
     {
+        if (_isExiting)
+        {
+            return;
+        }
+
         var (icon, tooltipKey) = state switch
         {
             DictationOverlayState.Hidden => (_idleIcon, "Loc.Tray.Ready"),
@@ -133,24 +145,42 @@ public sealed class AvaloniaTrayService : ITrayStateService
         }
 
         _mainWindow.ShowInTaskbar = true;
-        _mainWindow.Show();
         _mainWindow.WindowState = WindowState.Normal;
+        _mainWindow.Show();
         _mainWindow.Activate();
     }
 
-    private static void ExitApp()
+    private void ExitApp()
     {
         Dispatcher.UIThread.Post(() =>
         {
+            if (_isExiting)
+            {
+                return;
+            }
+
             if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             {
                 return;
             }
 
+            _isExiting = true;
+            _tray.ToolTipText = _loc.Get("Loc.Tray.Closing");
+            _tray.Menu = null;
+
+            try
+            {
+                App.Services.GetRequiredService<AppStatusViewModel>()
+                    .SetStatus("Loc.Status.Closing", busy: true);
+            }
+            catch
+            {
+                // Status bar may be unavailable during early/late lifecycle.
+            }
+
             if (desktop.MainWindow is echo.App.MainWindow mainWindow)
             {
                 mainWindow.ForceClose();
-                return;
             }
 
             desktop.Shutdown();
