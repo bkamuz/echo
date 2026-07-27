@@ -79,11 +79,26 @@ public partial class UpdateViewModel : ObservableObject
         CheckForUpdatesCommand.NotifyCanExecuteChanged();
         ApplyCommand.NotifyCanExecuteChanged();
 
+        if (forceRefresh)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+                _statusBar.SetStatus("Loc.Status.CheckingUpdates", busy: true));
+        }
+
         try
         {
             var result = await _updateChecker.CheckForUpdateAsync(forceRefresh).ConfigureAwait(false);
             if (result.WasSkipped)
             {
+                if (forceRefresh)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        _statusBar.IsBusy = false;
+                        _statusBar.RefreshReadiness();
+                    });
+                }
+
                 return;
             }
 
@@ -95,6 +110,8 @@ public partial class UpdateViewModel : ObservableObject
                     IsAvailable = true;
                     OnPropertyChanged(nameof(Tooltip));
                     ApplyCommand.NotifyCanExecuteChanged();
+                    _statusBar.IsBusy = false;
+                    _statusBar.RefreshReadiness();
                     return;
                 }
 
@@ -110,6 +127,11 @@ public partial class UpdateViewModel : ObservableObject
                 else if (notifyWhenUpToDate)
                 {
                     _statusBar.SetStatusTemporary("Loc.Status.UpToDate", alert: false);
+                }
+                else if (forceRefresh)
+                {
+                    _statusBar.IsBusy = false;
+                    _statusBar.RefreshReadiness();
                 }
             });
         }

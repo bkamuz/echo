@@ -97,6 +97,9 @@
   <sys:String x:Key="Loc.Status.UpToDate">Установлена последняя версия</sys:String>
   <sys:String x:Key="Loc.Status.UpdateFailed">Не удалось обновить: {0}</sys:String>
   <sys:String x:Key="Loc.Update.Tooltip">Обновить до v{0}</sys:String>
+  <sys:String x:Key="Loc.Update.Check">Проверить обновления</sys:String>
+  <sys:String x:Key="Loc.Update.Check.Tooltip">Проверить наличие новой версии на GitHub</sys:String>
+  <sys:String x:Key="Loc.Status.CheckingUpdates">Проверка обновлений…</sys:String>
 
   <!-- Model status -->
   <sys:String x:Key="Loc.Model.Unknown">Неизвестная модель</sys:String>

@@ -91,6 +91,9 @@
   <sys:String x:Key="Loc.Status.UpToDate">You have the latest version</sys:String>
   <sys:String x:Key="Loc.Status.UpdateFailed">Update failed: {0}</sys:String>
   <sys:String x:Key="Loc.Update.Tooltip">Update to v{0}</sys:String>
+  <sys:String x:Key="Loc.Update.Check">Check for updates</sys:String>
+  <sys:String x:Key="Loc.Update.Check.Tooltip">Check GitHub for a newer release</sys:String>
+  <sys:String x:Key="Loc.Status.CheckingUpdates">Checking for updates…</sys:String>
 
   <sys:String x:Key="Loc.Model.Unknown">Unknown model</sys:String>
   <sys:String x:Key="Loc.Model.Loaded">{0} ✓ loaded</sys:String>
