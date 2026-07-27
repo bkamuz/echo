@@ -57,7 +57,7 @@ public partial class UpdateViewModel : ObservableObject
 
     private async Task CheckOnStartupAsync()
     {
-        await CheckAsync(forceRefresh: false, notifyWhenUpToDate: false).ConfigureAwait(false);
+        await CheckAsync(forceRefresh: true, notifyWhenUpToDate: false).ConfigureAwait(false);
     }
 
     [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
