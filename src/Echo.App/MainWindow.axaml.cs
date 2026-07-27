@@ -82,7 +82,8 @@ public partial class MainWindow : Window
         }
 
         TitleBarGrid.ColumnDefinitions = new ColumnDefinitions("*,Auto,0");
-        UpdateButtonPanel.Margin = new Thickness(0, 0, 140, 0);
+        // Clear Win32 system caption (min/max/close); 140 still overlapped minimize.
+        UpdateButtonPanel.Margin = new Thickness(0, 0, 168, 0);
     }
 
     private void ApplyLinuxChrome()
