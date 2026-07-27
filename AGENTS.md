@@ -20,7 +20,7 @@
 - Models live under the user data folder; GigaAM must resolve a full bundle (encoder, decoder, joint, tokens), not encoder-only.
 - Windows GPU acceleration uses DirectML; required native DLLs ship inside the portable zip/installer and are refreshed via GitHub Actions cache workflows.
 - Releases are built by GitHub Actions from version tags; Windows auto-update reads GitHub Releases and surfaces a header update control (not a settings “Updates” group).
-- Tray icons stay dynamic (listen / processing / sleep); dictation also shows a cursor-adjacent icon (no taskbar overlay).
+- Tray icons stay dynamic (listen / processing / sleep); dictation shows a small status icon near the cursor (top-right), fixed where it appeared (does not follow the mouse); no Windows taskbar overlay—tray + cursor only.
 - Default text insertion is clipboard paste; typing mode exists and should restore the previous clipboard when used.
 - Core UX: global hold-to-dictate hotkey, history with copy, optional autostart, bottom status bar for readiness/version/errors, fixed-width icon sidebar aligned to the header logo.
 - Cross-platform targets include Windows (primary), Linux packaging (deb/AppImage/etc.), and macOS builds; Linux hotkey labels must not show Windows/Command names incorrectly.

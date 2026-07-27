@@ -191,14 +191,14 @@ try {
         Write-Host "Latest tag:   v$latestTagVersion"
     }
     else {
-        Write-Host "Latest tag:   (none — first release)"
+        Write-Host "Latest tag:   (none - first release)"
     }
     Write-Host "Next version: $nextVersion"
     Write-Host "Tag:          $tagName"
 
     if ($DryRun) {
         Write-Host ""
-        Write-Host "Dry run — no commit, tag, or push."
+        Write-Host "Dry run - no commit, tag, or push."
         return
     }
 
@@ -213,7 +213,7 @@ try {
         $null = Invoke-Git -GitArguments @("commit", "-m", $commitMessage)
     }
     else {
-        Write-Host "Csproj already at $nextVersion — skipping commit."
+        Write-Host "Csproj already at $nextVersion - skipping commit."
     }
 
     $null = Invoke-Git -GitArguments @("tag", "-a", $tagName, "-m", $commitMessage)
