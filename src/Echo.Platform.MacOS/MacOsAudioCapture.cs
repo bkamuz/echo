@@ -4,7 +4,12 @@ namespace echo.Platform.MacOS;
 
 public sealed class MacOsAudioCapture : IAudioCapture
 {
-    public event EventHandler<float[]>? SpectrumChanged;
+    // Stub until AVFoundation capture exists — keep the interface event without unused-field warning.
+    public event EventHandler<float[]>? SpectrumChanged
+    {
+        add { }
+        remove { }
+    }
 
     public IReadOnlyList<AudioDeviceInfo> ListInputDevices() =>
         [new AudioDeviceInfo("default", "Default microphone")];
