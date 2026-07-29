@@ -14,9 +14,27 @@
         IsHitTestVisible="False"
         WindowStartupLocation="Manual">
 
-  <Image x:Name="IconImage"
-         Width="24"
-         Height="24"
-         Stretch="Uniform"
-         IsHitTestVisible="False"/>
+  <StackPanel Orientation="Horizontal"
+              Spacing="4"
+              IsHitTestVisible="False">
+    <Image x:Name="IconImage"
+           Width="24"
+           Height="24"
+           Stretch="Uniform"
+           IsHitTestVisible="False"/>
+
+    <Border x:Name="MeterPanel"
+            Classes="dictation-eq-meter"
+            Width="72"
+            Height="24"
+            IsVisible="False"
+            IsHitTestVisible="False"
+            Padding="2">
+      <Image x:Name="SpectrogramImage"
+             Width="68"
+             Height="20"
+             Stretch="Fill"
+             IsHitTestVisible="False"/>
+    </Border>
+  </StackPanel>
 </Window>

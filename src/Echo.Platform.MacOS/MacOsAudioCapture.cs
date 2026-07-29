@@ -4,6 +4,8 @@ namespace echo.Platform.MacOS;
 
 public sealed class MacOsAudioCapture : IAudioCapture
 {
+    public event EventHandler<float[]>? SpectrumChanged;
+
     public IReadOnlyList<AudioDeviceInfo> ListInputDevices() =>
         [new AudioDeviceInfo("default", "Default microphone")];
 

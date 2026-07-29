@@ -8,6 +8,13 @@ public sealed class WasapiAudioCapture : IAudioCapture
 {
     private WaveInEvent? _waveIn;
     private readonly ConcurrentQueue<float> _buffer = new();
+    private readonly AudioLevelMeter _levelMeter = new();
+
+    public event EventHandler<float[]>? SpectrumChanged
+    {
+        add => _levelMeter.SpectrumChanged += value;
+        remove => _levelMeter.SpectrumChanged -= value;
+    }
 
     public IReadOnlyList<AudioDeviceInfo> ListInputDevices()
     {
@@ -25,6 +32,7 @@ public sealed class WasapiAudioCapture : IAudioCapture
     {
         StopRecording();
         _buffer.Clear();
+        _levelMeter.Configure(sampleRate);
 
         var deviceNumber = 0;
         if (!string.IsNullOrWhiteSpace(deviceName))
@@ -43,15 +51,23 @@ public sealed class WasapiAudioCapture : IAudioCapture
         {
             DeviceNumber = deviceNumber,
             WaveFormat = new WaveFormat(sampleRate, 16, 1),
-            BufferMilliseconds = 50,
+            BufferMilliseconds = 20,
         };
         _waveIn.DataAvailable += (_, e) =>
         {
-            for (var offset = 0; offset < e.BytesRecorded; offset += 2)
+            var sampleCount = e.BytesRecorded / 2;
+            Span<float> samples = sampleCount <= 512
+                ? stackalloc float[sampleCount]
+                : new float[sampleCount];
+
+            for (var i = 0; i < sampleCount; i++)
             {
-                var sample = BitConverter.ToInt16(e.Buffer, offset);
-                _buffer.Enqueue(sample / (float)short.MaxValue);
+                var sample = BitConverter.ToInt16(e.Buffer, i * 2) / (float)short.MaxValue;
+                samples[i] = sample;
+                _buffer.Enqueue(sample);
             }
+
+            _levelMeter.ReportSamples(samples);
         };
         _waveIn.StartRecording();
     }
@@ -61,6 +77,7 @@ public sealed class WasapiAudioCapture : IAudioCapture
         _waveIn?.StopRecording();
         _waveIn?.Dispose();
         _waveIn = null;
+        _levelMeter.Reset();
         return _buffer.ToArray();
     }
 }

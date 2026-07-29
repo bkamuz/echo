@@ -7,9 +7,16 @@ namespace echo.Platform.Linux;
 public sealed class LinuxAudioCapture : IAudioCapture
 {
     private readonly ConcurrentQueue<float> _buffer = new();
+    private readonly AudioLevelMeter _levelMeter = new();
     private Process? _recordProcess;
     private CancellationTokenSource? _readCts;
     private Task? _readTask;
+
+    public event EventHandler<float[]>? SpectrumChanged
+    {
+        add => _levelMeter.SpectrumChanged += value;
+        remove => _levelMeter.SpectrumChanged -= value;
+    }
 
     public IReadOnlyList<AudioDeviceInfo> ListInputDevices()
     {
@@ -79,6 +86,8 @@ public sealed class LinuxAudioCapture : IAudioCapture
                 "Audio capture on Linux requires the 'arecord' utility (alsa-utils package).");
         }
 
+        _levelMeter.Configure(sampleRate);
+
         var device = ResolveDevice(deviceName);
         var startInfo = new ProcessStartInfo
         {
@@ -99,7 +108,7 @@ public sealed class LinuxAudioCapture : IAudioCapture
         var token = _readCts.Token;
         _readTask = Task.Run(async () =>
         {
-            var chunk = new byte[4096];
+            var chunk = new byte[1024];
             while (!token.IsCancellationRequested)
             {
                 var read = await stream.ReadAsync(chunk.AsMemory(0, chunk.Length), token).ConfigureAwait(false);
@@ -113,6 +122,8 @@ public sealed class LinuxAudioCapture : IAudioCapture
                     var sample = BitConverter.ToInt16(chunk, offset);
                     _buffer.Enqueue(sample / (float)short.MaxValue);
                 }
+
+                _levelMeter.ReportPcm16Le(chunk.AsSpan(0, read));
             }
         }, token);
     }
@@ -148,6 +159,7 @@ public sealed class LinuxAudioCapture : IAudioCapture
         _readCts = null;
         _recordProcess?.Dispose();
         _recordProcess = null;
+        _levelMeter.Reset();
 
         return samples;
     }

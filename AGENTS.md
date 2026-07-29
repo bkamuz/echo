@@ -11,7 +11,7 @@
 - Prefer matching already-working UI patterns over new overlay hacks; remove debug instrumentation after bugfixes. App UI strings should go through Loc keys (`{DynamicResource Loc.*}`) so language switches update labels.
 - Hotkeys: capture the chord on key release; use platform-correct modifier names (especially on Linux).
 - Settings order: device → engine → model; show the active section title/description in the header.
-- Dictation overlay should show listening then processing states without decorative dots or noisy animation.
+- Dictation overlay should show listening then processing states without decorative dots or noisy animation; during listening, a compact adaptive spectrum/equalizer strip may sit beside the cursor status icon (lightweight metering/FFT only—no new real-time audio libraries).
 
 ## Learned Workspace Facts
 
@@ -20,7 +20,7 @@
 - Models live under the user data folder; GigaAM must resolve a full bundle (encoder, decoder, joint, tokens), not encoder-only.
 - Windows GPU acceleration uses DirectML; required native DLLs ship inside the portable zip/installer and are refreshed via GitHub Actions cache workflows.
 - Releases are built by GitHub Actions from version tags; Windows auto-update (published builds) reads GitHub Releases and surfaces a header update control (not a settings “Updates” group)—startup and an explicit header check can offer Apply when an update exists.
-- Tray icons stay dynamic (listen / processing / sleep); dictation shows a small status icon near the cursor (top-right), fixed where it appeared (does not follow the mouse); no Windows taskbar overlay—tray + cursor only.
+- Tray icons stay dynamic (listen / processing / sleep); dictation shows a small status icon near the cursor (top-right), fixed where it appeared (does not follow the mouse), with an optional compact spectrum/equalizer strip beside it while listening; no Windows taskbar overlay—tray + cursor only.
 - Default text insertion is clipboard paste; typing mode exists and should restore the previous clipboard when used; Windows clipboard mode must not also type the same text (no double insert after clipboard restore).
 - Core UX: global hold-to-dictate hotkey, history with copy, optional autostart, bottom status bar for readiness/version/errors, fixed-width icon sidebar aligned to the header logo.
 - Cross-platform targets include Windows (primary), Linux packaging (deb/AppImage/etc.), and macOS builds; Linux hotkey labels must not show Windows/Command names incorrectly.

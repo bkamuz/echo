@@ -38,6 +38,13 @@ packages/
 *.rsuser
 *.DotSettings.user
 
+## Local AI / agent tooling (not product source)
+.opencode/
+openspec/
+.claude/
+.codex/
+.kimi-code/
+
 ## Logs / temp
 *.log
 debug-*.log
