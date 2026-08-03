@@ -122,4 +122,51 @@ public class ParityTests
         Assert.NotNull(spec);
         Assert.Contains("sherpa", spec!.RepoId, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void GigaAm_ResolveCtc_PrefersInt8()
+    {
+        var dir = GigaAmTestFixtures.CreateTempDir();
+        try
+        {
+            GigaAmTestFixtures.WriteCtc(dir, ModelRegistry.GigaAmE2eCtcPrefix, int8: true);
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmE2eCtcPrefix}.onnx"), "");
+
+            var paths = ModelRegistry.ResolveGigaAmCtc(dir, "e2e-ctc");
+            Assert.NotNull(paths);
+            Assert.EndsWith("_int8.onnx", paths!.Model, StringComparison.Ordinal);
+            Assert.True(ModelRegistry.IsGigaAmVariantDownloaded(dir, "e2e-ctc"));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GigaAm_ResolveCtc_ReturnsNull_WhenTokensMissing()
+    {
+        var dir = GigaAmTestFixtures.CreateTempDir();
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, $"{ModelRegistry.GigaAmE2eCtcPrefix}_int8.onnx"), "");
+            Assert.Null(ModelRegistry.ResolveGigaAmCtc(dir, "e2e-ctc"));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GigaAm_SpecFor_E2eCtc_UsesCtcAllowPatterns()
+    {
+        var spec = ModelRegistry.GigaAmSpecFor("e2e-ctc");
+        Assert.NotNull(spec);
+        Assert.Equal("gigaam-v3-e2e-ctc", spec!.Id);
+        Assert.Contains(
+            ModelRegistry.GigaAmE2eCtcAllowPatterns,
+            p => p.Contains("e2e_ctc_int8", StringComparison.Ordinal));
+        Assert.Equal("e2e-ctc", ModelRegistry.GigaAmVariantFromSpecId(spec.Id));
+    }
 }

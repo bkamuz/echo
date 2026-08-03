@@ -22,6 +22,15 @@ public class ModelRegistryTests
     }
 
     [Fact]
+    public void SpecForEngine_ReturnsGigaAmE2eCtcSpec()
+    {
+        var spec = ModelRegistry.SpecForEngine("gigaam", "small", "e2e-ctc");
+        Assert.NotNull(spec);
+        Assert.Equal("gigaam-v3-e2e-ctc", spec!.Id);
+        Assert.Equal(ModelRegistry.GigaAmE2eCtcAllowPatterns, spec.AllowPatterns);
+    }
+
+    [Fact]
     public void SpecForEngine_ReturnsNullForUnknownEngine()
     {
         Assert.Null(ModelRegistry.SpecForEngine("invalid", "small", "e2e"));

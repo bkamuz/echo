@@ -48,7 +48,7 @@
   <sys:String x:Key="Loc.Settings.Engine">Движок</sys:String>
   <sys:String x:Key="Loc.Settings.Model">Модель</sys:String>
   <sys:String x:Key="Loc.Settings.Microphone">Микрофон</sys:String>
-  <sys:String x:Key="Loc.Settings.GigaAmHint">e2e — с пунктуацией и нормализацией, rnnt — только текст</sys:String>
+  <sys:String x:Key="Loc.Settings.GigaAmHint">e2e — RNNT с пунктуацией; e2e-ctc — CTC с пунктуацией (быстрее); rnnt — только текст</sys:String>
   <sys:String x:Key="Loc.Settings.WhisperHint">auto — автовыбор (рекомендуется для англ. слов). Whisper работает на CPU.</sys:String>
   <sys:String x:Key="Loc.Settings.ModelLoaded.Tooltip">{0} скачана и готова к распознаванию</sys:String>
   <sys:String x:Key="Loc.Settings.ModelDownload.Tooltip">Скачать {0} на устройство</sys:String>

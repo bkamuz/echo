@@ -5,6 +5,7 @@ public static class ModelRegistry
     public const string GigaAmRepo = "Smirnov75/GigaAM-v3-sherpa-onnx";
     public const string GigaAmE2ePrefix = "gigaam_v3_e2e_rnnt";
     public const string GigaAmRnntPrefix = "gigaam_v3_rnnt";
+    public const string GigaAmE2eCtcPrefix = "gigaam_v3_e2e_ctc";
 
     public static IReadOnlyList<string> WhisperSizes { get; } =
         ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
@@ -26,6 +27,14 @@ public static class ModelRegistry
         $"{GigaAmRnntPrefix}_decoder.onnx",
         $"{GigaAmRnntPrefix}_joint.onnx",
         $"{GigaAmRnntPrefix}_tokens.txt",
+        "config.json",
+    ];
+
+    public static IReadOnlyList<string> GigaAmE2eCtcAllowPatterns { get; } =
+    [
+        $"{GigaAmE2eCtcPrefix}_int8.onnx",
+        $"{GigaAmE2eCtcPrefix}.onnx",
+        $"{GigaAmE2eCtcPrefix}_tokens.txt",
         "config.json",
     ];
 
@@ -61,7 +70,10 @@ public static class ModelRegistry
         LocalDir: AppPaths.OmnilingualDir,
         AllowPatterns: OmnilingualAllowPatterns);
 
-    public static IReadOnlyList<string> GigaAmSizes { get; } = ["e2e", "rnnt"];
+    public static IReadOnlyList<string> GigaAmSizes { get; } = ["e2e", "e2e-ctc", "rnnt"];
+
+    public static bool IsGigaAmCtcVariant(string variant) =>
+        variant is "e2e-ctc";
 
     public static ModelSpec? GigaAmSpecFor(string variant) => variant switch
     {
@@ -72,6 +84,13 @@ public static class ModelRegistry
             RepoId: GigaAmRepo,
             LocalDir: AppPaths.GigaAmDir,
             AllowPatterns: GigaAmE2eAllowPatterns),
+        "e2e-ctc" => new ModelSpec(
+            Id: "gigaam-v3-e2e-ctc",
+            Title: "GigaAM v3 e2e-ctc",
+            Engine: "gigaam",
+            RepoId: GigaAmRepo,
+            LocalDir: AppPaths.GigaAmDir,
+            AllowPatterns: GigaAmE2eCtcAllowPatterns),
         "rnnt" => new ModelSpec(
             Id: "gigaam-v3-rnnt",
             Title: "GigaAM v3 rnnt",
@@ -85,12 +104,13 @@ public static class ModelRegistry
     public static string GigaAmVariantFromSpecId(string specId) => specId switch
     {
         "gigaam-v3-rnnt" => "rnnt",
+        "gigaam-v3-e2e-ctc" => "e2e-ctc",
         _ => "e2e",
     };
 
     public static GigaAmBundlePaths? ResolveGigaAmBundle(string dir, string variant)
     {
-        if (!Directory.Exists(dir))
+        if (!Directory.Exists(dir) || IsGigaAmCtcVariant(variant))
         {
             return null;
         }
@@ -115,6 +135,44 @@ public static class ModelRegistry
         var fp32 = GigaAmBundlePaths.ForPrefix(dir, prefix);
         return IsCompleteBundle(fp32) ? fp32 : null;
     }
+
+    public static GigaAmCtcPaths? ResolveGigaAmCtc(string dir, string variant)
+    {
+        if (!Directory.Exists(dir) || !IsGigaAmCtcVariant(variant))
+        {
+            return null;
+        }
+
+        var prefix = variant switch
+        {
+            "e2e-ctc" => GigaAmE2eCtcPrefix,
+            _ => null,
+        };
+        if (prefix is null)
+        {
+            return null;
+        }
+
+        var tokens = Path.Combine(dir, $"{prefix}_tokens.txt");
+        if (!File.Exists(tokens))
+        {
+            return null;
+        }
+
+        var int8 = Path.Combine(dir, $"{prefix}_int8.onnx");
+        if (File.Exists(int8))
+        {
+            return new GigaAmCtcPaths(int8, tokens);
+        }
+
+        var fp32 = Path.Combine(dir, $"{prefix}.onnx");
+        return File.Exists(fp32) ? new GigaAmCtcPaths(fp32, tokens) : null;
+    }
+
+    public static bool IsGigaAmVariantDownloaded(string dir, string variant) =>
+        IsGigaAmCtcVariant(variant)
+            ? ResolveGigaAmCtc(dir, variant) is not null
+            : ResolveGigaAmBundle(dir, variant) is not null;
 
     public static ModelSpec? SpecForEngine(string engine, string whisperModelSize, string gigaAmModelSize) =>
         engine switch
@@ -149,3 +207,5 @@ public sealed record GigaAmBundlePaths(string Encoder, string Decoder, string Jo
         Path.Combine(dir, $"{prefix}_joint.onnx"),
         Path.Combine(dir, $"{prefix}_tokens.txt"));
 }
+
+public sealed record GigaAmCtcPaths(string Model, string Tokens);

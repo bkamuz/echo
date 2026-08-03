@@ -17,9 +17,9 @@ public sealed record ModelSpec(
 
         return Engine switch
         {
-            "gigaam" => ModelRegistry.ResolveGigaAmBundle(
+            "gigaam" => ModelRegistry.IsGigaAmVariantDownloaded(
                 LocalDir,
-                ModelRegistry.GigaAmVariantFromSpecId(Id)) is not null,
+                ModelRegistry.GigaAmVariantFromSpecId(Id)),
             "whisper" => ModelRegistry.IsWhisperDownloaded(ModelRegistry.WhisperSizeFromSpecId(Id)),
             _ => Directory.EnumerateFiles(LocalDir).Any(),
         };

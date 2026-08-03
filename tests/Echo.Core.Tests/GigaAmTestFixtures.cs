@@ -18,4 +18,12 @@ internal static class GigaAmTestFixtures
         File.WriteAllText(Path.Combine(dir, $"{prefix}_joint.onnx"), "");
         File.WriteAllText(Path.Combine(dir, $"{prefix}_tokens.txt"), "");
     }
+
+    public static void WriteCtc(string dir, string prefix, bool int8 = true)
+    {
+        File.WriteAllText(Path.Combine(dir, $"{prefix}_tokens.txt"), "");
+        File.WriteAllText(
+            Path.Combine(dir, int8 ? $"{prefix}_int8.onnx" : $"{prefix}.onnx"),
+            "");
+    }
 }

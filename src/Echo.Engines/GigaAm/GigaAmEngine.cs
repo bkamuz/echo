@@ -9,7 +9,6 @@ namespace echo.Engines.GigaAm;
 public sealed class GigaAmEngine : SherpaOfflineEngine
 {
     private string _variant = "e2e";
-    private GigaAmBundlePaths? _bundle;
 
     public GigaAmEngine(ILogger<GigaAmEngine> logger)
         : base(logger)
@@ -26,6 +25,7 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
             return Config.GigaAmModelSize switch
             {
                 "rnnt" => $"GigaAM v3 rnnt ({device})",
+                "e2e-ctc" => $"GigaAM v3 e2e-ctc ({device})",
                 _ => $"GigaAM v3 e2e ({device})",
             };
         }
@@ -39,8 +39,18 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
     protected override OfflineModelConfig CreateModelConfig(string provider)
     {
         _variant = Config.GigaAmModelSize;
-        _bundle = ModelRegistry.ResolveGigaAmBundle(AppPaths.GigaAmDir, _variant);
-        if (_bundle is null)
+        if (ModelRegistry.IsGigaAmCtcVariant(_variant))
+        {
+            return CreateCtcModelConfig(provider);
+        }
+
+        return CreateTransducerModelConfig(provider);
+    }
+
+    private OfflineModelConfig CreateTransducerModelConfig(string provider)
+    {
+        var bundle = ModelRegistry.ResolveGigaAmBundle(AppPaths.GigaAmDir, _variant);
+        if (bundle is null)
         {
             throw new InvalidOperationException(
                 $"GigaAM {_variant} модель не найдена. Скачайте через настройки приложения.");
@@ -48,14 +58,35 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
 
         return new OfflineModelConfig
         {
-            Tokens = _bundle.Tokens,
+            Tokens = bundle.Tokens,
             NumThreads = Math.Max(1, Environment.ProcessorCount),
             Provider = provider,
             Transducer = new OfflineTransducerModelConfig
             {
-                Encoder = _bundle.Encoder,
-                Decoder = _bundle.Decoder,
-                Joiner = _bundle.Joiner,
+                Encoder = bundle.Encoder,
+                Decoder = bundle.Decoder,
+                Joiner = bundle.Joiner,
+            },
+        };
+    }
+
+    private OfflineModelConfig CreateCtcModelConfig(string provider)
+    {
+        var ctc = ModelRegistry.ResolveGigaAmCtc(AppPaths.GigaAmDir, _variant);
+        if (ctc is null)
+        {
+            throw new InvalidOperationException(
+                $"GigaAM {_variant} модель не найдена. Скачайте через настройки приложения.");
+        }
+
+        return new OfflineModelConfig
+        {
+            Tokens = ctc.Tokens,
+            NumThreads = Math.Max(1, Environment.ProcessorCount),
+            Provider = provider,
+            NeMoCtc = new OfflineNemoEncDecCtcModelConfig
+            {
+                Model = ctc.Model,
             },
         };
     }
