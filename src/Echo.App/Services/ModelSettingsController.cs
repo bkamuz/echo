@@ -74,6 +74,7 @@ public sealed class ModelSettingsController
         var downloadRaw = ProgressMessages.Downloading(spec.Title);
         setModelStatus(_loc.LocalizeProgress(downloadRaw));
         _status.SetStatus(downloadRaw, busy: true);
+        using var modelBusy = _coordinator.EnterModelBusy();
         try
         {
             var progress = _applyService.CreateProgressReporter(null, status =>

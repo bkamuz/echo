@@ -20,6 +20,7 @@ public sealed class DictationCoordinator : IDisposable
 
     private AppConfig _config;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
+    private int _modelBusyCount;
     private DateTimeOffset _pressStarted;
     private bool _isRecording;
     private nint _targetWindow;
@@ -55,7 +56,21 @@ public sealed class DictationCoordinator : IDisposable
 
     public string? LastOutcomeMessage { get; private set; }
 
+    /// <summary>
+    /// True while a model is downloading or loading into memory — dictation must not start.
+    /// </summary>
+    public bool IsModelBusy => Volatile.Read(ref _modelBusyCount) > 0;
+
     public event Action? OutcomeChanged;
+
+    /// <summary>
+    /// Marks model download/warmup as in progress so the hold-to-dictate hotkey is ignored.
+    /// </summary>
+    public IDisposable EnterModelBusy()
+    {
+        Interlocked.Increment(ref _modelBusyCount);
+        return new ModelBusyScope(this);
+    }
 
     public void ReloadConfig()
     {
@@ -69,6 +84,7 @@ public sealed class DictationCoordinator : IDisposable
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        using var modelBusy = EnterModelBusy();
         await _saveLock.WaitAsync(cancellationToken);
         try
         {
@@ -121,9 +137,12 @@ public sealed class DictationCoordinator : IDisposable
     {
         try
         {
-            if (!await WarmupIfDownloadedAsync(_config))
+            using (EnterModelBusy())
             {
-                _logger.LogInformation("Model not downloaded — skipping startup warmup");
+                if (!await WarmupIfDownloadedAsync(_config))
+                {
+                    _logger.LogInformation("Model not downloaded — skipping startup warmup");
+                }
             }
         }
         catch (Exception ex)
@@ -137,6 +156,7 @@ public sealed class DictationCoordinator : IDisposable
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        using var busy = EnterModelBusy();
         await _saveLock.WaitAsync(cancellationToken);
         try
         {
@@ -161,6 +181,8 @@ public sealed class DictationCoordinator : IDisposable
         progress?.Report(ProgressMessages.LoadingModel());
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Nested with TryWarmup/startup EnterModelBusy — keeps SaveConfigAsync covered too.
+        using var busy = EnterModelBusy();
         var sw = System.Diagnostics.Stopwatch.StartNew();
         await _transcription.WarmupAsync(config, cancellationToken);
         _logger.LogInformation("Model warmup completed in {Ms} ms", sw.ElapsedMilliseconds);
@@ -207,6 +229,12 @@ public sealed class DictationCoordinator : IDisposable
     {
         if (_isRecording)
         {
+            return;
+        }
+
+        if (IsModelBusy)
+        {
+            _statusNotifier?.ShowTemporary("Loc.Status.ModelBusy", warning: true);
             return;
         }
 
@@ -379,5 +407,20 @@ public sealed class DictationCoordinator : IDisposable
     public void Dispose()
     {
         Stop();
+    }
+
+    private sealed class ModelBusyScope(DictationCoordinator owner) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            Interlocked.Decrement(ref owner._modelBusyCount);
+        }
     }
 }

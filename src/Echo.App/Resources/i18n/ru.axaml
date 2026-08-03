@@ -81,6 +81,7 @@
   <sys:String x:Key="Loc.Status.Downloading">Скачивание {0}…</sys:String>
   <sys:String x:Key="Loc.Status.Saving">Сохранение…</sys:String>
   <sys:String x:Key="Loc.Status.LoadingModel">Загрузка модели…</sys:String>
+  <sys:String x:Key="Loc.Status.ModelBusy">Модель загружается — диктовка временно недоступна</sys:String>
   <sys:String x:Key="Loc.Status.PreparingDirectMl">Подготовка DirectML…</sys:String>
   <sys:String x:Key="Loc.Status.DownloadingUpdate">Скачивание обновления…</sys:String>
   <sys:String x:Key="Loc.Status.PreparingUpdate">Подготовка обновления…</sys:String>

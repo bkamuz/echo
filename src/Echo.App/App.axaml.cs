@@ -108,8 +108,16 @@ public partial class App : Application
 
             if (startMinimized)
             {
+                // Avalonia Hide() clears _shown, so the next Show() raises Opened again.
+                // Unsubscribe after the first hide or tray restore immediately re-hides the window.
                 desktop.MainWindow.ShowInTaskbar = false;
-                desktop.MainWindow.Opened += (_, _) => desktop.MainWindow.Hide();
+                EventHandler hideOnce = null!;
+                hideOnce = (_, _) =>
+                {
+                    desktop.MainWindow.Opened -= hideOnce;
+                    desktop.MainWindow.Hide();
+                };
+                desktop.MainWindow.Opened += hideOnce;
             }
             else
             {

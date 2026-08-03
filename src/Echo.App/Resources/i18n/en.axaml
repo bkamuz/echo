@@ -75,6 +75,7 @@
   <sys:String x:Key="Loc.Status.Downloading">Downloading {0}…</sys:String>
   <sys:String x:Key="Loc.Status.Saving">Saving…</sys:String>
   <sys:String x:Key="Loc.Status.LoadingModel">Loading model…</sys:String>
+  <sys:String x:Key="Loc.Status.ModelBusy">Model is loading — dictation is paused</sys:String>
   <sys:String x:Key="Loc.Status.PreparingDirectMl">Preparing DirectML…</sys:String>
   <sys:String x:Key="Loc.Status.DownloadingUpdate">Downloading update…</sys:String>
   <sys:String x:Key="Loc.Status.PreparingUpdate">Preparing update…</sys:String>
