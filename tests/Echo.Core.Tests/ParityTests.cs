@@ -169,4 +169,34 @@ public class ParityTests
             p => p.Contains("e2e_ctc_int8", StringComparison.Ordinal));
         Assert.Equal("e2e-ctc", ModelRegistry.GigaAmVariantFromSpecId(spec.Id));
     }
+
+    [Fact]
+    public void GigaAm_SpecFor_Multilingual_UsesSeparateDirAndGitHubRelease()
+    {
+        var spec = ModelRegistry.GigaAmSpecFor("multilingual");
+        Assert.NotNull(spec);
+        Assert.Equal("gigaam-multilingual-ctc", spec!.Id);
+        Assert.Equal(AppPaths.GigaAmMultilingualDir, spec.LocalDir);
+        Assert.Equal(ModelRegistry.GigaAmMultilingualReleaseTag, spec.GitHubReleaseTag);
+        Assert.Equal("multilingual", ModelRegistry.GigaAmVariantFromSpecId(spec.Id));
+        Assert.Equal(AppPaths.GigaAmMultilingualDir, ModelRegistry.GigaAmLocalDirFor("multilingual"));
+    }
+
+    [Fact]
+    public void GigaAm_ResolveCtc_Multilingual_PrefersInt8()
+    {
+        var dir = GigaAmTestFixtures.CreateTempDir();
+        try
+        {
+            GigaAmTestFixtures.WriteCtc(dir, ModelRegistry.GigaAmMultilingualPrefix, int8: true);
+            var paths = ModelRegistry.ResolveGigaAmCtc(dir, "multilingual");
+            Assert.NotNull(paths);
+            Assert.EndsWith("_int8.onnx", paths!.Model, StringComparison.Ordinal);
+            Assert.True(ModelRegistry.IsGigaAmVariantDownloaded(dir, "multilingual"));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
 }

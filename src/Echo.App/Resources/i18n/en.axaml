@@ -44,7 +44,7 @@
   <sys:String x:Key="Loc.Settings.Engine">Engine</sys:String>
   <sys:String x:Key="Loc.Settings.Model">Model</sys:String>
   <sys:String x:Key="Loc.Settings.Microphone">Microphone</sys:String>
-  <sys:String x:Key="Loc.Settings.GigaAmHint">e2e — RNNT with punctuation; e2e-ctc — CTC with punctuation (faster); rnnt — plain text</sys:String>
+  <sys:String x:Key="Loc.Settings.GigaAmHint">e2e — RNNT with punctuation; e2e-ctc — CTC with punctuation (faster); rnnt — plain text; multilingual — multilingual CTC (ru/kk/ky/uz…)</sys:String>
   <sys:String x:Key="Loc.Settings.WhisperHint">auto — auto-detect (recommended for English words). Whisper runs on CPU.</sys:String>
   <sys:String x:Key="Loc.Settings.ModelLoaded.Tooltip">{0} downloaded and ready for recognition</sys:String>
   <sys:String x:Key="Loc.Settings.ModelDownload.Tooltip">Download {0} to this device</sys:String>

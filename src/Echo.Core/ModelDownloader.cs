@@ -39,7 +39,25 @@ public sealed class ModelDownloader
         _logger.LogInformation("Downloading {Title} from {Repo}", spec.Title, spec.RepoId);
 
         Directory.CreateDirectory(spec.LocalDir);
-        await DownloadHuggingFaceFolderAsync(spec.RepoId, spec.LocalDir, spec.AllowPatterns, progress, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(spec.GitHubReleaseTag))
+        {
+            await DownloadGitHubReleaseAsync(
+                spec.RepoId,
+                spec.GitHubReleaseTag,
+                spec.LocalDir,
+                spec.AllowPatterns,
+                progress,
+                cancellationToken);
+        }
+        else
+        {
+            await DownloadHuggingFaceFolderAsync(
+                spec.RepoId,
+                spec.LocalDir,
+                spec.AllowPatterns,
+                progress,
+                cancellationToken);
+        }
 
         progress?.Report(ProgressMessages.Done(spec.Title));
     }
@@ -65,6 +83,87 @@ public sealed class ModelDownloader
 
         Directory.Delete(spec.LocalDir, recursive: true);
         _logger.LogInformation("Deleted model weights: {Title}", spec.Title);
+    }
+
+    private async Task DownloadGitHubReleaseAsync(
+        string repoId,
+        string tag,
+        string localDir,
+        IReadOnlyList<string>? allowPatterns,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (allowPatterns is null || allowPatterns.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"GitHub release download for '{repoId}' requires AllowPatterns.");
+        }
+
+        foreach (var fileName in allowPatterns)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var targetPath = Path.Combine(localDir, fileName);
+            if (File.Exists(targetPath))
+            {
+                continue;
+            }
+
+            progress?.Report(ProgressMessages.Downloading(fileName));
+            var fileUrl = $"https://github.com/{repoId}/releases/download/{tag}/{fileName}";
+            _logger.LogInformation("Downloading {File} from {Url}", fileName, fileUrl);
+
+            var tmpPath = targetPath + ".tmp";
+            var attempt = 0;
+            const int maxRetries = 3;
+            Exception? lastError = null;
+            var optionalFp32 = fileName.EndsWith(".onnx", StringComparison.OrdinalIgnoreCase)
+                && !fileName.Contains("_int8", StringComparison.OrdinalIgnoreCase);
+
+            while (attempt < maxRetries)
+            {
+                attempt++;
+                try
+                {
+                    using var fileResponse = await _http.GetAsync(
+                        fileUrl,
+                        HttpCompletionOption.ResponseHeadersRead,
+                        cancellationToken);
+                    if (fileResponse.StatusCode == System.Net.HttpStatusCode.NotFound && optionalFp32)
+                    {
+                        // Optional fp32 fallback may be omitted from the release.
+                        _logger.LogInformation("Optional asset missing, skipping: {File}", fileName);
+                        lastError = null;
+                        break;
+                    }
+
+                    fileResponse.EnsureSuccessStatusCode();
+                    Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+                    await using var stream = await fileResponse.Content.ReadAsStreamAsync(cancellationToken);
+                    await using var file = File.Create(tmpPath);
+                    await stream.CopyToAsync(file, cancellationToken);
+                    File.Move(tmpPath, targetPath, overwrite: true);
+                    lastError = null;
+                    break;
+                }
+                catch (Exception ex) when (attempt < maxRetries)
+                {
+                    lastError = ex;
+                    await Task.Delay(1000 * attempt, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                }
+            }
+
+            if (lastError is not null && !optionalFp32)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to download '{fileName}' from GitHub release '{tag}'.",
+                    lastError);
+            }
+        }
     }
 
     private async Task DownloadHuggingFaceFolderAsync(

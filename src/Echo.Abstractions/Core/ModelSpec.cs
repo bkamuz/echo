@@ -6,7 +6,8 @@ public sealed record ModelSpec(
     string Engine,
     string RepoId,
     string LocalDir,
-    IReadOnlyList<string>? AllowPatterns = null)
+    IReadOnlyList<string>? AllowPatterns = null,
+    string? GitHubReleaseTag = null)
 {
     public bool IsDownloaded()
     {

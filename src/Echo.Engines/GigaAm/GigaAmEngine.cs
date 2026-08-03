@@ -26,6 +26,7 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
             {
                 "rnnt" => $"GigaAM v3 rnnt ({device})",
                 "e2e-ctc" => $"GigaAM v3 e2e-ctc ({device})",
+                "multilingual" => $"GigaAM Multilingual CTC ({device})",
                 _ => $"GigaAM v3 e2e ({device})",
             };
         }
@@ -49,7 +50,7 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
 
     private OfflineModelConfig CreateTransducerModelConfig(string provider)
     {
-        var bundle = ModelRegistry.ResolveGigaAmBundle(AppPaths.GigaAmDir, _variant);
+        var bundle = ModelRegistry.ResolveGigaAmBundle(ModelRegistry.GigaAmLocalDirFor(_variant), _variant);
         if (bundle is null)
         {
             throw new InvalidOperationException(
@@ -72,7 +73,7 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
 
     private OfflineModelConfig CreateCtcModelConfig(string provider)
     {
-        var ctc = ModelRegistry.ResolveGigaAmCtc(AppPaths.GigaAmDir, _variant);
+        var ctc = ModelRegistry.ResolveGigaAmCtc(ModelRegistry.GigaAmLocalDirFor(_variant), _variant);
         if (ctc is null)
         {
             throw new InvalidOperationException(

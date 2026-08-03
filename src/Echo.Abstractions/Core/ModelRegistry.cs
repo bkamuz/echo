@@ -7,6 +7,11 @@ public static class ModelRegistry
     public const string GigaAmRnntPrefix = "gigaam_v3_rnnt";
     public const string GigaAmE2eCtcPrefix = "gigaam_v3_e2e_ctc";
 
+    /// <summary>Maintainer GitHub repo hosting the sherpa-ready Multilingual CTC assets.</summary>
+    public const string GigaAmMultilingualRepo = "bkamuz/echo";
+    public const string GigaAmMultilingualReleaseTag = "gigaam-multilingual-ctc";
+    public const string GigaAmMultilingualPrefix = "gigaam_multilingual_ctc";
+
     public static IReadOnlyList<string> WhisperSizes { get; } =
         ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
 
@@ -36,6 +41,13 @@ public static class ModelRegistry
         $"{GigaAmE2eCtcPrefix}.onnx",
         $"{GigaAmE2eCtcPrefix}_tokens.txt",
         "config.json",
+    ];
+
+    public static IReadOnlyList<string> GigaAmMultilingualAllowPatterns { get; } =
+    [
+        $"{GigaAmMultilingualPrefix}_int8.onnx",
+        $"{GigaAmMultilingualPrefix}.onnx",
+        $"{GigaAmMultilingualPrefix}_tokens.txt",
     ];
 
     public static string WhisperGgmlPath(string size) =>
@@ -70,10 +82,13 @@ public static class ModelRegistry
         LocalDir: AppPaths.OmnilingualDir,
         AllowPatterns: OmnilingualAllowPatterns);
 
-    public static IReadOnlyList<string> GigaAmSizes { get; } = ["e2e", "e2e-ctc", "rnnt"];
+    public static IReadOnlyList<string> GigaAmSizes { get; } = ["e2e", "e2e-ctc", "rnnt", "multilingual"];
 
     public static bool IsGigaAmCtcVariant(string variant) =>
-        variant is "e2e-ctc";
+        variant is "e2e-ctc" or "multilingual";
+
+    public static string GigaAmLocalDirFor(string variant) =>
+        variant == "multilingual" ? AppPaths.GigaAmMultilingualDir : AppPaths.GigaAmDir;
 
     public static ModelSpec? GigaAmSpecFor(string variant) => variant switch
     {
@@ -98,6 +113,14 @@ public static class ModelRegistry
             RepoId: GigaAmRepo,
             LocalDir: AppPaths.GigaAmDir,
             AllowPatterns: GigaAmRnntAllowPatterns),
+        "multilingual" => new ModelSpec(
+            Id: "gigaam-multilingual-ctc",
+            Title: "GigaAM Multilingual CTC",
+            Engine: "gigaam",
+            RepoId: GigaAmMultilingualRepo,
+            LocalDir: AppPaths.GigaAmMultilingualDir,
+            AllowPatterns: GigaAmMultilingualAllowPatterns,
+            GitHubReleaseTag: GigaAmMultilingualReleaseTag),
         _ => null,
     };
 
@@ -105,6 +128,7 @@ public static class ModelRegistry
     {
         "gigaam-v3-rnnt" => "rnnt",
         "gigaam-v3-e2e-ctc" => "e2e-ctc",
+        "gigaam-multilingual-ctc" => "multilingual",
         _ => "e2e",
     };
 
@@ -146,6 +170,7 @@ public static class ModelRegistry
         var prefix = variant switch
         {
             "e2e-ctc" => GigaAmE2eCtcPrefix,
+            "multilingual" => GigaAmMultilingualPrefix,
             _ => null,
         };
         if (prefix is null)
