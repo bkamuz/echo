@@ -11,7 +11,7 @@
 - Prefer matching already-working UI patterns over new overlay hacks; remove debug instrumentation after bugfixes. App UI strings should go through Loc keys (`{DynamicResource Loc.*}`) so language switches update labels.
 - Hotkeys: capture the chord on key release; use platform-correct modifier names (especially on Linux).
 - Settings order: device → engine → model; show the active section title/description in the header.
-- Dictation overlay should show listening then processing states without decorative dots or noisy animation; during listening, a compact adaptive spectrum/equalizer strip may sit beside the cursor status icon (lightweight metering/FFT only—no new real-time audio libraries).
+- Dictation overlay should show listening then processing states without decorative dots or noisy animation; during listening, a compact adaptive spectrum/equalizer strip may sit beside the cursor status icon (lightweight metering/FFT only—no new real-time audio libraries); mic capture must stay shared (no WASAPI exclusive mode that locks other apps).
 
 ## Learned Workspace Facts
 

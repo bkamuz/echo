@@ -107,12 +107,14 @@ public partial class DictationCursorOverlayWindow : Window
             var i1 = Math.Min(i0 + 1, bands.Length - 1);
             var frac = bandPos - i0;
             var level = Math.Clamp(bands[i0] * (1f - frac) + bands[i1] * frac, 0f, 1f);
+            // Mild gamma so quiet speech still reads on the dark meter strip.
+            var paint = level <= 0f ? 0f : MathF.Pow(level, 0.65f);
 
             var offset = y * _stride + x * 4;
-            _pixels[offset] = (byte)(AccentB * level);
-            _pixels[offset + 1] = (byte)(AccentG * level);
-            _pixels[offset + 2] = (byte)(AccentR * level);
-            _pixels[offset + 3] = (byte)(level * 255f);
+            _pixels[offset] = (byte)(AccentB * paint);
+            _pixels[offset + 1] = (byte)(AccentG * paint);
+            _pixels[offset + 2] = (byte)(AccentR * paint);
+            _pixels[offset + 3] = (byte)(paint * 255f);
         }
 
         using var fb = _spectrogram.Lock();

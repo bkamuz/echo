@@ -132,9 +132,10 @@ public sealed class AudioLevelMeter
                 count++;
             }
 
+            // Unnormalized FFT magnitudes: speech energy spreads across bins.
+            // Stronger gain than a full-scale sine needs so quiet mics still paint.
             var mag = count > 0 ? (float)(sum / count / FftSize) : 0f;
-            // Scale magnitude into a usable 0..1-ish range before AGC.
-            mag = Math.Clamp(mag * 8f, 0f, 1f);
+            mag = Math.Clamp(mag * 64f, 0f, 1f);
             _bands[b] = AdaptBand(mag, ref _bandPeaks[b]);
         }
     }
