@@ -75,6 +75,10 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            // Tray app: stay alive while the main window is hidden. Exit only via
+            // tray Exit / update restart (explicit Shutdown).
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             var coordinator = Services.GetRequiredService<DictationCoordinator>();
             var loc = Services.GetRequiredService<LocalizationService>();
             loc.Apply(coordinator.Config.UiLanguage);

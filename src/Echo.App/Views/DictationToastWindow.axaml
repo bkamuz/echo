@@ -9,6 +9,7 @@
         CanResize="False"
         ShowInTaskbar="False"
         ShowActivated="False"
+        Focusable="False"
         Topmost="True"
         WindowDecorations="None"
         TransparencyLevelHint="Transparent"

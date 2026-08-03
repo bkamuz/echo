@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using echo.Abstractions.Platform;
+using echo.Platform.Windows;
 
 namespace echo.App.Views;
 
@@ -36,6 +37,16 @@ public partial class DictationCursorOverlayWindow : Window
     public DictationCursorOverlayWindow()
     {
         InitializeComponent();
+        if (OperatingSystem.IsWindows())
+        {
+            Opened += (_, _) =>
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    WindowsNoActivateWindow.TryApply(TryGetPlatformHandle()?.Handle ?? 0);
+                }
+            };
+        }
     }
 
     public void Present(Bitmap icon, int cursorX, int cursorY, bool showMeter)

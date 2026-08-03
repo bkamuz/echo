@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
+using echo.Platform.Windows;
 
 namespace echo.App.Views;
 
@@ -15,6 +16,16 @@ public partial class DictationToastWindow : Window
     public DictationToastWindow()
     {
         InitializeComponent();
+        if (OperatingSystem.IsWindows())
+        {
+            Opened += (_, _) =>
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    WindowsNoActivateWindow.TryApply(TryGetPlatformHandle()?.Handle ?? 0);
+                }
+            };
+        }
     }
 
     public void Present(string text)

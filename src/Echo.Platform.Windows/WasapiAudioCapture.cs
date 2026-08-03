@@ -34,18 +34,7 @@ public sealed class WasapiAudioCapture : IAudioCapture
         _buffer.Clear();
         _levelMeter.Configure(sampleRate);
 
-        var deviceNumber = 0;
-        if (!string.IsNullOrWhiteSpace(deviceName))
-        {
-            for (var i = 0; i < WaveInEvent.DeviceCount; i++)
-            {
-                if (WaveInEvent.GetCapabilities(i).ProductName.Contains(deviceName, StringComparison.OrdinalIgnoreCase))
-                {
-                    deviceNumber = i;
-                    break;
-                }
-            }
-        }
+        var deviceNumber = ResolveDeviceNumber(deviceName);
 
         _waveIn = new WaveInEvent
         {
@@ -70,6 +59,43 @@ public sealed class WasapiAudioCapture : IAudioCapture
             _levelMeter.ReportSamples(samples);
         };
         _waveIn.StartRecording();
+    }
+
+    /// <summary>
+    /// Settings store WaveIn index as Id ("0","1",...). Legacy configs may store ProductName.
+    /// </summary>
+    private static int ResolveDeviceNumber(string? deviceName)
+    {
+        var count = WaveInEvent.DeviceCount;
+        if (count <= 0 || string.IsNullOrWhiteSpace(deviceName))
+        {
+            return 0;
+        }
+
+        if (int.TryParse(deviceName, out var index) && index >= 0 && index < count)
+        {
+            return index;
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            var name = WaveInEvent.GetCapabilities(i).ProductName;
+            if (name.Equals(deviceName, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        for (var i = 0; i < count; i++)
+        {
+            var name = WaveInEvent.GetCapabilities(i).ProductName;
+            if (name.Contains(deviceName, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return 0;
     }
 
     public float[] StopRecording()

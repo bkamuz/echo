@@ -68,7 +68,12 @@ public sealed class DictationCoordinator : IDisposable
     /// </summary>
     public IDisposable EnterModelBusy()
     {
-        Interlocked.Increment(ref _modelBusyCount);
+        if (Interlocked.Increment(ref _modelBusyCount) == 1)
+        {
+            // Fully mute the global hotkey so presses cannot overwrite download status.
+            _hotkey.Stop();
+        }
+
         return new ModelBusyScope(this);
     }
 
@@ -227,14 +232,8 @@ public sealed class DictationCoordinator : IDisposable
 
     private void OnHotkeyActivated()
     {
-        if (_isRecording)
+        if (_isRecording || IsModelBusy)
         {
-            return;
-        }
-
-        if (IsModelBusy)
-        {
-            _statusNotifier?.ShowTemporary("Loc.Status.ModelBusy", warning: true);
             return;
         }
 
@@ -274,6 +273,9 @@ public sealed class DictationCoordinator : IDisposable
         }
 
         _tray.SetState(DictationOverlayState.Processing);
+
+        // Undo any focus steal from the processing overlay before the long STT wait.
+        RestoreInjectionTarget();
 
         await Task.Yield();
 
@@ -390,7 +392,12 @@ public sealed class DictationCoordinator : IDisposable
     private nint CaptureInjectionTarget()
     {
         var handle = _focusTarget.CaptureTargetWindow();
-        return handle == 0 ? 0 : handle;
+        if (handle == 0 || _focusTarget.IsOwnWindow(handle))
+        {
+            return 0;
+        }
+
+        return handle;
     }
 
     private void RestoreInjectionTarget()
@@ -420,7 +427,11 @@ public sealed class DictationCoordinator : IDisposable
                 return;
             }
 
-            Interlocked.Decrement(ref owner._modelBusyCount);
+            if (Interlocked.Decrement(ref owner._modelBusyCount) == 0)
+            {
+                owner._hotkey.Configure(owner._config.Hotkey);
+                owner._hotkey.Start();
+            }
         }
     }
 }

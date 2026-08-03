@@ -136,7 +136,7 @@ public sealed class WindowsUpdateApplier : IUpdateApplier
                 Copy-Item -Path $directMlSrc -Destination $directMlDst -Recurse -Force
             }
 
-            Start-Process -FilePath (Join-Path $installDir $exeName) -ArgumentList $minimizedArgument -WindowStyle Hidden
+            Start-Process -FilePath (Join-Path $installDir $exeName) -ArgumentList $minimizedArgument
             """;
     }
 

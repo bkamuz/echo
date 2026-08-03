@@ -5,13 +5,13 @@ namespace echo.Platform.Windows;
 
 public sealed class WindowsFocusTarget : IFocusTarget
 {
-    private const int SwShow = 5;
+    private const int SwShowNoActivate = 8;
 
     public nint CaptureTargetWindow() => GetForegroundWindow();
 
     public void RestoreTargetWindow(nint handle)
     {
-        if (handle == 0 || !IsWindow(handle))
+        if (handle == 0 || !IsWindow(handle) || IsOwnWindow(handle))
         {
             return;
         }
@@ -26,7 +26,7 @@ public sealed class WindowsFocusTarget : IFocusTarget
         var targetThread = GetWindowThreadProcessId(handle, out _);
         var currentThread = GetCurrentThreadId();
 
-        if (foregroundThread != currentThread)
+        if (foregroundThread != 0 && foregroundThread != currentThread)
         {
             AttachThreadInput(currentThread, foregroundThread, true);
         }
@@ -36,16 +36,16 @@ public sealed class WindowsFocusTarget : IFocusTarget
             AttachThreadInput(currentThread, targetThread, true);
         }
 
-        ShowWindow(handle, SwShow);
-        BringWindowToTop(handle);
-        SetForegroundWindow(handle);
+        // SW_SHOWNOACTIVATE avoids a z-order flash that drops caret in browsers/chats.
+        ShowWindow(handle, SwShowNoActivate);
+        _ = SetForegroundWindow(handle);
 
         if (targetThread != currentThread)
         {
             AttachThreadInput(currentThread, targetThread, false);
         }
 
-        if (foregroundThread != currentThread)
+        if (foregroundThread != 0 && foregroundThread != currentThread)
         {
             AttachThreadInput(currentThread, foregroundThread, false);
         }
@@ -67,9 +67,6 @@ public sealed class WindowsFocusTarget : IFocusTarget
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(nint hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern bool BringWindowToTop(nint hWnd);
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(nint hWnd, int nCmdShow);

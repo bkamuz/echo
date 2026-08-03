@@ -148,6 +148,14 @@ public sealed class AvaloniaTrayService : ITrayStateService
         _mainWindow.WindowState = WindowState.Normal;
         _mainWindow.Show();
         _mainWindow.Activate();
+
+        // After update restart (--minimized / prior Hidden start) Win32 may leave the
+        // window inactive; a brief Topmost nudge brings it to the foreground.
+        if (OperatingSystem.IsWindows())
+        {
+            _mainWindow.Topmost = true;
+            _mainWindow.Topmost = false;
+        }
     }
 
     private void ExitApp()
