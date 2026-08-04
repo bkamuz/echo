@@ -3,7 +3,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using echo.Abstractions.Platform;
 using echo.Platform.Windows;
 
 namespace echo.App.Views;
@@ -15,7 +14,6 @@ public partial class DictationCursorOverlayWindow : Window
     private const double IconSizeDip = 24;
     private const double MeterWidthDip = 72;
     private const double GapDip = 4;
-    private const double IconOnlyWidthDip = IconSizeDip;
     private const double WithMeterWidthDip = IconSizeDip + GapDip + MeterWidthDip;
 
     // Accent #39FF14
@@ -26,10 +24,14 @@ public partial class DictationCursorOverlayWindow : Window
     private const int SpecWidth = 68;
     private const int SpecHeight = 20;
 
+    private const uint SwpNosize = 0x0001;
+    private const uint SwpNozorder = 0x0004;
+    private const uint SwpNoactivate = 0x0010;
+
     private WriteableBitmap? _spectrogram;
     private byte[]? _pixels;
     private int _stride;
-    private double _layoutWidthDip = IconOnlyWidthDip;
+    private double _layoutWidthDip = WithMeterWidthDip;
     private int _anchorX;
     private int _anchorY;
     private bool _hasAnchor;
@@ -37,15 +39,14 @@ public partial class DictationCursorOverlayWindow : Window
     public DictationCursorOverlayWindow()
     {
         InitializeComponent();
+        // Keep HWND width stable for the whole dictation cycle. Resizing on
+        // Recording→Processing can recreate/activate the native window and
+        // blur caret in browser contenteditables.
+        Width = WithMeterWidthDip;
+
         if (OperatingSystem.IsWindows())
         {
-            Opened += (_, _) =>
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    WindowsNoActivateWindow.TryApply(TryGetPlatformHandle()?.Handle ?? 0);
-                }
-            };
+            Opened += (_, _) => ApplyNoActivate();
         }
     }
 
@@ -56,7 +57,9 @@ public partial class DictationCursorOverlayWindow : Window
 
         if (!IsVisible)
         {
+            ApplyNoActivate();
             Show();
+            ApplyNoActivate();
         }
 
         _anchorX = cursorX;
@@ -70,8 +73,7 @@ public partial class DictationCursorOverlayWindow : Window
     public void SetMeterVisible(bool visible)
     {
         MeterPanel.IsVisible = visible;
-        _layoutWidthDip = visible ? WithMeterWidthDip : IconOnlyWidthDip;
-        Width = _layoutWidthDip;
+        // Do not change Window.Width — see ctor note about HWND stability.
 
         if (!visible)
         {
@@ -86,6 +88,16 @@ public partial class DictationCursorOverlayWindow : Window
         {
             PositionNearCursor(_anchorX, _anchorY);
         }
+    }
+
+    private void ApplyNoActivate()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        WindowsNoActivateWindow.TryApply(TryGetPlatformHandle()?.Handle ?? 0);
     }
 
     public void UpdateSpectrum(ReadOnlySpan<float> bands)
@@ -137,8 +149,6 @@ public partial class DictationCursorOverlayWindow : Window
     {
         ClearSpectrogram();
         MeterPanel.IsVisible = false;
-        _layoutWidthDip = IconOnlyWidthDip;
-        Width = IconOnlyWidthDip;
         _hasAnchor = false;
 
         if (IsVisible)
@@ -206,7 +216,7 @@ public partial class DictationCursorOverlayWindow : Window
             ?? Screens.Primary;
         if (screen is null)
         {
-            Position = new PixelPoint(cursorX, cursorY);
+            MoveWithoutActivate(cursorX, cursorY);
             return;
         }
 
@@ -223,6 +233,32 @@ public partial class DictationCursorOverlayWindow : Window
         x = Math.Clamp(x, area.X, area.X + Math.Max(0, area.Width - widthPx));
         y = Math.Clamp(y, area.Y, area.Y + Math.Max(0, area.Height - heightPx));
 
+        MoveWithoutActivate(x, y);
+    }
+
+    private void MoveWithoutActivate(int x, int y)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var hwnd = TryGetPlatformHandle()?.Handle ?? 0;
+            if (hwnd != 0 &&
+                SetWindowPos(hwnd, 0, x, y, 0, 0, SwpNosize | SwpNozorder | SwpNoactivate))
+            {
+                // Avoid Window.Position setter — it can activate on some Avalonia builds.
+                return;
+            }
+        }
+
         Position = new PixelPoint(x, y);
     }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(
+        nint hWnd,
+        nint hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint uFlags);
 }

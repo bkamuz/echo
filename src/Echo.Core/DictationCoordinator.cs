@@ -70,6 +70,8 @@ public sealed class DictationCoordinator : IDisposable
     {
         if (Interlocked.Increment(ref _modelBusyCount) == 1)
         {
+            // Drop any in-flight capture — Stop() will not raise Deactivated.
+            AbortActiveRecording();
             // Fully mute the global hotkey so presses cannot overwrite download status.
             _hotkey.Stop();
         }
@@ -89,16 +91,33 @@ public sealed class DictationCoordinator : IDisposable
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var modelBusy = EnterModelBusy();
+
+        var incoming = config.Clone();
+        incoming.Normalize();
+        var needsEngineWork = RequiresEngineWarmup(_config, incoming);
+
+        // Mic / input-method / toast toggles must not stop the hotkey or reload the model.
+        using var modelBusy = needsEngineWork ? EnterModelBusy() : null;
         await _saveLock.WaitAsync(cancellationToken);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(ProgressMessages.Saving());
-            _config = config;
-            _config.Normalize();
+
+            var previousInputDevice = _config.InputDevice;
+            _config = incoming;
             _configStore.Save(_config);
             _hotkey.Configure(_config.Hotkey);
+
+            if (!string.Equals(previousInputDevice, _config.InputDevice, StringComparison.Ordinal))
+            {
+                AbortActiveRecording();
+            }
+
+            if (!needsEngineWork)
+            {
+                return;
+            }
 
             try
             {
@@ -119,6 +138,14 @@ public sealed class DictationCoordinator : IDisposable
             _saveLock.Release();
         }
     }
+
+    private static bool RequiresEngineWarmup(AppConfig current, AppConfig next) =>
+        !string.Equals(current.Engine, next.Engine, StringComparison.Ordinal)
+        || !string.Equals(current.WhisperModelSize, next.WhisperModelSize, StringComparison.Ordinal)
+        || !string.Equals(current.GigaAmModelSize, next.GigaAmModelSize, StringComparison.Ordinal)
+        || !string.Equals(current.Language, next.Language, StringComparison.Ordinal)
+        || !string.Equals(current.Device, next.Device, StringComparison.Ordinal)
+        || current.SampleRate != next.SampleRate;
 
     public void Start()
     {
@@ -198,21 +225,28 @@ public sealed class DictationCoordinator : IDisposable
     {
         _hotkey.Activated -= OnHotkeyActivated;
         _hotkey.Stop();
+        AbortActiveRecording();
+    }
 
-        if (_isRecording)
+    private void AbortActiveRecording()
+    {
+        if (!_isRecording)
         {
-            _isRecording = false;
-            try
-            {
-                _audio.StopRecording();
-            }
-            catch
-            {
-                // Ignore audio stop failures during shutdown.
-            }
-
-            _tray.SetState(DictationOverlayState.Hidden);
+            return;
         }
+
+        _isRecording = false;
+        _targetWindow = 0;
+        try
+        {
+            _audio.StopRecording();
+        }
+        catch
+        {
+            // Ignore audio stop failures during abort/shutdown.
+        }
+
+        _tray.SetState(DictationOverlayState.Hidden);
     }
 
     public void RestartHotkey()
@@ -274,8 +308,9 @@ public sealed class DictationCoordinator : IDisposable
 
         _tray.SetState(DictationOverlayState.Processing);
 
-        // Undo any focus steal from the processing overlay before the long STT wait.
-        RestoreInjectionTarget();
+        // Only undo if Echo itself stole activation. Unconditional restore
+        // (ShowWindow/SetForegroundWindow) blurs caret in browser chats.
+        RestoreInjectionTarget(onlyIfStolenByUs: true);
 
         await Task.Yield();
 
@@ -318,6 +353,9 @@ public sealed class DictationCoordinator : IDisposable
             _history.Append(engine.DisplayName, text.TrimEnd());
 
             sw.Restart();
+            // Drop the processing overlay before paste so it cannot sit as the
+            // foreground HWND and steal Ctrl+V from browser chat inputs.
+            _tray.SetState(DictationOverlayState.Hidden);
             RestoreInjectionTarget();
             try
             {
@@ -400,9 +438,20 @@ public sealed class DictationCoordinator : IDisposable
         return handle;
     }
 
-    private void RestoreInjectionTarget()
+    private void RestoreInjectionTarget(bool onlyIfStolenByUs = false)
     {
         if (_targetWindow == 0)
+        {
+            return;
+        }
+
+        var foreground = _focusTarget.CaptureTargetWindow();
+        if (foreground == _targetWindow)
+        {
+            return;
+        }
+
+        if (onlyIfStolenByUs && (foreground == 0 || !_focusTarget.IsOwnWindow(foreground)))
         {
             return;
         }

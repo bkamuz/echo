@@ -35,7 +35,17 @@ public partial class DictationToastWindow : Window
 
         if (!IsVisible)
         {
+            if (OperatingSystem.IsWindows())
+            {
+                WindowsNoActivateWindow.TryApply(TryGetPlatformHandle()?.Handle ?? 0);
+            }
+
             Show();
+
+            if (OperatingSystem.IsWindows())
+            {
+                WindowsNoActivateWindow.TryApply(TryGetPlatformHandle()?.Handle ?? 0);
+            }
         }
 
         Dispatcher.UIThread.Post(PositionToBottomRight, DispatcherPriority.Loaded);

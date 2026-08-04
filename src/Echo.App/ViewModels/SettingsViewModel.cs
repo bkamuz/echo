@@ -274,7 +274,15 @@ public partial class SettingsViewModel : ObservableObject
         ScheduleApply();
     }
 
-    partial void OnInputDeviceChanged(AudioDeviceInfo? value) => ScheduleApply();
+    partial void OnInputDeviceChanged(AudioDeviceInfo? value)
+    {
+        if (_isLoadingFromConfig || value is null)
+        {
+            return;
+        }
+
+        ScheduleApply();
+    }
 
     public void UpdateModelStatus()
     {

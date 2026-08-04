@@ -5,8 +5,6 @@ namespace echo.Platform.Windows;
 
 public sealed class WindowsFocusTarget : IFocusTarget
 {
-    private const int SwShowNoActivate = 8;
-
     public nint CaptureTargetWindow() => GetForegroundWindow();
 
     public void RestoreTargetWindow(nint handle)
@@ -19,6 +17,9 @@ public sealed class WindowsFocusTarget : IFocusTarget
         var foreground = GetForegroundWindow();
         if (foreground == handle)
         {
+            // Already foreground — do not call ShowWindow/SetForegroundWindow.
+            // Chromium contenteditables drop their caret on those calls even when
+            // the top-level HWND does not change.
             return;
         }
 
@@ -36,8 +37,9 @@ public sealed class WindowsFocusTarget : IFocusTarget
             AttachThreadInput(currentThread, targetThread, true);
         }
 
-        // SW_SHOWNOACTIVATE avoids a z-order flash that drops caret in browsers/chats.
-        ShowWindow(handle, SwShowNoActivate);
+        // No ShowWindow: SW_SHOW* can blur the focused DOM/input even with
+        // SW_SHOWNOACTIVATE. SetForegroundWindow alone is enough to retarget
+        // SendInput / Ctrl+V after an Echo overlay briefly stole activation.
         _ = SetForegroundWindow(handle);
 
         if (targetThread != currentThread)
@@ -67,9 +69,6 @@ public sealed class WindowsFocusTarget : IFocusTarget
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(nint hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern bool ShowWindow(nint hWnd, int nCmdShow);
 
     [DllImport("user32.dll")]
     private static extern bool IsWindow(nint hWnd);

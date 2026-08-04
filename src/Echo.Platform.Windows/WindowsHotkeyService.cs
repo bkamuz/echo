@@ -39,23 +39,55 @@ public sealed class WindowsHotkeyService : IHotkeyService
 
     public void Start()
     {
+        // WH_KEYBOARD_LL delivers via the installing thread's message loop.
+        // Capture UI SynchronizationContext on first UI Start; later Start/Stop
+        // from thread-pool (e.g. after SaveConfigAsync) must marshal back.
+        if (SynchronizationContext.Current is { } current)
+        {
+            _syncContext = current;
+        }
+
+        RunOnHookAffinity(StartCore);
+    }
+
+    public void Stop() => RunOnHookAffinity(StopCore);
+
+    private void StartCore()
+    {
         if (_hook != IntPtr.Zero)
         {
             return;
         }
 
-        _syncContext = SynchronizationContext.Current;
         _hookProc = HookCallback;
         _hook = SetWindowsHookEx(WhKeyboardLl, _hookProc, GetModuleHandle(null), 0);
     }
 
-    public void Stop()
+    private void StopCore()
     {
         if (_hook != IntPtr.Zero)
         {
             UnhookWindowsHookEx(_hook);
             _hook = IntPtr.Zero;
         }
+
+        lock (_lock)
+        {
+            _pressedKeys.Clear();
+            _active = false;
+        }
+    }
+
+    private void RunOnHookAffinity(Action action)
+    {
+        var ctx = _syncContext;
+        if (ctx is null || ReferenceEquals(SynchronizationContext.Current, ctx))
+        {
+            action();
+            return;
+        }
+
+        ctx.Send(_ => action(), null);
     }
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
