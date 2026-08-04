@@ -7,6 +7,7 @@ using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 using echo.App.DependencyInjection;
 using echo.App.Localization;
+using echo.App.Logging;
 using echo.App.Services;
 using echo.App.ViewModels;
 using echo.App.Views;
@@ -17,6 +18,7 @@ using echo.Platform.Linux;
 using echo.Platform.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace echo.App;
 
@@ -31,10 +33,15 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        AppPaths.EnsureDirectories();
+
         var host = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
-                services.AddLogging();
+                services.AddLogging(builder =>
+                {
+                    builder.AddProvider(new FileLoggerProvider(AppPaths.LogPath));
+                });
                 services.UseEcho();
                 services.UsePlatform();
                 services.UseEchoEngines();

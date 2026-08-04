@@ -479,9 +479,7 @@ public partial class SettingsViewModel : ObservableObject
             AddTrailingSpace = config.AddTrailingSpace;
             ShowDictationToast = config.ShowDictationToast;
             StartWithSystem = config.StartWithSystem;
-            InputDevice = InputDevices.FirstOrDefault(d => d.Id == config.InputDevice)
-                ?? InputDevices.FirstOrDefault(d => d.Name == config.InputDevice)
-                ?? InputDevices.FirstOrDefault();
+            InputDevice = _audio.FindListedDevice(config.InputDevice);
             UpdateModelStatus();
             OnPropertyChanged(nameof(ComputeDeviceOptions));
             EnsureValidComputeDevice();

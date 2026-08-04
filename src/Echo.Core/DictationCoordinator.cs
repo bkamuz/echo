@@ -306,6 +306,19 @@ public sealed class DictationCoordinator : IDisposable
             return;
         }
 
+        // Stop capture before Processing UI so WASAPI teardown cannot race the overlay.
+        float[] samples;
+        try
+        {
+            samples = _audio.StopRecording();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop audio recording");
+            FinishDictation("Loc.Status.RecognitionError", alert: true);
+            return;
+        }
+
         _tray.SetState(DictationOverlayState.Processing);
 
         // Only undo if Echo itself stole activation. Unconditional restore
@@ -316,8 +329,6 @@ public sealed class DictationCoordinator : IDisposable
 
         try
         {
-            var samples = _audio.StopRecording();
-
             if (samples.Length == 0)
             {
                 FinishDictation("Тишина — речь не распознана", warning: true);
