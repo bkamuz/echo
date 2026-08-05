@@ -84,30 +84,9 @@ public sealed class WindowsFocusTarget : IFocusTarget
 
     public void RestoreTargetFocus(nint focusHandle)
     {
-        if (focusHandle == 0 || !IsWindow(focusHandle) || IsOwnWindow(focusHandle))
-        {
-            return;
-        }
-
-        var targetThread = GetWindowThreadProcessId(focusHandle, out _);
-        var currentThread = GetCurrentThreadId();
-        var attached = false;
-        if (targetThread != 0 && targetThread != currentThread)
-        {
-            attached = AttachThreadInput(currentThread, targetThread, true);
-        }
-
-        try
-        {
-            _ = SetFocus(focusHandle);
-        }
-        finally
-        {
-            if (attached)
-            {
-                AttachThreadInput(currentThread, targetThread, false);
-            }
-        }
+        // Intentionally a no-op. SetFocus/AttachThreadInput on foreign HWNDs
+        // (esp. Chromium) drops caret and makes Ctrl+V land nowhere. Top-level
+        // RestoreTargetWindow is enough when Echo itself stole foreground.
     }
 
     public bool IsOwnWindow(nint handle)
@@ -138,9 +117,6 @@ public sealed class WindowsFocusTarget : IFocusTarget
 
     [DllImport("user32.dll")]
     private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool attach);
-
-    [DllImport("user32.dll")]
-    private static extern nint SetFocus(nint hWnd);
 
     // Exact name required: GetProcAddress is case-sensitive (GetGuiThreadInfo ≠ GetGUIThreadInfo).
     [DllImport("user32.dll", EntryPoint = "GetGUIThreadInfo", SetLastError = true)]

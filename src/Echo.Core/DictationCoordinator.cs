@@ -24,7 +24,6 @@ public sealed class DictationCoordinator : IDisposable
     private DateTimeOffset _pressStarted;
     private bool _isRecording;
     private nint _targetWindow;
-    private nint _targetFocus;
 
     public DictationCoordinator(
         ConfigStore configStore,
@@ -238,7 +237,6 @@ public sealed class DictationCoordinator : IDisposable
 
         _isRecording = false;
         _targetWindow = 0;
-        _targetFocus = 0;
         try
         {
             _audio.StopRecording();
@@ -285,7 +283,6 @@ public sealed class DictationCoordinator : IDisposable
             _logger.LogWarning(ex, "Failed to start audio recording");
             _isRecording = false;
             _targetWindow = 0;
-            _targetFocus = 0;
             FinishDictation("Не удалось начать запись микрофона", alert: true);
             return;
         }
@@ -429,7 +426,6 @@ public sealed class DictationCoordinator : IDisposable
         finally
         {
             _targetWindow = 0;
-            _targetFocus = 0;
             _tray.SetState(DictationOverlayState.Hidden);
         }
     }
@@ -451,18 +447,7 @@ public sealed class DictationCoordinator : IDisposable
         var handle = _focusTarget.CaptureTargetWindow();
         if (handle == 0 || _focusTarget.IsOwnWindow(handle))
         {
-            _targetFocus = 0;
             return 0;
-        }
-
-        try
-        {
-            _targetFocus = _focusTarget.CaptureTargetFocus();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to capture focus HWND — paste will use top-level window only");
-            _targetFocus = 0;
         }
 
         return handle;
@@ -470,32 +455,26 @@ public sealed class DictationCoordinator : IDisposable
 
     private void RestoreInjectionTarget(bool onlyIfStolenByUs = false)
     {
-        if (_targetWindow == 0 && _targetFocus == 0)
+        if (_targetWindow == 0)
         {
             return;
         }
 
         var foreground = _focusTarget.CaptureTargetWindow();
-        var needsForegroundRestore = _targetWindow != 0 && foreground != _targetWindow;
-
-        if (needsForegroundRestore)
+        if (foreground == _targetWindow)
         {
-            if (onlyIfStolenByUs && (foreground == 0 || !_focusTarget.IsOwnWindow(foreground)))
-            {
-                return;
-            }
-
-            _focusTarget.RestoreTargetWindow(_targetWindow);
-            Thread.Sleep(30);
+            // Already foreground — do not call SetForegroundWindow/SetFocus.
+            // Chromium contenteditables drop caret on those calls.
+            return;
         }
 
-        // Even when the top-level HWND stayed foreground (Chromium chats), overlays can
-        // move keyboard focus away from the contenteditable — restore caret before paste.
-        if (!onlyIfStolenByUs && _targetFocus != 0)
+        if (onlyIfStolenByUs && (foreground == 0 || !_focusTarget.IsOwnWindow(foreground)))
         {
-            _focusTarget.RestoreTargetFocus(_targetFocus);
-            Thread.Sleep(10);
+            return;
         }
+
+        _focusTarget.RestoreTargetWindow(_targetWindow);
+        Thread.Sleep(30);
     }
 
     public void Dispose()

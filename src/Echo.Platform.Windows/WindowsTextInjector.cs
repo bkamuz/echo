@@ -152,9 +152,16 @@ public sealed class WindowsTextInjector : ITextInjector
             return ClipboardPasteOutcome.FailedBeforePaste;
         }
 
-        Thread.Sleep(30);
-        SendCtrlV();
+        // Give clipboard viewers / OLE a beat before synthesizing Ctrl+V.
+        Thread.Sleep(50);
+        if (!SendCtrlV())
+        {
+            return ClipboardPasteOutcome.FailedBeforePaste;
+        }
 
+        // Let the target process begin handling WM_PASTE before we return
+        // (toast/UI work). Clipboard restore stays deferred — Chromium reads async.
+        Thread.Sleep(50);
         ScheduleClipboardRestore(hadText ? savedText : null);
 
         return ClipboardPasteOutcome.Pasted;
@@ -303,7 +310,7 @@ public sealed class WindowsTextInjector : ITextInjector
         }
     }
 
-    private static void SendCtrlV()
+    private static bool SendCtrlV()
     {
         const ushort vkControl = 0x11;
         const ushort vkV = 0x56;
@@ -311,10 +318,18 @@ public sealed class WindowsTextInjector : ITextInjector
         [
             new() { Type = InputKeyboard, U = new InputUnion { Ki = new KeyboardInput { WVk = vkControl } } },
             new() { Type = InputKeyboard, U = new InputUnion { Ki = new KeyboardInput { WVk = vkV } } },
-            new() { Type = InputKeyboard, U = new InputUnion { Ki = new KeyboardInput { WVk = vkV, DwFlags = KeyeventfKeyup } } },
-            new() { Type = InputKeyboard, U = new InputUnion { Ki = new KeyboardInput { WVk = vkControl, DwFlags = KeyeventfKeyup } } },
+            new()
+            {
+                Type = InputKeyboard,
+                U = new InputUnion { Ki = new KeyboardInput { WVk = vkV, DwFlags = KeyeventfKeyup } },
+            },
+            new()
+            {
+                Type = InputKeyboard,
+                U = new InputUnion { Ki = new KeyboardInput { WVk = vkControl, DwFlags = KeyeventfKeyup } },
+            },
         ];
-        _ = SendInput(4, inputs, InputSize);
+        return SendInput(4, inputs, InputSize) == 4;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
