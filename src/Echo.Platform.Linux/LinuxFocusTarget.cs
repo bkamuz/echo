@@ -31,6 +31,8 @@ public sealed class LinuxFocusTarget : IFocusTarget
         return 0;
     }
 
+    public nint CaptureTargetFocus() => 0;
+
     public void RestoreTargetWindow(nint handle)
     {
         if (handle == 0 || !LinuxSession.IsX11 || !LinuxCommandHelper.CommandExists("xdotool"))
@@ -49,6 +51,10 @@ public sealed class LinuxFocusTarget : IFocusTarget
         catch
         {
         }
+    }
+
+    public void RestoreTargetFocus(nint focusHandle)
+    {
     }
 
     public bool IsOwnWindow(nint handle) => false;

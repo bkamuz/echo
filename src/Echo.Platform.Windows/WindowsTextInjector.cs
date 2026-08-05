@@ -11,6 +11,7 @@ public sealed class WindowsTextInjector : ITextInjector
     private const uint KeyeventfUnicode = 0x0004;
     private const uint CfUnicode = 13;
     private const uint GmemMoveable = 0x0002;
+    private const int ClipboardRestoreDelayMs = 400;
 
     public Task<TextInjectionResult> InjectAsync(
         string text,
@@ -153,18 +154,37 @@ public sealed class WindowsTextInjector : ITextInjector
 
         Thread.Sleep(30);
         SendCtrlV();
-        Thread.Sleep(50);
 
-        if (hadText)
-        {
-            TryRestoreClipboardWithRetry(savedText!);
-        }
-        else
-        {
-            TryClearClipboardWithRetry();
-        }
+        ScheduleClipboardRestore(hadText ? savedText : null);
 
         return ClipboardPasteOutcome.Pasted;
+    }
+
+    /// <summary>
+    /// Chromium/Electron paste handlers read the clipboard asynchronously; restoring too
+    /// early makes Ctrl+V insert the previous clip instead of the dictation text.
+    /// </summary>
+    private static void ScheduleClipboardRestore(string? savedText)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(ClipboardRestoreDelayMs).ConfigureAwait(false);
+                if (savedText is not null)
+                {
+                    TryRestoreClipboardWithRetry(savedText);
+                }
+                else
+                {
+                    TryClearClipboardWithRetry();
+                }
+            }
+            catch
+            {
+                // Best-effort restore — dictation text is already in history/toast.
+            }
+        });
     }
 
     private static void TryRestoreClipboardWithRetry(string savedText)

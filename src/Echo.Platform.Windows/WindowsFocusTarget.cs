@@ -7,6 +7,35 @@ public sealed class WindowsFocusTarget : IFocusTarget
 {
     public nint CaptureTargetWindow() => GetForegroundWindow();
 
+    public nint CaptureTargetFocus()
+    {
+        var foreground = GetForegroundWindow();
+        if (foreground == 0 || IsOwnWindow(foreground))
+        {
+            return 0;
+        }
+
+        var threadId = GetWindowThreadProcessId(foreground, out _);
+        if (threadId == 0)
+        {
+            return 0;
+        }
+
+        var info = new GuiThreadInfo { CbSize = Marshal.SizeOf<GuiThreadInfo>() };
+        if (!GetGuiThreadInfo(threadId, ref info))
+        {
+            return 0;
+        }
+
+        var focus = info.HwndFocus;
+        if (focus == 0 || !IsWindow(focus) || IsOwnWindow(focus))
+        {
+            return 0;
+        }
+
+        return focus;
+    }
+
     public void RestoreTargetWindow(nint handle)
     {
         if (handle == 0 || !IsWindow(handle) || IsOwnWindow(handle))
@@ -53,6 +82,16 @@ public sealed class WindowsFocusTarget : IFocusTarget
         }
     }
 
+    public void RestoreTargetFocus(nint focusHandle)
+    {
+        if (focusHandle == 0 || !IsWindow(focusHandle) || IsOwnWindow(focusHandle))
+        {
+            return;
+        }
+
+        _ = SetFocus(focusHandle);
+    }
+
     public bool IsOwnWindow(nint handle)
     {
         if (handle == 0 || !IsWindow(handle))
@@ -81,4 +120,27 @@ public sealed class WindowsFocusTarget : IFocusTarget
 
     [DllImport("user32.dll")]
     private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool attach);
+
+    [DllImport("user32.dll")]
+    private static extern nint SetFocus(nint hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetGuiThreadInfo(uint idThread, ref GuiThreadInfo lpgui);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GuiThreadInfo
+    {
+        public int CbSize;
+        public int Flags;
+        public nint HwndActive;
+        public nint HwndFocus;
+        public nint HwndCapture;
+        public nint HwndMenuOwner;
+        public nint HwndMoveSize;
+        public nint HwndCaret;
+        public int RcCaretLeft;
+        public int RcCaretTop;
+        public int RcCaretRight;
+        public int RcCaretBottom;
+    }
 }
