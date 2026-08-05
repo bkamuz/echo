@@ -17,6 +17,11 @@ public sealed record TypeSpeedOption(string Label, int DelayMs)
     public override string ToString() => Label;
 }
 
+public sealed record PostReleaseOption(string Label, int DelayMs)
+{
+    public override string ToString() => Label;
+}
+
 public sealed record UiLanguageChoice(string Code, string Label)
 {
     public override string ToString() => Label;
@@ -50,6 +55,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private AudioDeviceInfo? _inputDevice;
     [ObservableProperty] private InputMethodOption? _selectedInputMethod;
     [ObservableProperty] private TypeSpeedOption? _selectedTypeSpeed;
+    [ObservableProperty] private PostReleaseOption? _selectedPostRelease;
     [ObservableProperty] private UiLanguageChoice? _selectedUiLanguage;
     [ObservableProperty] private bool _addTrailingSpace;
     [ObservableProperty] private bool _showDictationToast;
@@ -115,6 +121,7 @@ public partial class SettingsViewModel : ObservableObject
         _registeredEngineIds = engines.Select(e => e.EngineId).ToHashSet(StringComparer.Ordinal);
         RebuildEngineOptions();
         RebuildTypeSpeedOptions();
+        RebuildPostReleaseOptions();
         RebuildUiLanguageChoices();
         RebuildInputMethodOptions();
         RebuildComputeDeviceOptions();
@@ -129,6 +136,7 @@ public partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<EngineOption> EngineOptions { get; private set; } = [];
     public IReadOnlyList<ComputeDeviceOption> ComputeDeviceOptions { get; private set; } = [];
     public IReadOnlyList<TypeSpeedOption> TypeSpeedOptions { get; private set; } = [];
+    public IReadOnlyList<PostReleaseOption> PostReleaseOptions { get; private set; } = [];
     public IReadOnlyList<UiLanguageChoice> UiLanguageChoices { get; private set; } = [];
     public IReadOnlyList<InputMethodOption> InputMethodOptions { get; private set; } = [];
 
@@ -141,6 +149,8 @@ public partial class SettingsViewModel : ObservableObject
         !OperatingSystem.IsLinux() && SelectedInputMethod?.Id == "type";
 
     public string TypeSpeedTooltip => _loc.Get("Loc.Settings.TypeSpeed.Tooltip");
+
+    public string PostReleaseTooltip => _loc.Get("Loc.Settings.PostRelease.Tooltip");
 
     public string HotkeyDisplay =>
         IsCapturingHotkey && !string.IsNullOrEmpty(HotkeyPreview)
@@ -239,6 +249,16 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     partial void OnSelectedTypeSpeedChanged(TypeSpeedOption? value)
+    {
+        if (value is null)
+        {
+            return;
+        }
+
+        ScheduleApply();
+    }
+
+    partial void OnSelectedPostReleaseChanged(PostReleaseOption? value)
     {
         if (value is null)
         {
@@ -448,6 +468,7 @@ public partial class SettingsViewModel : ObservableObject
         config.InputMethod = SelectedInputMethod?.Id
             ?? (OperatingSystem.IsLinux() ? "auto" : "clipboard");
         config.TypeDelayMs = SelectedTypeSpeed?.DelayMs ?? 1;
+        config.PostReleaseMs = SelectedPostRelease?.DelayMs ?? 500;
         config.AddTrailingSpace = AddTrailingSpace;
         config.ShowDictationToast = ShowDictationToast;
         config.StartWithSystem = StartWithSystem;
@@ -473,6 +494,9 @@ public partial class SettingsViewModel : ObservableObject
                 ?? InputMethodOptions.First();
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == config.TypeDelayMs)
                 ?? TypeSpeedOptions[1];
+            SelectedPostRelease = PostReleaseOptions.FirstOrDefault(o => o.DelayMs == config.PostReleaseMs)
+                ?? PostReleaseOptions.FirstOrDefault(o => o.DelayMs == 500)
+                ?? PostReleaseOptions.FirstOrDefault();
             SelectedUiLanguage = UiLanguageChoices.FirstOrDefault(c =>
                 string.Equals(c.Code, config.UiLanguage, StringComparison.OrdinalIgnoreCase))
                 ?? UiLanguageChoices.FirstOrDefault();
@@ -526,6 +550,18 @@ public partial class SettingsViewModel : ObservableObject
             new(_loc.Get("Loc.TypeSpeed.Fast"), 0),
             new(_loc.Get("Loc.TypeSpeed.Normal"), 1),
             new(_loc.Get("Loc.TypeSpeed.Smooth"), 5),
+        ];
+    }
+
+    private void RebuildPostReleaseOptions()
+    {
+        PostReleaseOptions =
+        [
+            new(_loc.Get("Loc.PostRelease.Off"), 0),
+            new(_loc.Get("Loc.PostRelease.Short"), 300),
+            new(_loc.Get("Loc.PostRelease.Normal"), 500),
+            new(_loc.Get("Loc.PostRelease.Long"), 800),
+            new(_loc.Get("Loc.PostRelease.Max"), 1000),
         ];
     }
 
@@ -606,11 +642,13 @@ public partial class SettingsViewModel : ObservableObject
     {
         var inputMethodId = SelectedInputMethod?.Id;
         var typeSpeedDelay = SelectedTypeSpeed?.DelayMs ?? 1;
+        var postReleaseMs = SelectedPostRelease?.DelayMs ?? 500;
         var computeDeviceId = SelectedComputeDevice?.Id;
         var uiLanguageCode = SelectedUiLanguage?.Code ?? _loc.Preference;
 
         RebuildEngineOptions();
         RebuildTypeSpeedOptions();
+        RebuildPostReleaseOptions();
         RebuildUiLanguageChoices();
         RebuildInputMethodOptions();
         RebuildComputeDeviceOptions();
@@ -622,12 +660,16 @@ public partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(ComputeDeviceOptions));
             OnPropertyChanged(nameof(InputMethodOptions));
             OnPropertyChanged(nameof(TypeSpeedOptions));
+            OnPropertyChanged(nameof(PostReleaseOptions));
             OnPropertyChanged(nameof(UiLanguageChoices));
 
             SelectedInputMethod = InputMethodOptions.FirstOrDefault(o => o.Id == inputMethodId)
                 ?? InputMethodOptions.FirstOrDefault();
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == typeSpeedDelay)
                 ?? TypeSpeedOptions.ElementAtOrDefault(1);
+            SelectedPostRelease = PostReleaseOptions.FirstOrDefault(o => o.DelayMs == postReleaseMs)
+                ?? PostReleaseOptions.FirstOrDefault(o => o.DelayMs == 500)
+                ?? PostReleaseOptions.FirstOrDefault();
             SelectedComputeDevice = ResolveComputeDeviceOption(
                 computeDeviceId ?? ExecutionProviderResolver.CpuDevice);
             SelectedUiLanguage = UiLanguageChoices.FirstOrDefault(c =>

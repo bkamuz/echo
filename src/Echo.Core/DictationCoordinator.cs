@@ -24,6 +24,9 @@ public sealed class DictationCoordinator : IDisposable
     private DateTimeOffset _pressStarted;
     private bool _isRecording;
     private nint _targetWindow;
+    private int _sessionId;
+    private Task? _startTask;
+    private CancellationTokenSource? _sessionCts;
 
     public DictationCoordinator(
         ConfigStore configStore,
@@ -230,13 +233,25 @@ public sealed class DictationCoordinator : IDisposable
 
     private void AbortActiveRecording()
     {
-        if (!_isRecording)
+        if (!_isRecording && _startTask is null)
         {
+            CancelSession();
             return;
         }
 
         _isRecording = false;
         _targetWindow = 0;
+        CancelSession();
+        var start = Interlocked.Exchange(ref _startTask, null);
+        try
+        {
+            start?.Wait(TimeSpan.FromSeconds(2));
+        }
+        catch
+        {
+            // Start failures are already logged from the worker.
+        }
+
         try
         {
             _audio.StopRecording();
@@ -247,6 +262,18 @@ public sealed class DictationCoordinator : IDisposable
         }
 
         _tray.SetState(DictationOverlayState.Hidden);
+    }
+
+    private void CancelSession()
+    {
+        try
+        {
+            _sessionCts?.Cancel();
+        }
+        catch
+        {
+            // CTS may already be disposed.
+        }
     }
 
     public void RestartHotkey()
@@ -273,21 +300,54 @@ public sealed class DictationCoordinator : IDisposable
 
         _isRecording = true;
         _pressStarted = DateTimeOffset.UtcNow;
-        try
-        {
-            _targetWindow = CaptureInjectionTarget();
-            _audio.StartRecording(_config.SampleRate, _config.InputDevice);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to start audio recording");
-            _isRecording = false;
-            _targetWindow = 0;
-            FinishDictation("Не удалось начать запись микрофона", alert: true);
-            return;
-        }
+        _targetWindow = CaptureInjectionTarget();
 
+        // Show listening UI immediately — WASAPI open must not block the overlay.
         _tray.SetState(DictationOverlayState.Recording);
+
+        var session = Interlocked.Increment(ref _sessionId);
+        _sessionCts?.Dispose();
+        _sessionCts = new CancellationTokenSource();
+        var token = _sessionCts.Token;
+        var sampleRate = _config.SampleRate;
+        var inputDevice = _config.InputDevice;
+
+        _startTask = Task.Run(() =>
+        {
+            try
+            {
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                _audio.StartRecording(sampleRate, inputDevice);
+
+                if (token.IsCancellationRequested || Volatile.Read(ref _sessionId) != session)
+                {
+                    try
+                    {
+                        _audio.StopRecording();
+                    }
+                    catch
+                    {
+                        // Session already aborted.
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (token.IsCancellationRequested || Volatile.Read(ref _sessionId) != session)
+                {
+                    return;
+                }
+
+                _logger.LogWarning(ex, "Failed to start audio recording");
+                _isRecording = false;
+                _targetWindow = 0;
+                FinishDictation("Не удалось начать запись микрофона", alert: true);
+            }
+        });
     }
 
     private async Task HandleDeactivatedAsync()
@@ -297,12 +357,25 @@ public sealed class DictationCoordinator : IDisposable
             return;
         }
 
-        _isRecording = false;
+        // Keep _isRecording true through post-release capture so a new press cannot
+        // race StartRecording while the tail is still open.
 
         var elapsed = DateTimeOffset.UtcNow - _pressStarted;
         if (elapsed.TotalMilliseconds < _config.MinPressMs)
         {
-            _audio.StopRecording();
+            CancelSession();
+            await EnsureStartCompletedAsync().ConfigureAwait(true);
+            try
+            {
+                _audio.StopRecording();
+            }
+            catch
+            {
+                // Ignore — short press discard.
+            }
+
+            _isRecording = false;
+            _startTask = null;
             FinishDictation(status: null);
             return;
         }
@@ -316,6 +389,24 @@ public sealed class DictationCoordinator : IDisposable
         RestoreInjectionTarget(onlyIfStolenByUs: true);
 
         await Task.Yield();
+        await EnsureStartCompletedAsync().ConfigureAwait(true);
+
+        var postReleaseMs = _config.PostReleaseMs;
+        if (postReleaseMs > 0 && _sessionCts is { IsCancellationRequested: false })
+        {
+            try
+            {
+                await Task.Delay(postReleaseMs, _sessionCts.Token).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+                _isRecording = false;
+                _startTask = null;
+                _targetWindow = 0;
+                _tray.SetState(DictationOverlayState.Hidden);
+                return;
+            }
+        }
 
         float[] samples;
         try
@@ -327,9 +418,14 @@ public sealed class DictationCoordinator : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to stop audio recording");
+            _isRecording = false;
+            _startTask = null;
             FinishDictation("Loc.Status.RecognitionError", alert: true);
             return;
         }
+
+        _isRecording = false;
+        _startTask = null;
 
         try
         {
@@ -372,12 +468,15 @@ public sealed class DictationCoordinator : IDisposable
             // foreground HWND and steal Ctrl+V from browser chat inputs.
             _tray.SetState(DictationOverlayState.Hidden);
             RestoreInjectionTarget();
+
+            var showRecoveryToast = false;
             try
             {
                 var injectResult = await _injector.InjectAsync(text, _config.InputMethod, _config.TypeDelayMs);
                 var injectMs = sw.ElapsedMilliseconds;
                 if (injectResult.Outcome == TextInjectionOutcome.Failed)
                 {
+                    showRecoveryToast = true;
                     _logger.LogWarning(
                         "Text injection failed — result saved to history: {Message}",
                         injectResult.Message);
@@ -387,6 +486,7 @@ public sealed class DictationCoordinator : IDisposable
                 }
                 else if (injectResult.Outcome == TextInjectionOutcome.ClipboardOnly)
                 {
+                    showRecoveryToast = true;
                     _logger.LogInformation(
                         "Dictation done (clipboard only): transcribe={TranscribeMs}ms inject={InjectMs}ms chars={Chars} — {Message}",
                         transcribeMs,
@@ -409,11 +509,16 @@ public sealed class DictationCoordinator : IDisposable
             }
             catch (Exception injectEx)
             {
+                showRecoveryToast = true;
                 _logger.LogWarning(injectEx, "Text injection failed — result saved to history");
                 FinishDictation("Loc.Inject.Failed", alert: true);
             }
 
-            _dictationToast.Show(text.TrimEnd());
+            // Toast is a recovery surface — only when paste did not land cleanly.
+            if (showRecoveryToast)
+            {
+                _dictationToast.Show(text.TrimEnd());
+            }
         }
         catch (Exception ex)
         {
@@ -427,6 +532,24 @@ public sealed class DictationCoordinator : IDisposable
         {
             _targetWindow = 0;
             _tray.SetState(DictationOverlayState.Hidden);
+        }
+    }
+
+    private async Task EnsureStartCompletedAsync()
+    {
+        var start = _startTask;
+        if (start is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await start.ConfigureAwait(true);
+        }
+        catch
+        {
+            // Start failures are reported from the start task itself.
         }
     }
 
@@ -480,6 +603,9 @@ public sealed class DictationCoordinator : IDisposable
     public void Dispose()
     {
         Stop();
+        _sessionCts?.Dispose();
+        _sessionCts = null;
+        _saveLock.Dispose();
     }
 
     private sealed class ModelBusyScope(DictationCoordinator owner) : IDisposable

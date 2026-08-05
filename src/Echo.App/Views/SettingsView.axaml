@@ -52,6 +52,13 @@
                             HorizontalAlignment="Stretch"/>
                 </StackPanel>
               </Grid>
+              <StackPanel Classes="settings-field" MaxWidth="200" HorizontalAlignment="Left">
+                <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.PostRelease}"
+                           ToolTip.Tip="{Binding PostReleaseTooltip}"/>
+                <ComboBox ItemsSource="{Binding PostReleaseOptions}"
+                          SelectedItem="{Binding SelectedPostRelease}"
+                          HorizontalAlignment="Stretch"/>
+              </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="16">
                 <CheckBox Content="{DynamicResource Loc.Settings.TrailingSpace}"
                           IsChecked="{Binding AddTrailingSpace}"/>

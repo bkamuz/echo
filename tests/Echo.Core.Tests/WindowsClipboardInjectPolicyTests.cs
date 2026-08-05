@@ -34,10 +34,14 @@ public sealed class WindowsClipboardInjectPolicyTests
     }
 
     [Fact]
-    public void Resolve_ReturnsNull_ForAuto_WhenPasteFailed_AllowingTypeFallback()
+    public void Resolve_ReturnsFailed_ForFocusStolen_WithoutTypingFallback()
     {
-        var result = WindowsClipboardInjectPolicy.Resolve("auto", ClipboardPasteOutcome.FailedBeforePaste);
+        var clipboard = WindowsClipboardInjectPolicy.Resolve("clipboard", ClipboardPasteOutcome.FocusStolen);
+        Assert.NotNull(clipboard);
+        Assert.Equal(TextInjectionOutcome.Failed, clipboard.Outcome);
 
-        Assert.Null(result);
+        var auto = WindowsClipboardInjectPolicy.Resolve("auto", ClipboardPasteOutcome.FocusStolen);
+        Assert.NotNull(auto);
+        Assert.Equal(TextInjectionOutcome.Failed, auto.Outcome);
     }
 }
