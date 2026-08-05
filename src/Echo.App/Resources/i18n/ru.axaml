@@ -38,8 +38,10 @@
   <sys:String x:Key="Loc.Settings.TypeSpeed">Скорость печати</sys:String>
   <sys:String x:Key="Loc.Settings.TypeSpeed.Tooltip">Задержка между символами при методе «Печать»</sys:String>
   <sys:String x:Key="Loc.Settings.TrailingSpace">Пробел в конце фразы</sys:String>
-  <sys:String x:Key="Loc.Settings.ShowToast">Показывать текст после диктовки</sys:String>
-  <sys:String x:Key="Loc.Settings.ShowToast.Tooltip">Вспышка с распознанным текстом. Нажмите на неё, чтобы скопировать.</sys:String>
+  <sys:String x:Key="Loc.Settings.PostRelease">Хвост после отпускания</sys:String>
+  <sys:String x:Key="Loc.Settings.PostRelease.Tooltip">Коротко продолжать запись после отпускания хоткея, чтобы не обрезать последний слог</sys:String>
+  <sys:String x:Key="Loc.Settings.ShowToast">Показывать текст, если вставка не удалась</sys:String>
+  <sys:String x:Key="Loc.Settings.ShowToast.Tooltip">Вспышка с распознанным текстом только при сбое вставки. Нажмите, чтобы скопировать.</sys:String>
   <sys:String x:Key="Loc.Settings.StartWithSystem">Запускать при старте системы</sys:String>
   <sys:String x:Key="Loc.Settings.StartWithSystem.Tooltip">Echo запустится в фоне при входе в систему</sys:String>
   <sys:String x:Key="Loc.Settings.UiLanguage">Язык интерфейса</sys:String>
@@ -74,6 +76,11 @@
   <sys:String x:Key="Loc.TypeSpeed.Fast">Быстро</sys:String>
   <sys:String x:Key="Loc.TypeSpeed.Normal">Нормально</sys:String>
   <sys:String x:Key="Loc.TypeSpeed.Smooth">Плавно</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Off">Выкл</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Short">0.3 с</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Normal">0.5 с</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Long">0.8 с</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Max">1.0 с</sys:String>
 
   <!-- Status / progress -->
   <sys:String x:Key="Loc.Status.Done">Готово</sys:String>

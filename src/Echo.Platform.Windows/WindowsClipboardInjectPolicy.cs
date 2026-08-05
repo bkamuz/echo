@@ -6,6 +6,8 @@ public enum ClipboardPasteOutcome
 {
     FailedBeforePaste,
     Pasted,
+    /// <summary>Ctrl+V was sent but Echo owns foreground — do not type-fallback.</summary>
+    FocusStolen,
 }
 
 /// <summary>
@@ -22,6 +24,11 @@ public static class WindowsClipboardInjectPolicy
         if (outcome == ClipboardPasteOutcome.Pasted)
         {
             return TextInjectionResult.AutoPasted;
+        }
+
+        if (outcome == ClipboardPasteOutcome.FocusStolen)
+        {
+            return TextInjectionResult.Failed("Loc.Inject.Failed");
         }
 
         if (method is "clipboard")

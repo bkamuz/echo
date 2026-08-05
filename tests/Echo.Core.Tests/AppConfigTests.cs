@@ -34,6 +34,7 @@ public class AppConfigTests
         Assert.Equal("omnilingual", clone.Engine);
         Assert.Equal("directml", clone.Device);
         Assert.Equal(original.UiLanguage, clone.UiLanguage);
+        Assert.Equal(original.PostReleaseMs, clone.PostReleaseMs);
     }
 
     [Fact]
@@ -68,6 +69,24 @@ public class AppConfigTests
         var config = new AppConfig { UiLanguage = input };
         config.Normalize();
         Assert.Equal(expected, config.UiLanguage);
+    }
+
+    [Theory]
+    [InlineData(-10, 0)]
+    [InlineData(500, 500)]
+    [InlineData(2000, 1500)]
+    public void Normalize_ClampsPostReleaseMs(int input, int expected)
+    {
+        var config = new AppConfig { PostReleaseMs = input };
+        config.Normalize();
+        Assert.Equal(expected, config.PostReleaseMs);
+    }
+
+    [Fact]
+    public void PostReleaseMs_DefaultsTo500()
+    {
+        var config = new AppConfig();
+        Assert.Equal(500, config.PostReleaseMs);
     }
 
     [Theory]

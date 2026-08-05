@@ -164,7 +164,25 @@ public sealed class WindowsTextInjector : ITextInjector
         Thread.Sleep(50);
         ScheduleClipboardRestore(hadText ? savedText : null);
 
+        // Soft heuristic: if Echo owns foreground after Ctrl+V, paste likely missed the target.
+        if (IsOwnProcessForeground())
+        {
+            return ClipboardPasteOutcome.FocusStolen;
+        }
+
         return ClipboardPasteOutcome.Pasted;
+    }
+
+    private static bool IsOwnProcessForeground()
+    {
+        var hwnd = GetForegroundWindow();
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        _ = GetWindowThreadProcessId(hwnd, out var processId);
+        return processId == (uint)Environment.ProcessId;
     }
 
     /// <summary>
@@ -331,6 +349,12 @@ public sealed class WindowsTextInjector : ITextInjector
         ];
         return SendInput(4, inputs, InputSize) == 4;
     }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);

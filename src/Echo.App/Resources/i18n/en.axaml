@@ -34,8 +34,10 @@
   <sys:String x:Key="Loc.Settings.TypeSpeed">Typing speed</sys:String>
   <sys:String x:Key="Loc.Settings.TypeSpeed.Tooltip">Delay between characters in Type mode</sys:String>
   <sys:String x:Key="Loc.Settings.TrailingSpace">Trailing space after phrase</sys:String>
-  <sys:String x:Key="Loc.Settings.ShowToast">Show text after dictation</sys:String>
-  <sys:String x:Key="Loc.Settings.ShowToast.Tooltip">Flash with recognized text. Click it to copy.</sys:String>
+  <sys:String x:Key="Loc.Settings.PostRelease">Release tail</sys:String>
+  <sys:String x:Key="Loc.Settings.PostRelease.Tooltip">Keep recording briefly after you release the hotkey so the last syllable is not cut off</sys:String>
+  <sys:String x:Key="Loc.Settings.ShowToast">Show text when paste fails</sys:String>
+  <sys:String x:Key="Loc.Settings.ShowToast.Tooltip">Flash with recognized text only if insertion failed. Click it to copy.</sys:String>
   <sys:String x:Key="Loc.Settings.StartWithSystem">Start with system</sys:String>
   <sys:String x:Key="Loc.Settings.StartWithSystem.Tooltip">Echo starts in the background at login</sys:String>
   <sys:String x:Key="Loc.Settings.UiLanguage">Interface language</sys:String>
@@ -69,6 +71,11 @@
   <sys:String x:Key="Loc.TypeSpeed.Fast">Fast</sys:String>
   <sys:String x:Key="Loc.TypeSpeed.Normal">Normal</sys:String>
   <sys:String x:Key="Loc.TypeSpeed.Smooth">Smooth</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Off">Off</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Short">0.3 s</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Normal">0.5 s</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Long">0.8 s</sys:String>
+  <sys:String x:Key="Loc.PostRelease.Max">1.0 s</sys:String>
 
   <sys:String x:Key="Loc.Status.Done">Done</sys:String>
   <sys:String x:Key="Loc.Status.DoneWithDetail">Done: {0}</sys:String>

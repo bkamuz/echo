@@ -153,14 +153,20 @@ public sealed class WindowsHotkeyService : IHotkeyService
             return;
         }
 
-        if (_syncContext is not null)
-        {
-            _syncContext.Post(_ => handler(), null);
-        }
-        else
+        if (_syncContext is null)
         {
             handler();
+            return;
         }
+
+        // Hook callback already runs on the UI message loop — avoid an extra Post hop.
+        if (ReferenceEquals(SynchronizationContext.Current, _syncContext))
+        {
+            handler();
+            return;
+        }
+
+        _syncContext.Post(_ => handler(), null);
     }
 
     private static int NormalizeVk(int vk) => vk switch

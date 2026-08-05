@@ -47,6 +47,12 @@ public sealed class AppConfig
     [JsonPropertyName("min_press_ms")]
     public int MinPressMs { get; set; } = 300;
 
+    /// <summary>
+    /// Extra capture after hotkey release so the last syllable is not cut off.
+    /// </summary>
+    [JsonPropertyName("post_release_ms")]
+    public int PostReleaseMs { get; set; } = 500;
+
     [JsonPropertyName("sample_rate")]
     public int SampleRate { get; set; } = 16000;
 
@@ -89,6 +95,7 @@ public sealed class AppConfig
             InputMethod = InputMethod,
             TypeDelayMs = TypeDelayMs,
             MinPressMs = MinPressMs,
+            PostReleaseMs = PostReleaseMs,
             SampleRate = SampleRate,
             AddTrailingSpace = AddTrailingSpace,
             ShowDictationToast = ShowDictationToast,
@@ -143,6 +150,7 @@ public sealed class AppConfig
         }
 
         TypeDelayMs = Math.Clamp(TypeDelayMs, 0, 50);
+        PostReleaseMs = Math.Clamp(PostReleaseMs, 0, 1500);
 
         if (OperatingSystem.IsLinux())
         {

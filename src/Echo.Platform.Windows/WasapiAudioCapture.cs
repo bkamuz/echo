@@ -28,6 +28,10 @@ public sealed class WasapiAudioCapture : IAudioCapture, IDisposable
     private float[] _resampleScratch = [];
     private volatile bool _acceptingData;
 
+    /// <summary>Requested device key (id/name) → last resolved WASAPI endpoint id.</summary>
+    private string? _cachedDeviceKey;
+    private string? _cachedEndpointId;
+
     public WasapiAudioCapture(ILogger<WasapiAudioCapture>? logger = null)
     {
         _logger = logger;
@@ -363,9 +367,27 @@ public sealed class WasapiAudioCapture : IAudioCapture, IDisposable
 
     /// <summary>
     /// Settings may store WASAPI endpoint Id, legacy WaveIn index ("0","1",...), or ProductName.
+    /// Caches the resolved endpoint id so subsequent presses skip full enumeration.
     /// </summary>
     private MMDevice ResolveDevice(string? deviceIdOrName)
     {
+        var key = deviceIdOrName ?? string.Empty;
+        if (_cachedEndpointId is not null
+            && string.Equals(_cachedDeviceKey, key, StringComparison.Ordinal))
+        {
+            try
+            {
+                using var cachedEnumerator = new MMDeviceEnumerator();
+                return cachedEnumerator.GetDevice(_cachedEndpointId);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Cached capture endpoint {Id} unavailable — re-resolving", _cachedEndpointId);
+                _cachedEndpointId = null;
+                _cachedDeviceKey = null;
+            }
+        }
+
         using var enumerator = new MMDeviceEnumerator();
         var devices = enumerator
             .EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)
@@ -379,52 +401,69 @@ public sealed class WasapiAudioCapture : IAudioCapture, IDisposable
         MMDevice PickDefault() =>
             enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
 
+        MMDevice resolved;
         if (string.IsNullOrWhiteSpace(deviceIdOrName))
         {
-            return PickDefault();
+            resolved = PickDefault();
         }
-
-        var byId = devices.Find(d => d.ID.Equals(deviceIdOrName, StringComparison.OrdinalIgnoreCase));
-        if (byId is not null)
+        else
         {
-            return byId;
-        }
-
-        if (int.TryParse(deviceIdOrName, out var index) && index >= 0)
-        {
-            var waveInName = TryGetWaveInProductName(index);
-            if (!string.IsNullOrWhiteSpace(waveInName))
+            var byId = devices.Find(d => d.ID.Equals(deviceIdOrName, StringComparison.OrdinalIgnoreCase));
+            if (byId is not null)
             {
-                var match = MatchByFriendlyName(devices, waveInName);
-                if (match is not null)
+                resolved = byId;
+            }
+            else if (int.TryParse(deviceIdOrName, out var index) && index >= 0)
+            {
+                resolved = ResolveLegacyIndex(devices, index) ?? PickDefault();
+            }
+            else
+            {
+                var byName = MatchByFriendlyName(devices, deviceIdOrName);
+                if (byName is not null)
                 {
-                    _logger?.LogInformation(
-                        "Mapped legacy WaveIn index {Index} ({WaveInName}) → {WasapiName}",
-                        index,
-                        waveInName,
-                        match.FriendlyName);
-                    return match;
+                    resolved = byName;
+                }
+                else
+                {
+                    _logger?.LogWarning("Capture device '{Device}' not found — using default", deviceIdOrName);
+                    resolved = PickDefault();
                 }
             }
+        }
 
-            if (index < devices.Count)
+        _cachedDeviceKey = key;
+        _cachedEndpointId = resolved.ID;
+        return resolved;
+    }
+
+    private MMDevice? ResolveLegacyIndex(List<MMDevice> devices, int index)
+    {
+        var waveInName = TryGetWaveInProductName(index);
+        if (!string.IsNullOrWhiteSpace(waveInName))
+        {
+            var match = MatchByFriendlyName(devices, waveInName);
+            if (match is not null)
             {
                 _logger?.LogInformation(
-                    "Mapped legacy WaveIn index {Index} by ordinal → {WasapiName}",
+                    "Mapped legacy WaveIn index {Index} ({WaveInName}) → {WasapiName}",
                     index,
-                    devices[index].FriendlyName);
-                return devices[index];
+                    waveInName,
+                    match.FriendlyName);
+                return match;
             }
         }
 
-        var byName = MatchByFriendlyName(devices, deviceIdOrName);
-        if (byName is not null)
+        if (index < devices.Count)
         {
-            return byName;
+            _logger?.LogInformation(
+                "Mapped legacy WaveIn index {Index} by ordinal → {WasapiName}",
+                index,
+                devices[index].FriendlyName);
+            return devices[index];
         }
 
-        _logger?.LogWarning("Capture device '{Device}' not found — using default", deviceIdOrName);
-        return PickDefault();
+        return null;
     }
 
     private static AudioDeviceInfo? MatchListedByName(IReadOnlyList<AudioDeviceInfo> devices, string name)
