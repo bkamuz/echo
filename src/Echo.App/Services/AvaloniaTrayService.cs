@@ -70,8 +70,23 @@ public sealed class AvaloniaTrayService : ITrayStateService
             return;
         }
 
-        _currentState = state;
-        ApplyState(state);
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            _currentState = state;
+            ApplyState(state);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_currentState == state)
+            {
+                return;
+            }
+
+            _currentState = state;
+            ApplyState(state);
+        });
     }
 
     private void ApplyTooltipForCurrentState() => ApplyState(_currentState);

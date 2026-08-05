@@ -319,7 +319,9 @@ public sealed class DictationCoordinator : IDisposable
         float[] samples;
         try
         {
-            samples = await Task.Run(_audio.StopRecording).ConfigureAwait(false);
+            // Stop on a worker thread so RecordingStopped wait does not block the UI,
+            // but resume on the UI sync context for Avalonia tray/overlay updates.
+            samples = await Task.Run(_audio.StopRecording);
         }
         catch (Exception ex)
         {
