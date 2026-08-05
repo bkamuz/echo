@@ -37,6 +37,15 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
     protected override string GetLoadFailedMessage() =>
         "Не удалось загрузить GigaAM. Проверьте целостность модели.";
 
+    /// <summary>
+    /// Multilingual CTC (~225MB int8) often aborts the process under DirectML EP;
+    /// keep it on CPU. Managed DirectML failures are caught, native aborts are not.
+    /// </summary>
+    protected override string PreferProvider(string requestedProvider) =>
+        Config.GigaAmModelSize == "multilingual" && requestedProvider == "directml"
+            ? "cpu"
+            : requestedProvider;
+
     protected override OfflineModelConfig CreateModelConfig(string provider)
     {
         _variant = Config.GigaAmModelSize;
@@ -79,6 +88,8 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
             throw new InvalidOperationException(
                 $"GigaAM {_variant} модель не найдена. Скачайте через настройки приложения.");
         }
+
+        TokenFileNormalizer.EnsureUnixNewlines(ctc.Tokens);
 
         return new OfflineModelConfig
         {

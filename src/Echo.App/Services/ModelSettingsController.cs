@@ -84,6 +84,13 @@ public sealed class ModelSettingsController
                 _status.SetStatus(status, busy: !isTerminal);
             });
             await _downloader.DownloadAsync(spec, progress, cancellationToken).ConfigureAwait(false);
+
+            if (!spec.IsDownloaded())
+            {
+                throw new InvalidOperationException(
+                    $"Download finished but '{spec.Title}' is incomplete. Try again.");
+            }
+
             await Dispatcher.UIThread.InvokeAsync(() =>
                 setModelStatus(_loc.Format("Loc.Model.Loaded", spec.Title)));
 
@@ -100,6 +107,24 @@ public sealed class ModelSettingsController
                     SettingsApplyService.StatusClearMs);
             });
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                setModelStatus(_loc.Format("Loc.Model.NotLoaded", spec.Title));
+                _status.SetStatus("Loc.Status.ApplyError", alert: true);
+            });
+            return false;
+        }
+        catch (Exception)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                setModelStatus(_loc.Format("Loc.Model.NotLoaded", spec.Title));
+                _status.SetStatus("Loc.Model.DownloadFailed", alert: true);
+            });
+            return false;
         }
         finally
         {

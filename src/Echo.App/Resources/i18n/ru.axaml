@@ -114,6 +114,7 @@
   <sys:String x:Key="Loc.Model.Loaded">{0} ✓ загружена</sys:String>
   <sys:String x:Key="Loc.Model.NotLoaded">{0} — не загружена</sys:String>
   <sys:String x:Key="Loc.Model.Deleted">{0} удалена</sys:String>
+  <sys:String x:Key="Loc.Model.DownloadFailed">Не удалось скачать или активировать модель — проверьте сеть и повторите</sys:String>
   <sys:String x:Key="Loc.Model.DefaultTitle">Модель распознавания</sys:String>
 
   <!-- History -->

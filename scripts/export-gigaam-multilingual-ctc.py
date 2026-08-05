@@ -62,7 +62,7 @@ def write_tokens(path: Path, labels: list[str], blank_id: int | None = None) -> 
     # Sherpa NeMo CTC expects blank as the last token id.
     if blank_id is None:
         blank_id = len(labels)
-    with path.open("w", encoding="utf-8") as f:
+    with path.open("w", encoding="utf-8", newline="\n") as f:
         for i, token in enumerate(labels):
             f.write(f"{token} {i}\n")
         f.write(f"<blk> {blank_id}\n")

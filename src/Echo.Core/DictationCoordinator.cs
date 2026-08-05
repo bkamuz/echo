@@ -197,6 +197,15 @@ public sealed class DictationCoordinator : IDisposable
         {
             await WarmupIfDownloadedAsync(_config, progress, cancellationToken);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Model warmup failed after download/apply");
+            throw;
+        }
         finally
         {
             _saveLock.Release();

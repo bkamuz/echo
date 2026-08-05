@@ -30,7 +30,7 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
     public Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
     {
         var loadKey = GetLoadKey();
-        var requestedProvider = SherpaProviderHelper.ResolveSherpaProvider(Config.Device);
+        var requestedProvider = PreferProvider(SherpaProviderHelper.ResolveSherpaProvider(Config.Device));
 
         if (_recognizer is not null
             && _loadedKey == loadKey
@@ -92,6 +92,11 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
     protected virtual string PostProcess(string text) => text;
 
     protected virtual int FeatureDim => 80;
+
+    /// <summary>
+    /// Override to force a safer EP for models that abort natively under DirectML.
+    /// </summary>
+    protected virtual string PreferProvider(string requestedProvider) => requestedProvider;
 
     private bool TryCreateWithFallback(
         string requestedProvider,

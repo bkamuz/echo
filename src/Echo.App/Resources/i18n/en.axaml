@@ -107,6 +107,7 @@
   <sys:String x:Key="Loc.Model.Loaded">{0} ✓ loaded</sys:String>
   <sys:String x:Key="Loc.Model.NotLoaded">{0} — not downloaded</sys:String>
   <sys:String x:Key="Loc.Model.Deleted">{0} deleted</sys:String>
+  <sys:String x:Key="Loc.Model.DownloadFailed">Model download or activation failed — check the network and try again</sys:String>
   <sys:String x:Key="Loc.Model.DefaultTitle">Recognition model</sys:String>
 
   <sys:String x:Key="Loc.History.Loading">Loading history…</sys:String>

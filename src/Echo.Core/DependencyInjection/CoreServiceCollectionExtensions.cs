@@ -14,7 +14,12 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<HistoryStore>();
         services.AddSingleton<TranscriptionService>();
         services.AddSingleton<DictationCoordinator>();
-        services.AddHttpClient("echo-models");
+        services.AddHttpClient("echo-models", (_, client) =>
+        {
+            // Multilingual CTC int8 alone is ~225 MB; default 100s is too short on many links.
+            client.Timeout = TimeSpan.FromHours(1);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd($"Echo/{UpdateEnvironment.CurrentVersion}");
+        });
         services.AddSingleton(sp =>
         {
             var httpFactory = sp.GetRequiredService<System.Net.Http.IHttpClientFactory>();

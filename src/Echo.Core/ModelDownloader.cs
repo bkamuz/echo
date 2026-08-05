@@ -143,6 +143,12 @@ public sealed class ModelDownloader
                     await using var file = File.Create(tmpPath);
                     await stream.CopyToAsync(file, cancellationToken);
                     File.Move(tmpPath, targetPath, overwrite: true);
+                    if (fileName.EndsWith("_tokens.txt", StringComparison.OrdinalIgnoreCase)
+                        || fileName.Equals("tokens.txt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        TokenFileNormalizer.EnsureUnixNewlines(targetPath);
+                    }
+
                     lastError = null;
                     break;
                 }
@@ -233,6 +239,10 @@ public sealed class ModelDownloader
             }
 
             File.Move(tmpPath, targetPath, overwrite: true);
+            if (path.EndsWith("tokens.txt", StringComparison.OrdinalIgnoreCase))
+            {
+                TokenFileNormalizer.EnsureUnixNewlines(targetPath);
+            }
         }
     }
 
