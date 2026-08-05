@@ -22,7 +22,7 @@ public sealed class WindowsFocusTarget : IFocusTarget
         }
 
         var info = new GuiThreadInfo { CbSize = Marshal.SizeOf<GuiThreadInfo>() };
-        if (!GetGuiThreadInfo(threadId, ref info))
+        if (!GetGUIThreadInfo(threadId, ref info))
         {
             return 0;
         }
@@ -89,7 +89,25 @@ public sealed class WindowsFocusTarget : IFocusTarget
             return;
         }
 
-        _ = SetFocus(focusHandle);
+        var targetThread = GetWindowThreadProcessId(focusHandle, out _);
+        var currentThread = GetCurrentThreadId();
+        var attached = false;
+        if (targetThread != 0 && targetThread != currentThread)
+        {
+            attached = AttachThreadInput(currentThread, targetThread, true);
+        }
+
+        try
+        {
+            _ = SetFocus(focusHandle);
+        }
+        finally
+        {
+            if (attached)
+            {
+                AttachThreadInput(currentThread, targetThread, false);
+            }
+        }
     }
 
     public bool IsOwnWindow(nint handle)
@@ -124,8 +142,9 @@ public sealed class WindowsFocusTarget : IFocusTarget
     [DllImport("user32.dll")]
     private static extern nint SetFocus(nint hWnd);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool GetGuiThreadInfo(uint idThread, ref GuiThreadInfo lpgui);
+    // Exact name required: GetProcAddress is case-sensitive (GetGuiThreadInfo ≠ GetGUIThreadInfo).
+    [DllImport("user32.dll", EntryPoint = "GetGUIThreadInfo", SetLastError = true)]
+    private static extern bool GetGUIThreadInfo(uint idThread, ref GuiThreadInfo lpgui);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct GuiThreadInfo

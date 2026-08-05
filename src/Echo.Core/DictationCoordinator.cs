@@ -275,15 +275,17 @@ public sealed class DictationCoordinator : IDisposable
 
         _isRecording = true;
         _pressStarted = DateTimeOffset.UtcNow;
-        _targetWindow = CaptureInjectionTarget();
         try
         {
+            _targetWindow = CaptureInjectionTarget();
             _audio.StartRecording(_config.SampleRate, _config.InputDevice);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to start audio recording");
             _isRecording = false;
+            _targetWindow = 0;
+            _targetFocus = 0;
             FinishDictation("Не удалось начать запись микрофона", alert: true);
             return;
         }
@@ -447,13 +449,20 @@ public sealed class DictationCoordinator : IDisposable
     private nint CaptureInjectionTarget()
     {
         var handle = _focusTarget.CaptureTargetWindow();
-        _targetFocus = handle == 0 || _focusTarget.IsOwnWindow(handle)
-            ? 0
-            : _focusTarget.CaptureTargetFocus();
-
         if (handle == 0 || _focusTarget.IsOwnWindow(handle))
         {
+            _targetFocus = 0;
             return 0;
+        }
+
+        try
+        {
+            _targetFocus = _focusTarget.CaptureTargetFocus();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to capture focus HWND — paste will use top-level window only");
+            _targetFocus = 0;
         }
 
         return handle;
