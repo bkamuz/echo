@@ -11,7 +11,7 @@ namespace echo.Platform.Windows;
 /// </summary>
 public sealed class WasapiAudioCapture : IAudioCapture, IDisposable
 {
-    private const int StopTimeoutMs = 2000;
+    private const int StopTimeoutMs = 750;
 
     private readonly object _gate = new();
     private readonly ConcurrentQueue<float> _buffer = new();

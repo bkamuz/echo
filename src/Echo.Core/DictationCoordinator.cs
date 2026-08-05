@@ -306,19 +306,8 @@ public sealed class DictationCoordinator : IDisposable
             return;
         }
 
-        // Stop capture before Processing UI so WASAPI teardown cannot race the overlay.
-        float[] samples;
-        try
-        {
-            samples = _audio.StopRecording();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to stop audio recording");
-            FinishDictation("Loc.Status.RecognitionError", alert: true);
-            return;
-        }
-
+        // Switch UI immediately; safe WASAPI stop runs off the UI thread so the
+        // listening icon/spectrogram does not linger during RecordingStopped wait.
         _tray.SetState(DictationOverlayState.Processing);
 
         // Only undo if Echo itself stole activation. Unconditional restore
@@ -326,6 +315,18 @@ public sealed class DictationCoordinator : IDisposable
         RestoreInjectionTarget(onlyIfStolenByUs: true);
 
         await Task.Yield();
+
+        float[] samples;
+        try
+        {
+            samples = await Task.Run(_audio.StopRecording).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop audio recording");
+            FinishDictation("Loc.Status.RecognitionError", alert: true);
+            return;
+        }
 
         try
         {
