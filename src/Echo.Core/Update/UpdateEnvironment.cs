@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 
@@ -8,7 +9,21 @@ public static class UpdateEnvironment
 {
     public const string GitHubOwner = "bkamuz";
     public const string GitHubRepo = "echo";
-    public const string WindowsPortableAssetSuffix = "-win-x64-portable.zip";
+    public const string WindowsX64PortableAssetSuffix = "-win-x64-portable.zip";
+    public const string WindowsArm64PortableAssetSuffix = "-win-arm64-portable.zip";
+
+    /// <summary>Legacy alias for x64 clients / tests.</summary>
+    public const string WindowsPortableAssetSuffix = WindowsX64PortableAssetSuffix;
+
+    public static string CurrentWindowsPortableAssetSuffix =>
+        RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.Arm64 => WindowsArm64PortableAssetSuffix,
+            _ => WindowsX64PortableAssetSuffix,
+        };
+
+    public static bool IsWindowsArm64Process =>
+        RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
 
     public static string UpdateManifestUrl =>
         $"https://raw.githubusercontent.com/{GitHubOwner}/{GitHubRepo}/main/latest.json";

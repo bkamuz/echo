@@ -28,6 +28,12 @@ public sealed class DirectMlRuntimeInstaller
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        if (RuntimeInformation.ProcessArchitecture is Architecture.Arm64 or Architecture.Arm)
+        {
+            throw new PlatformNotSupportedException(
+                "DirectML runtime is not available on Windows ARM. Use CPU recognition.");
+        }
+
         if (IsInstalled)
         {
             DirectMlPaths.PrepareNativeSearchPath();

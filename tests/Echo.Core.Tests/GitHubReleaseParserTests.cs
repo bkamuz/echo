@@ -17,15 +17,22 @@ public class GitHubReleaseParserTests
         {
           "name": "Echo-1.3.0-win-x64-portable.zip",
           "browser_download_url": "https://github.com/bkamuz/echo/releases/download/v1.3.0/Echo-1.3.0-win-x64-portable.zip"
+        },
+        {
+          "name": "Echo-1.3.0-win-arm64-portable.zip",
+          "browser_download_url": "https://github.com/bkamuz/echo/releases/download/v1.3.0/Echo-1.3.0-win-arm64-portable.zip"
         }
       ]
     }
     """;
 
     [Fact]
-    public void TryParseLatestRelease_ReturnsUpdate_WhenNewerVersionExists()
+    public void TryParseLatestRelease_ReturnsX64Update_WhenX64SuffixRequested()
     {
-        var update = GitHubReleaseParser.TryParseLatestRelease(SampleReleaseJson, new Version(1, 2, 0));
+        var update = GitHubReleaseParser.TryParseLatestRelease(
+            SampleReleaseJson,
+            new Version(1, 2, 0),
+            UpdateEnvironment.WindowsX64PortableAssetSuffix);
 
         Assert.NotNull(update);
         Assert.Equal(new Version(1, 3, 0), update.Version);
@@ -36,9 +43,26 @@ public class GitHubReleaseParserTests
     }
 
     [Fact]
+    public void TryParseLatestRelease_ReturnsArm64Update_WhenArm64SuffixRequested()
+    {
+        var update = GitHubReleaseParser.TryParseLatestRelease(
+            SampleReleaseJson,
+            new Version(1, 2, 0),
+            UpdateEnvironment.WindowsArm64PortableAssetSuffix);
+
+        Assert.NotNull(update);
+        Assert.Equal(
+            "https://github.com/bkamuz/echo/releases/download/v1.3.0/Echo-1.3.0-win-arm64-portable.zip",
+            update.DownloadUrl);
+    }
+
+    [Fact]
     public void TryParseLatestRelease_ReturnsNull_WhenVersionIsCurrent()
     {
-        var update = GitHubReleaseParser.TryParseLatestRelease(SampleReleaseJson, new Version(1, 3, 0));
+        var update = GitHubReleaseParser.TryParseLatestRelease(
+            SampleReleaseJson,
+            new Version(1, 3, 0),
+            UpdateEnvironment.WindowsX64PortableAssetSuffix);
         Assert.Null(update);
     }
 

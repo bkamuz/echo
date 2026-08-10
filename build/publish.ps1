@@ -52,6 +52,17 @@ switch -Wildcard ($Runtime) {
             "$outDir/runtimes/macos-arm64",
             "$outDir/runtimes/macos-x64"
         Remove-Item -Force -ErrorAction SilentlyContinue "$outDir/ggml-metal.metal"
+        if ($Runtime -eq "win-arm64") {
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue `
+                "$outDir/directml",
+                "$outDir/runtimes/win-x64",
+                "$outDir/runtimes/win-x86"
+        }
+        else {
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue `
+                "$outDir/runtimes/win-arm64",
+                "$outDir/runtimes/win-x86"
+        }
     }
 }
 

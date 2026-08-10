@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("win-x64")]
+    [ValidateSet("win-x64", "win-arm64")]
     [string]$Runtime = "win-x64",
     [string]$Version = ""
 )
@@ -36,11 +36,8 @@ New-Item -ItemType Directory -Force -Path $staging | Out-Null
 try
 {
     Copy-Item (Join-Path $sourceDir "Echo.App.exe") $staging
-    $directMl = Join-Path $sourceDir "directml"
-    if (Test-Path $directMl)
-    {
-        Copy-Item $directMl (Join-Path $staging "directml") -Recurse
-    }
+    # Match CI portable-all.sh: do not bake DirectML into portable zips.
+    # (GPU runtime is downloaded on first select for x64 only.)
 
     Compress-Archive -Path (Join-Path $staging "*") -DestinationPath $zipPath -CompressionLevel Optimal
 }

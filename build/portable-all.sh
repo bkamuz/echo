@@ -11,11 +11,12 @@ fi
 release_dir="$root/dist/releases"
 mkdir -p "$release_dir"
 
-publish_win_x64() {
-  bash "$root/build/publish.sh" win-x64 "$version"
+publish_win_portable() {
+  local rid="$1"
+  bash "$root/build/publish.sh" "$rid" "$version"
 
-  local source_dir="$root/dist/win-x64"
-  local zip_name="Echo-${version}-win-x64-portable.zip"
+  local source_dir="$root/dist/$rid"
+  local zip_name="Echo-${version}-${rid}-portable.zip"
   local zip_path="$release_dir/$zip_name"
   local staging
   staging="$(mktemp -d)"
@@ -26,7 +27,7 @@ publish_win_x64() {
   fi
 
   cp "$source_dir/Echo.App.exe" "$staging/"
-  # DirectML is downloaded on first GPU select — not baked into the default portable zip.
+  # DirectML is downloaded on first GPU select (x64 only) — not baked into portable zips.
 
   rm -f "$zip_path"
   (cd "$staging" && zip -qr "$zip_path" .)
@@ -37,7 +38,8 @@ publish_win_x64() {
   echo "Portable: $zip_path ($size_mb MB)"
 }
 
-publish_win_x64
+publish_win_portable win-x64
+publish_win_portable win-arm64
 bash "$root/build/portable.sh" linux-x64 "$version"
 bash "$root/build/linux-packages.sh" "$version"
 bash "$root/build/portable.sh" osx-arm64 "$version"

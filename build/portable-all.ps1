@@ -14,8 +14,10 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 
-& $portableScript -Runtime win-x64 -Version $Version
-if ($LASTEXITCODE) { throw "portable.ps1 win-x64 failed (exit $LASTEXITCODE)" }
+foreach ($winRid in @("win-x64", "win-arm64")) {
+    & $portableScript -Runtime $winRid -Version $Version
+    if ($LASTEXITCODE) { throw "portable.ps1 $winRid failed (exit $LASTEXITCODE)" }
+}
 
 function New-UnixPortable {
     param(

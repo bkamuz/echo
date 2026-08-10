@@ -53,7 +53,7 @@
   </PropertyGroup>
 
   <Target Name="CopyDirectMlNative" AfterTargets="Build"
-          Condition="'$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true' and ('$(RuntimeIdentifier)' == '' or $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win')))">
+          Condition="'$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64')">
     <PropertyGroup>
       <_DirectMlOutDir Condition="'$(_DirectMlOutDir)' == ''">$(OutputPath)</_DirectMlOutDir>
     </PropertyGroup>
@@ -67,7 +67,7 @@
 
   <Target Name="PrepareWinPublish" BeforeTargets="_ComputeFilesToBundle"
           DependsOnTargets="ComputeResolvedFilesToPublishList"
-          Condition="'$(RuntimeIdentifier)' == 'win-x64' and '$(PublishSingleFile)' == 'true'">
+          Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win')) and '$(PublishSingleFile)' == 'true'">
     <ItemGroup>
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
         Condition="$([System.String]::Copy('%(RelativePath)').Contains('runtimes/linux'))
@@ -75,8 +75,21 @@
                   Or $([System.String]::Copy('%(RelativePath)').EndsWith('.pdb'))
                   Or $([System.String]::Copy('%(RelativePath)').EndsWith('.lib'))
                   Or $([System.String]::Copy('%(RelativePath)').EndsWith('.metal'))" />
-      <DirectMlNativeForPublish Include="$(DirectMlNativeDir)*.dll" Condition="'$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true'" />
-      <ResolvedFileToPublish Include="@(DirectMlNativeForPublish)" Condition="'$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true'">
+      <!-- Drop the opposite Windows RID natives from the single-file bundle. -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+        Condition="'$(RuntimeIdentifier)' == 'win-arm64'
+                  And ($([System.String]::Copy('%(RelativePath)').Contains('runtimes/win-x64'))
+                    Or $([System.String]::Copy('%(RelativePath)').Contains('runtimes/win-x86'))
+                    Or $([System.String]::Copy('%(RelativePath)').Contains('directml')))" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+        Condition="'$(RuntimeIdentifier)' == 'win-x64'
+                  And ($([System.String]::Copy('%(RelativePath)').Contains('runtimes/win-arm64'))
+                    Or $([System.String]::Copy('%(RelativePath)').Contains('runtimes/win-x86')))" />
+      <!-- Never bake x64 DirectML into win-arm64 (or any non-x64) publishes. -->
+      <DirectMlNativeForPublish Include="$(DirectMlNativeDir)*.dll"
+        Condition="'$(RuntimeIdentifier)' == 'win-x64' and '$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true'" />
+      <ResolvedFileToPublish Include="@(DirectMlNativeForPublish)"
+        Condition="'$(RuntimeIdentifier)' == 'win-x64' and '$(ShipDirectMl)' == 'true' and '$(DirectMlNativeReady)' == 'true'">
         <RelativePath>directml\%(DirectMlNativeForPublish.Filename)%(DirectMlNativeForPublish.Extension)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>

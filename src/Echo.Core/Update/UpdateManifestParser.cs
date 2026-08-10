@@ -5,7 +5,14 @@ namespace echo.Core.Update;
 
 public static class UpdateManifestParser
 {
-    public static UpdateInfo? TryParseManifest(string json, Version currentVersion)
+    public static UpdateInfo? TryParseManifest(string json, Version currentVersion) =>
+        TryParseManifest(json, currentVersion, UpdateEnvironment.IsWindowsArm64Process);
+
+    /// <summary>
+    /// Parses latest.json. On ARM64 prefers downloadUrlWinArm64; otherwise downloadUrl (x64).
+    /// Does not fall back from ARM to x64 — wrong-arch zips must never be offered.
+    /// </summary>
+    public static UpdateInfo? TryParseManifest(string json, Version currentVersion, bool preferArm64)
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -26,14 +33,11 @@ public static class UpdateManifestParser
             return null;
         }
 
-        if (!root.TryGetProperty("downloadUrl", out var downloadUrlElement))
-        {
-            return null;
-        }
+        var downloadUrl = preferArm64
+            ? ReadHttpsUrl(root, "downloadUrlWinArm64")
+            : ReadHttpsUrl(root, "downloadUrl");
 
-        var downloadUrl = downloadUrlElement.GetString();
-        if (string.IsNullOrWhiteSpace(downloadUrl)
-            || !downloadUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        if (downloadUrl is null)
         {
             return null;
         }
@@ -50,5 +54,22 @@ public static class UpdateManifestParser
             DownloadUrl = downloadUrl,
             ReleaseNotesUrl = releaseNotesUrl,
         };
+    }
+
+    private static string? ReadHttpsUrl(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var element))
+        {
+            return null;
+        }
+
+        var url = element.GetString();
+        if (string.IsNullOrWhiteSpace(url)
+            || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return url;
     }
 }

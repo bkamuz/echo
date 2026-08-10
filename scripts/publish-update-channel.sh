@@ -16,8 +16,10 @@ fi
 
 REPO="${UPDATES_REPO:-${GITHUB_REPOSITORY:-bkamuz/echo}}"
 TAG="v${VERSION}"
-ASSET_NAME="Echo-${VERSION}-win-x64-portable.zip"
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET_NAME}"
+ASSET_X64="Echo-${VERSION}-win-x64-portable.zip"
+ASSET_ARM64="Echo-${VERSION}-win-arm64-portable.zip"
+DOWNLOAD_URL_X64="https://github.com/${REPO}/releases/download/${TAG}/${ASSET_X64}"
+DOWNLOAD_URL_ARM64="https://github.com/${REPO}/releases/download/${TAG}/${ASSET_ARM64}"
 RELEASE_NOTES_URL="https://github.com/${REPO}/releases/tag/${TAG}"
 
 export GH_TOKEN
@@ -31,7 +33,8 @@ cd "$WORK_DIR/repo"
 cat > latest.json <<EOF
 {
   "version": "${VERSION}",
-  "downloadUrl": "${DOWNLOAD_URL}",
+  "downloadUrl": "${DOWNLOAD_URL_X64}",
+  "downloadUrlWinArm64": "${DOWNLOAD_URL_ARM64}",
   "releaseNotesUrl": "${RELEASE_NOTES_URL}"
 }
 EOF

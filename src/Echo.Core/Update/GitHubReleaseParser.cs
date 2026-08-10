@@ -5,7 +5,10 @@ namespace echo.Core.Update;
 
 public static class GitHubReleaseParser
 {
-    public static UpdateInfo? TryParseLatestRelease(string json, Version currentVersion)
+    public static UpdateInfo? TryParseLatestRelease(string json, Version currentVersion) =>
+        TryParseLatestRelease(json, currentVersion, UpdateEnvironment.CurrentWindowsPortableAssetSuffix);
+
+    public static UpdateInfo? TryParseLatestRelease(string json, Version currentVersion, string portableAssetSuffix)
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -50,7 +53,7 @@ public static class GitHubReleaseParser
                 continue;
             }
 
-            if (!name.EndsWith(UpdateEnvironment.WindowsPortableAssetSuffix, StringComparison.OrdinalIgnoreCase))
+            if (!name.EndsWith(portableAssetSuffix, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

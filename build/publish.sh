@@ -47,6 +47,11 @@ prune_loose_artifacts() {
       rm -rf "$out_dir/runtimes/linux-x64" "$out_dir/runtimes/linux-arm64"
       rm -rf "$out_dir/runtimes/macos-arm64" "$out_dir/runtimes/macos-x64"
       rm -f "$out_dir/ggml-metal.metal"
+      if [[ "$rid" == "win-arm64" ]]; then
+        rm -rf "$out_dir/directml" "$out_dir/runtimes/win-x64" "$out_dir/runtimes/win-x86"
+      else
+        rm -rf "$out_dir/runtimes/win-arm64" "$out_dir/runtimes/win-x86"
+      fi
       ;;
   esac
 
