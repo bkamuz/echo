@@ -41,6 +41,18 @@ public class ModelRegistryTests
     }
 
     [Fact]
+    public void SpecForEngine_ReturnsGigaAmMultilingualLargeSpec()
+    {
+        var spec = ModelRegistry.SpecForEngine("gigaam", "small", "multilingual-large");
+        Assert.NotNull(spec);
+        Assert.Equal("gigaam-multilingual-large-ctc", spec!.Id);
+        Assert.Equal(ModelRegistry.GigaAmMultilingualLargeRepo, spec.RepoId);
+        Assert.Null(spec.GitHubReleaseTag);
+        Assert.Equal(ModelRegistry.GigaAmMultilingualLargeAllowPatterns, spec.AllowPatterns);
+        Assert.Equal(AppPaths.GigaAmMultilingualLargeDir, spec.LocalDir);
+    }
+
+    [Fact]
     public void SpecForEngine_ReturnsNullForUnknownEngine()
     {
         Assert.Null(ModelRegistry.SpecForEngine("invalid", "small", "e2e"));

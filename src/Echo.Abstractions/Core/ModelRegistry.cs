@@ -12,6 +12,10 @@ public static class ModelRegistry
     public const string GigaAmMultilingualReleaseTag = "gigaam-multilingual-ctc";
     public const string GigaAmMultilingualPrefix = "gigaam_multilingual_ctc";
 
+    /// <summary>Sherpa-ready Multilingual Large CTC (~600M int8) on Hugging Face.</summary>
+    public const string GigaAmMultilingualLargeRepo = "fussraider/GigaAM-Multilingual-sherpa-onnx-ctc";
+    public const string GigaAmMultilingualLargePrefix = "gigaam_multilingual_large_ctc";
+
     public static IReadOnlyList<string> WhisperSizes { get; } =
         ["tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"];
 
@@ -50,6 +54,16 @@ public static class ModelRegistry
         $"{GigaAmMultilingualPrefix}_tokens.txt",
     ];
 
+    public static IReadOnlyList<string> GigaAmMultilingualLargeAllowPatterns { get; } =
+    [
+        "large/model.int8.onnx",
+        "large/model.onnx",
+        "large/tokens.txt",
+        $"{GigaAmMultilingualLargePrefix}_int8.onnx",
+        $"{GigaAmMultilingualLargePrefix}.onnx",
+        $"{GigaAmMultilingualLargePrefix}_tokens.txt",
+    ];
+
     public static string WhisperGgmlPath(string size) =>
         Path.Combine(AppPaths.WhisperDir(size), $"ggml-{size}.bin");
 
@@ -82,13 +96,18 @@ public static class ModelRegistry
         LocalDir: AppPaths.OmnilingualDir,
         AllowPatterns: OmnilingualAllowPatterns);
 
-    public static IReadOnlyList<string> GigaAmSizes { get; } = ["e2e", "e2e-ctc", "rnnt", "multilingual"];
+    public static IReadOnlyList<string> GigaAmSizes { get; } =
+        ["e2e", "e2e-ctc", "rnnt", "multilingual", "multilingual-large"];
 
     public static bool IsGigaAmCtcVariant(string variant) =>
-        variant is "e2e-ctc" or "multilingual";
+        variant is "e2e-ctc" or "multilingual" or "multilingual-large";
 
-    public static string GigaAmLocalDirFor(string variant) =>
-        variant == "multilingual" ? AppPaths.GigaAmMultilingualDir : AppPaths.GigaAmDir;
+    public static string GigaAmLocalDirFor(string variant) => variant switch
+    {
+        "multilingual" => AppPaths.GigaAmMultilingualDir,
+        "multilingual-large" => AppPaths.GigaAmMultilingualLargeDir,
+        _ => AppPaths.GigaAmDir,
+    };
 
     public static ModelSpec? GigaAmSpecFor(string variant) => variant switch
     {
@@ -121,6 +140,13 @@ public static class ModelRegistry
             LocalDir: AppPaths.GigaAmMultilingualDir,
             AllowPatterns: GigaAmMultilingualAllowPatterns,
             GitHubReleaseTag: GigaAmMultilingualReleaseTag),
+        "multilingual-large" => new ModelSpec(
+            Id: "gigaam-multilingual-large-ctc",
+            Title: "GigaAM Multilingual Large CTC",
+            Engine: "gigaam",
+            RepoId: GigaAmMultilingualLargeRepo,
+            LocalDir: AppPaths.GigaAmMultilingualLargeDir,
+            AllowPatterns: GigaAmMultilingualLargeAllowPatterns),
         _ => null,
     };
 
@@ -129,6 +155,7 @@ public static class ModelRegistry
         "gigaam-v3-rnnt" => "rnnt",
         "gigaam-v3-e2e-ctc" => "e2e-ctc",
         "gigaam-multilingual-ctc" => "multilingual",
+        "gigaam-multilingual-large-ctc" => "multilingual-large",
         _ => "e2e",
     };
 
@@ -167,6 +194,11 @@ public static class ModelRegistry
             return null;
         }
 
+        if (variant == "multilingual-large")
+        {
+            return ResolveGigaAmMultilingualLargeCtc(dir);
+        }
+
         var prefix = variant switch
         {
             "e2e-ctc" => GigaAmE2eCtcPrefix,
@@ -178,6 +210,35 @@ public static class ModelRegistry
             return null;
         }
 
+        return ResolveGigaAmCtcByPrefix(dir, prefix);
+    }
+
+    private static GigaAmCtcPaths? ResolveGigaAmMultilingualLargeCtc(string dir)
+    {
+        var flat = ResolveGigaAmCtcByPrefix(dir, GigaAmMultilingualLargePrefix);
+        if (flat is not null)
+        {
+            return flat;
+        }
+
+        var hfTokens = Path.Combine(dir, "large", "tokens.txt");
+        if (!File.Exists(hfTokens))
+        {
+            return null;
+        }
+
+        var hfInt8 = Path.Combine(dir, "large", "model.int8.onnx");
+        if (File.Exists(hfInt8))
+        {
+            return new GigaAmCtcPaths(hfInt8, hfTokens);
+        }
+
+        var hfFp32 = Path.Combine(dir, "large", "model.onnx");
+        return File.Exists(hfFp32) ? new GigaAmCtcPaths(hfFp32, hfTokens) : null;
+    }
+
+    private static GigaAmCtcPaths? ResolveGigaAmCtcByPrefix(string dir, string prefix)
+    {
         var tokens = Path.Combine(dir, $"{prefix}_tokens.txt");
         if (!File.Exists(tokens))
         {

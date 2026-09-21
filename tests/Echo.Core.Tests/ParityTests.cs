@@ -199,4 +199,56 @@ public class ParityTests
             Directory.Delete(dir, recursive: true);
         }
     }
+
+    [Fact]
+    public void GigaAm_SpecFor_MultilingualLarge_UsesHuggingFaceAndSeparateDir()
+    {
+        var spec = ModelRegistry.GigaAmSpecFor("multilingual-large");
+        Assert.NotNull(spec);
+        Assert.Equal("gigaam-multilingual-large-ctc", spec!.Id);
+        Assert.Equal(AppPaths.GigaAmMultilingualLargeDir, spec.LocalDir);
+        Assert.Equal(ModelRegistry.GigaAmMultilingualLargeRepo, spec.RepoId);
+        Assert.Equal("multilingual-large", ModelRegistry.GigaAmVariantFromSpecId(spec.Id));
+        Assert.Equal(AppPaths.GigaAmMultilingualLargeDir, ModelRegistry.GigaAmLocalDirFor("multilingual-large"));
+    }
+
+    [Fact]
+    public void GigaAm_ResolveCtc_MultilingualLarge_PrefersFlatPrefixInt8()
+    {
+        var dir = GigaAmTestFixtures.CreateTempDir();
+        try
+        {
+            GigaAmTestFixtures.WriteCtc(dir, ModelRegistry.GigaAmMultilingualLargePrefix, int8: true);
+            var paths = ModelRegistry.ResolveGigaAmCtc(dir, "multilingual-large");
+            Assert.NotNull(paths);
+            Assert.EndsWith("_int8.onnx", paths!.Model, StringComparison.Ordinal);
+            Assert.True(ModelRegistry.IsGigaAmVariantDownloaded(dir, "multilingual-large"));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GigaAm_ResolveCtc_MultilingualLarge_SupportsHuggingFaceLayout()
+    {
+        var dir = GigaAmTestFixtures.CreateTempDir();
+        try
+        {
+            var largeDir = Path.Combine(dir, "large");
+            Directory.CreateDirectory(largeDir);
+            File.WriteAllText(Path.Combine(largeDir, "model.int8.onnx"), "");
+            File.WriteAllText(Path.Combine(largeDir, "tokens.txt"), "");
+
+            var paths = ModelRegistry.ResolveGigaAmCtc(dir, "multilingual-large");
+            Assert.NotNull(paths);
+            Assert.EndsWith("large/model.int8.onnx", paths!.Model.Replace('\\', '/'), StringComparison.Ordinal);
+            Assert.True(ModelRegistry.IsGigaAmVariantDownloaded(dir, "multilingual-large"));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
 }
