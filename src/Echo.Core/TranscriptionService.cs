@@ -14,7 +14,10 @@ public sealed class TranscriptionService
 
     public ITranscriptionEngine Resolve(AppConfig config)
     {
-        var engineId = config.Engine;
+        var engineId = _engines.IsRegistered(config.Engine)
+            ? config.Engine
+            : _engines.RegisteredEngineIds.FirstOrDefault()
+                ?? config.Engine;
         var engine = _engines.GetRequired(engineId);
 
         engine.Configure(new EngineOptions

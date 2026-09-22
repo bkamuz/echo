@@ -172,6 +172,8 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsOmnilingual => Engine == "omnilingual";
     public bool IsParakeetNpu => Engine == "parakeet_npu";
     public bool IsDeviceVisible => Engine is not ("whisper" or "parakeet_npu");
+    public bool IsSherpaUnavailableOnPlatform => !SherpaWorkerPolicy.IsSupported;
+    public string SherpaArm64UnavailableHint => _loc.Get("Loc.Settings.SherpaArm64Unavailable");
 
     partial void OnIsApplyingChanged(bool value) => OnPropertyChanged(nameof(IsSettingsEnabled));
 
@@ -493,7 +495,7 @@ public partial class SettingsViewModel : ObservableObject
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
-                if (Engine == "parakeet_npu")
+                if (Engine == "parakeet_npu" && SherpaWorkerPolicy.IsSupported)
                 {
                     Engine = "gigaam";
                 }
@@ -604,12 +606,15 @@ public partial class SettingsViewModel : ObservableObject
     {
         var localized = BaseEngineIds
             .Where(id => id != "parakeet_npu" || _npuAvailability.IsLikelyPlatform)
+            .Where(id => !SherpaWorkerPolicy.IsSherpaEngineId(id) || SherpaWorkerPolicy.IsSupported)
             .Select(id => new EngineOption(id, GetEngineDisplayName(id)))
             .ToList();
         EngineOptions = localized.Where(o => _registeredEngineIds.Contains(o.Id)).ToList();
         if (EngineOptions.Count == 0)
         {
-            EngineOptions = localized.Where(o => o.Id == "gigaam").ToList();
+            EngineOptions = localized
+                .Where(o => o.Id is "parakeet_npu" or "gigaam")
+                .ToList();
         }
     }
 
@@ -777,6 +782,7 @@ public partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(ModelDownloadTooltip));
             OnPropertyChanged(nameof(ModelDeleteTooltip));
             OnPropertyChanged(nameof(TypeSpeedTooltip));
+            OnPropertyChanged(nameof(SherpaArm64UnavailableHint));
             OnPropertyChanged(nameof(IsTypeInput));
             UpdateModelStatus();
         }

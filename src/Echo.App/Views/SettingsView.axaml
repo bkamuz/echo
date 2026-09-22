@@ -129,6 +129,12 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
+                  <TextBlock Text="{Binding SherpaArm64UnavailableHint}"
+                             IsVisible="{Binding IsSherpaUnavailableOnPlatform}"
+                             TextWrapping="Wrap"
+                             FontSize="12"
+                             Opacity="0.75"
+                             Margin="0,4,0,0"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2"

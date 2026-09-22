@@ -11,4 +11,14 @@ public static class SherpaWorkerPolicy
     public static bool ShouldIsolate() =>
         OperatingSystem.IsWindows()
         && RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
+
+    /// <summary>
+    /// Sherpa/GigaAM native stack is not supported on Windows ARM64 yet (worker AVs pre-load).
+    /// </summary>
+    public static bool IsSupported =>
+        !(OperatingSystem.IsWindows()
+          && RuntimeInformation.ProcessArchitecture == Architecture.Arm64);
+
+    public static bool IsSherpaEngineId(string engineId) =>
+        engineId is "gigaam" or "whisper" or "omnilingual";
 }

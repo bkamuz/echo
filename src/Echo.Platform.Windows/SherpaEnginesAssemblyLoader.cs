@@ -14,6 +14,11 @@ internal static class SherpaEnginesAssemblyLoader
 
     public static void RegisterEngines(IServiceCollection services)
     {
+        if (!SherpaWorkerPolicy.IsSupported)
+        {
+            return;
+        }
+
         RegisterEngine(services, "gigaam", "echo.Engines.GigaAm.GigaAmEngine");
         RegisterEngine(services, "omnilingual", "echo.Engines.Omnilingual.OmnilingualEngine");
         TryRegisterEngine(services, "whisper", "echo.Engines.Whisper.WhisperEngine");
