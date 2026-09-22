@@ -12,13 +12,19 @@ $versionArgs = if ([string]::IsNullOrWhiteSpace($Version)) { @() } else { @("-p:
 
 Write-Host "Publishing Echo for $Runtime (single-file)..."
 $outDir = "dist/$Runtime"
+$compressionArgs = if ($Runtime -eq "win-arm64") {
+    @("-p:EnableCompressionInSingleFile=false")
+} else {
+    @("-p:EnableCompressionInSingleFile=true")
+}
+
 dotnet publish "src/Echo.App/Echo.App.csproj" `
     -c Release `
     -r $Runtime `
     --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:EnableCompressionInSingleFile=true `
+    @compressionArgs `
     -p:DebugType=none `
     -p:DebugSymbols=false `
     @versionArgs `

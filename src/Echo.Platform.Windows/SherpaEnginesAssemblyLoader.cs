@@ -24,7 +24,9 @@ internal static class SherpaEnginesAssemblyLoader
         services.AddSingleton(new EngineRegistration
         {
             EngineId = engineId,
-            Factory = sp => CreateEngine(sp, typeName),
+            Factory = sp => SherpaWorkerPolicy.ShouldIsolate()
+                ? CreateOutOfProcessEngine(sp, engineId)
+                : CreateEngine(sp, typeName),
         });
     }
 
@@ -35,6 +37,11 @@ internal static class SherpaEnginesAssemblyLoader
             EngineId = engineId,
             Factory = sp =>
             {
+                if (SherpaWorkerPolicy.ShouldIsolate())
+                {
+                    return CreateOutOfProcessEngine(sp, engineId);
+                }
+
                 var assembly = LoadAssembly();
                 if (assembly.GetType(typeName, throwOnError: false) is null)
                 {
@@ -52,5 +59,15 @@ internal static class SherpaEnginesAssemblyLoader
         return ReflectionEngineFactory.CreateEngine(services, assembly, typeName);
     }
 
+    private static ITranscriptionEngine CreateOutOfProcessEngine(IServiceProvider services, string engineId)
+    {
+        var logger = ReflectionEngineFactory.CreateTypedLogger(
+            services,
+            typeof(SherpaOutOfProcessEngine));
+        return new SherpaOutOfProcessEngine(engineId, (Microsoft.Extensions.Logging.ILogger)logger);
+    }
+
     private static Assembly LoadAssembly() => Assembly.Load(new AssemblyName(AssemblyName));
+
+    internal static Assembly LoadAssemblyForWorker() => LoadAssembly();
 }

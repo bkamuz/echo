@@ -1,5 +1,6 @@
 using echo.Abstractions.Engines;
 using Microsoft.Extensions.Logging;
+using System.Runtime.InteropServices;
 using SherpaOnnx;
 
 namespace echo.Engines;
@@ -123,7 +124,7 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
                 return true;
             }
         }
-        else if (requestedProvider == "cpu")
+        else if (requestedProvider == "cpu" && CanFallbackToDirectMl())
         {
             _logger.LogWarning("CPU provider failed for {Engine}; falling back to DirectML", EngineId);
             if (TryCreateRecognizer("directml", out recognizer))
@@ -160,6 +161,7 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
 
         try
         {
+            SherpaNativeEnvironment.PrepareForLoad();
             _logger.LogInformation("Loading {Engine} (provider={Provider})", EngineId, provider);
             recognizer = new OfflineRecognizer(config);
             return true;
@@ -170,4 +172,8 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
             return false;
         }
     }
+
+    private static bool CanFallbackToDirectMl() =>
+        !OperatingSystem.IsWindows()
+        || RuntimeInformation.ProcessArchitecture is not Architecture.Arm64 and not Architecture.Arm;
 }

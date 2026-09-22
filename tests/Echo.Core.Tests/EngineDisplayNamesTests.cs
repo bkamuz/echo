@@ -1,10 +1,24 @@
 using echo.Abstractions.Core;
+using echo.Abstractions.Engines;
 using echo.Core;
 
 namespace echo.Core.Tests;
 
 public class EngineDisplayNamesTests
 {
+    [Fact]
+    public void ForOptions_FormatsGigaAmWithDevice()
+    {
+        var options = new EngineOptions
+        {
+            Engine = "gigaam",
+            GigaAmModelSize = "e2e",
+            Device = "cpu",
+        };
+
+        Assert.Equal("GigaAM v3 e2e (CPU)", EngineDisplayNames.ForOptions("gigaam", options));
+    }
+
     [Theory]
     [InlineData("gigaam", "e2e", "cpu", "GigaAM v3 e2e (CPU)")]
     [InlineData("gigaam", "rnnt", "directml", "GigaAM v3 rnnt (DIRECTML)")]
