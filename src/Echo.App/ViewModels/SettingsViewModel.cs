@@ -171,7 +171,9 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsWhisper => Engine == "whisper";
     public bool IsOmnilingual => Engine == "omnilingual";
     public bool IsParakeetNpu => Engine == "parakeet_npu";
-    public bool IsDeviceVisible => Engine is not ("whisper" or "parakeet_npu");
+    public bool IsDeviceVisible =>
+        Engine is not "whisper"
+        && (Engine is not "parakeet_npu" || _npuAvailability.IsLikelyPlatform);
     public bool IsSherpaUnavailableOnPlatform => !SherpaWorkerPolicy.IsSupported;
     public string SherpaArm64UnavailableHint => _loc.Get("Loc.Settings.SherpaArm64Unavailable");
 
@@ -495,16 +497,12 @@ public partial class SettingsViewModel : ObservableObject
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
-                if (Engine == "parakeet_npu" && SherpaWorkerPolicy.IsSupported)
-                {
-                    Engine = "gigaam";
-                }
-
                 _status.SetStatusTemporary(
                     "Loc.Status.NpuFailed",
                     SettingsApplyService.StatusClearMs,
                     alert: true);
                 IsApplying = false;
+                ScheduleApply();
             });
         }
     }
@@ -710,6 +708,28 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         var options = new List<ComputeDeviceOption> { cpu };
+
+        if (IsParakeetNpu)
+        {
+            if (_npuAvailability.IsLikelyPlatform)
+            {
+                var enabled = _npuAvailability.IsAvailable;
+                var runtimeReady = _parakeetNpuSupport?.IsRuntimeInstalled == true;
+                var npuTooltip = enabled
+                    ? (runtimeReady
+                        ? _loc.Get("Loc.Device.Npu.Tooltip")
+                        : _loc.Format("Loc.Device.Npu.TooltipPending", _npuAvailability.StatusDetail))
+                    : _loc.Format("Loc.Device.Npu.TooltipUnavailable", _npuAvailability.StatusDetail);
+                options.Add(new(
+                    ExecutionProviderResolver.NpuDevice,
+                    _loc.Get("Loc.Device.Npu"),
+                    npuTooltip,
+                    enabled));
+            }
+
+            ComputeDeviceOptions = options;
+            return;
+        }
 
         if (_directMlAvailability.IsAvailable)
         {

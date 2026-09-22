@@ -20,14 +20,17 @@ if (wavPath is null || !File.Exists(wavPath))
 
 try
 {
-    if (!SnapdragonHardware.IsSnapdragonXElite(out var processor))
-    {
-        Console.Error.WriteLine($"WARNING: processor '{processor}' may not be Snapdragon X Elite.");
-    }
-    else
+    if (SnapdragonHardware.IsSnapdragonXElite(out var processor))
     {
         Console.WriteLine($"Processor: {processor}");
     }
+    else
+    {
+        Console.Error.WriteLine(
+            $"WARNING: processor '{processor}' is not a recognized Snapdragon X/X2 Elite family name; attempting HTP anyway.");
+    }
+
+    SnapdragonHardware.LogHtpCompatibilityWarning(null);
 
     var runtimeDownloader = new QnnRuntimeDownloader(new HttpClient(), NullLogger<QnnRuntimeDownloader>.Instance);
     var modelDownloader = new ParakeetModelDownloader(new HttpClient(), NullLogger<ParakeetModelDownloader>.Instance);

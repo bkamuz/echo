@@ -18,6 +18,20 @@ public sealed class ParakeetModelDownloader
 
     public bool IsInstalled => ParakeetNpuPaths.IsModelInstalled;
 
+    public bool IsCpuEncoderInstalled => ParakeetNpuPaths.IsCpuEncoderInstalled;
+
+    public async Task EnsureCpuEncoderAsync(
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var manifest = ManifestLoader.LoadModelManifest();
+        var file = manifest.Files.FirstOrDefault(f =>
+            string.Equals(f.Path, "encoder-model.int8.onnx", StringComparison.Ordinal))
+            ?? throw new InvalidOperationException("Parakeet CPU encoder asset is missing from the model manifest.");
+
+        await EnsureFileAsync(file, progress, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task EnsureInstalledAsync(
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
@@ -30,38 +44,10 @@ public sealed class ParakeetModelDownloader
         var manifest = ManifestLoader.LoadModelManifest();
         Directory.CreateDirectory(ModelDir);
 
-        foreach (var file in manifest.Files)
+        foreach (var file in manifest.Files.Where(f =>
+                     !string.Equals(f.Path, "encoder-model.int8.onnx", StringComparison.Ordinal)))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var target = Path.Combine(ModelDir, file.Path);
-            if (File.Exists(target))
-            {
-                try
-                {
-                    AssetVerifier.VerifyFile(target, file.Bytes, file.Sha256);
-                    continue;
-                }
-                catch (InvalidOperationException)
-                {
-                    File.Delete(target);
-                }
-            }
-
-            progress?.Report(ProgressMessages.Downloading(file.Path));
-            _logger.LogInformation("Downloading Parakeet NPU asset {File} from {Url}", file.Path, file.Url);
-
-            var tmp = target + ".tmp";
-            using var response = await _http.GetAsync(file.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                .ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            await using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-            await using (var fileStream = File.Create(tmp))
-            {
-                await stream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
-            }
-
-            File.Move(tmp, target, overwrite: true);
-            AssetVerifier.VerifyFile(target, file.Bytes, file.Sha256);
+            await EnsureFileAsync(file, progress, cancellationToken).ConfigureAwait(false);
         }
 
         if (!IsInstalled)
@@ -71,6 +57,44 @@ public sealed class ParakeetModelDownloader
 
         progress?.Report(ProgressMessages.Done("Parakeet NPU model"));
         _logger.LogInformation("Parakeet NPU model installed to {Dir}", ModelDir);
+    }
+
+    private async Task EnsureFileAsync(
+        ParakeetModelFile file,
+        IProgress<string>? progress,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var target = Path.Combine(ModelDir, file.Path);
+        if (File.Exists(target))
+        {
+            try
+            {
+                AssetVerifier.VerifyFile(target, file.Bytes, file.Sha256);
+                return;
+            }
+            catch (InvalidOperationException)
+            {
+                File.Delete(target);
+            }
+        }
+
+        progress?.Report(ProgressMessages.Downloading(file.Path));
+        _logger.LogInformation("Downloading Parakeet asset {File} from {Url}", file.Path, file.Url);
+
+        Directory.CreateDirectory(ModelDir);
+        var tmp = target + ".tmp";
+        using var response = await _http.GetAsync(file.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        await using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+        await using (var fileStream = File.Create(tmp))
+        {
+            await stream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
+        }
+
+        File.Move(tmp, target, overwrite: true);
+        AssetVerifier.VerifyFile(target, file.Bytes, file.Sha256);
     }
 
     public void Delete()
@@ -87,29 +111,40 @@ internal static class ParakeetNpuPaths
 {
     public static string ModelDir => AppPaths.ParakeetNpuDir;
 
+    public static bool IsCpuEncoderInstalled => IsFileInstalled("encoder-model.int8.onnx");
+
     public static bool IsModelInstalled
     {
         get
         {
             var manifest = ManifestLoader.LoadModelManifest();
-            return manifest.Files.All(file =>
-            {
-                var path = Path.Combine(ModelDir, file.Path);
-                if (!File.Exists(path))
-                {
-                    return false;
-                }
+            return manifest.Files
+                .Where(file => !string.Equals(file.Path, "encoder-model.int8.onnx", StringComparison.Ordinal))
+                .All(file => IsFileInstalled(file.Path, file.Bytes, file.Sha256));
+        }
+    }
 
-                try
-                {
-                    AssetVerifier.VerifyFile(path, file.Bytes, file.Sha256);
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            });
+    private static bool IsFileInstalled(string relativePath, long? bytes = null, string? sha256 = null)
+    {
+        var path = Path.Combine(ModelDir, relativePath);
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        if (bytes is null || sha256 is null)
+        {
+            return true;
+        }
+
+        try
+        {
+            AssetVerifier.VerifyFile(path, bytes.Value, sha256);
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

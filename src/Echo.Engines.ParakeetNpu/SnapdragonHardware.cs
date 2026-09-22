@@ -1,10 +1,12 @@
 using System.Runtime.Versioning;
+using echo.Abstractions.Platform;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
 namespace echo.Engines.ParakeetNpu;
 
 /// <summary>
-/// Chipset gating for Hexagon V73 HTP binaries (Snapdragon X Elite).
+/// Platform gating for Parakeet on Windows ARM64 (Snapdragon Copilot+ PCs).
 /// </summary>
 [SupportedOSPlatform("windows")]
 public static class SnapdragonHardware
@@ -18,29 +20,51 @@ public static class SnapdragonHardware
     public static bool IsSnapdragonXElite(out string processorName)
     {
         processorName = TryReadProcessorName() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(processorName))
-        {
-            return false;
-        }
-
-        var normalized = processorName.ToLowerInvariant();
-        return normalized.Contains("snapdragon")
-            && (normalized.Contains("x elite") || normalized.Contains("x1e"));
+        return SnapdragonProcessorMatcher.IsSupportedHtpProcessor(processorName);
     }
 
-    public static void EnsureSnapdragonXElite()
+    public static void EnsureWindowsArm64()
     {
         if (!IsWindowsArm64)
         {
             throw new PlatformNotSupportedException(
-                "Parakeet NPU requires Windows on ARM64 (Snapdragon Copilot+ PC).");
+                "Parakeet requires Windows on ARM64 (Snapdragon Copilot+ PC).");
+        }
+    }
+
+    /// <summary>
+    /// Logs HTP compatibility warnings but does not block load — runtime QNN errors are acceptable.
+    /// </summary>
+    public static void LogHtpCompatibilityWarning(ILogger? logger)
+    {
+        var processor = TryReadProcessorName() ?? string.Empty;
+        if (logger is null)
+        {
+            return;
         }
 
-        if (!IsSnapdragonXElite(out var processor))
+        if (string.IsNullOrWhiteSpace(processor))
         {
-            throw new PlatformNotSupportedException(
-                $"Parakeet HTP model targets Snapdragon X Elite (Hexagon V73). Detected: {processor}. " +
-                "Snapdragon X Plus may require a recompiled context binary.");
+            logger.LogWarning(
+                "Could not read Snapdragon processor name. Parakeet HTP context targets Hexagon V73; load may fail.");
+            return;
+        }
+
+        if (!SnapdragonProcessorMatcher.IsSupportedHtpProcessor(processor))
+        {
+            logger.LogWarning(
+                "Parakeet HTP context targets Hexagon V73 (Snapdragon X Elite). Detected: {Processor}. " +
+                "Unrecognized Snapdragon variant — attempting HTP anyway; X Plus may need a recompiled context binary.",
+                processor);
+            return;
+        }
+
+        if (SnapdragonProcessorMatcher.MayNeedAlternateHtpContext(processor))
+        {
+            logger.LogWarning(
+                "Parakeet HTP context was built for Hexagon V73. Detected: {Processor}. " +
+                "X2 Elite may need a different context binary if QNN load fails.",
+                processor);
         }
     }
 

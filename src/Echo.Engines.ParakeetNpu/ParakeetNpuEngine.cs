@@ -12,6 +12,8 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
 
     private ParakeetPipeline? _pipeline;
     private string _resolvedProvider = "cpu";
+    private string _configuredDevice = ExecutionProviderResolver.CpuDevice;
+    private bool? _loadedUseNpu;
 
     public ParakeetNpuEngine(
         QnnRuntimeDownloader runtimeDownloader,
@@ -31,46 +33,85 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
 
     public void Configure(EngineOptions options)
     {
-        // Parakeet NPU ignores Sherpa device strings; always uses ORT QNN when loaded.
+        _configuredDevice = ExecutionProviderResolver.ToConfigDevice(
+            ExecutionProviderResolver.FromConfigDevice(options.Device));
+
+        var wantNpu = ExecutionProviderResolver.FromConfigDevice(_configuredDevice) == ExecutionProvider.Npu;
+        if (_pipeline is not null && _loadedUseNpu != wantNpu)
+        {
+            Unload();
+        }
     }
 
     public async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
     {
-        if (_pipeline is not null)
+        var useNpu = ExecutionProviderResolver.FromConfigDevice(_configuredDevice) == ExecutionProvider.Npu;
+        if (_pipeline is not null && _loadedUseNpu == useNpu)
         {
             return;
         }
+
+        Unload();
 
         if (!OperatingSystem.IsWindows())
         {
             throw new PlatformNotSupportedException("Parakeet NPU is Windows-only.");
         }
 
-        SnapdragonHardware.EnsureSnapdragonXElite();
+        SnapdragonHardware.EnsureWindowsArm64();
 
-        await _runtimeDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
         await _modelDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
         var modelDir = ParakeetModelDownloader.ModelDir;
-        var runtimeDir = QnnRuntimeDownloader.RuntimeDir;
+
+        if (useNpu)
+        {
+            SnapdragonHardware.LogHtpCompatibilityWarning(_logger);
+
+            await _runtimeDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            var runtimeDir = QnnRuntimeDownloader.RuntimeDir;
+            try
+            {
+                _logger.LogInformation(
+                    "Loading Parakeet NPU pipeline (provider=qnn/htp, model={ModelDir})",
+                    modelDir);
+                _pipeline = ParakeetPipeline.LoadNpu(modelDir, runtimeDir, _logger);
+                _resolvedProvider = "qnn/htp";
+                _loadedUseNpu = true;
+                _logger.LogInformation("Parakeet NPU ready — encoder on Hexagon HTP via ORT QNN EP");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Parakeet NPU (HTP) load failed");
+                throw new InvalidOperationException(
+                    "Could not load Parakeet on the Hexagon NPU. Check echo.log for QNN/HTP details " +
+                    "(missing skel/cat, wrong SoC generation, or incomplete runtime).", ex);
+            }
+
+            return;
+        }
+
+        await _modelDownloader.EnsureCpuEncoderAsync(cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
 
         try
         {
             _logger.LogInformation(
-                "Loading Parakeet NPU pipeline (provider=qnn/htp, model={ModelDir})",
+                "Loading Parakeet CPU pipeline (provider=cpu, model={ModelDir})",
                 modelDir);
-            _pipeline = ParakeetPipeline.LoadNpu(modelDir, runtimeDir, _logger);
-            _resolvedProvider = "qnn/htp";
-            _logger.LogInformation("Parakeet NPU ready — encoder on Hexagon HTP via ORT QNN EP");
+            _pipeline = ParakeetPipeline.LoadCpu(modelDir, _logger);
+            _resolvedProvider = "cpu";
+            _loadedUseNpu = false;
+            _logger.LogInformation("Parakeet CPU ready — encoder on ORT CPU EP");
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Parakeet NPU (HTP) load failed");
+            _logger.LogWarning(ex, "Parakeet CPU load failed");
             throw new InvalidOperationException(
-                "Could not load Parakeet on the Hexagon NPU. Check echo.log for QNN/HTP details " +
-                "(missing skel/cat, wrong SoC, or incomplete runtime).", ex);
+                "Could not load Parakeet on CPU. Check echo.log for ONNX runtime details.", ex);
         }
     }
 
@@ -97,6 +138,7 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
     {
         _pipeline?.Dispose();
         _pipeline = null;
+        _loadedUseNpu = null;
         _resolvedProvider = "cpu";
     }
 
