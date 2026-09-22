@@ -9,19 +9,37 @@ public sealed class ModelDownloader
     private readonly ILogger<ModelDownloader> _logger;
     private readonly HttpClient _http;
     private readonly IWhisperModelSupport? _whisper;
+    private readonly IParakeetNpuModelSupport? _parakeetNpu;
 
     public ModelDownloader(
         ILogger<ModelDownloader> logger,
         HttpClient http,
-        IWhisperModelSupport? whisper = null)
+        IWhisperModelSupport? whisper = null,
+        IParakeetNpuModelSupport? parakeetNpu = null)
     {
         _logger = logger;
         _http = http;
         _whisper = whisper;
+        _parakeetNpu = parakeetNpu;
     }
 
     public async Task DownloadAsync(ModelSpec spec, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
+        if (spec.Engine == "parakeet_npu")
+        {
+            if (_parakeetNpu is null)
+            {
+                throw new InvalidOperationException(
+                    "Parakeet NPU is not available in this Echo build (Windows ARM64 required).");
+            }
+
+            progress?.Report(ProgressMessages.Downloading("QNN runtime"));
+            await _parakeetNpu.EnsureRuntimeAsync(progress, cancellationToken).ConfigureAwait(false);
+            await _parakeetNpu.DownloadModelAsync(progress, cancellationToken).ConfigureAwait(false);
+            progress?.Report(ProgressMessages.Done(spec.Title));
+            return;
+        }
+
         if (spec.Engine == "whisper")
         {
             if (_whisper is null)
@@ -64,6 +82,12 @@ public sealed class ModelDownloader
 
     public void Delete(ModelSpec spec)
     {
+        if (spec.Engine == "parakeet_npu")
+        {
+            _parakeetNpu?.DeleteModel();
+            return;
+        }
+
         if (spec.Engine == "whisper")
         {
             if (_whisper is null)

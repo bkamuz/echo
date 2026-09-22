@@ -14,6 +14,7 @@ using echo.App.Views;
 using echo.Core;
 using echo.Core.DependencyInjection;
 using echo.Engines.DependencyInjection;
+using echo.Engines.ParakeetNpu.DependencyInjection;
 using echo.Platform.Linux;
 using echo.Platform.Windows;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,10 @@ public partial class App : Application
                 services.UseEcho();
                 services.UsePlatform();
                 services.UseEchoEngines();
+                if (OperatingSystem.IsWindows())
+                {
+                    services.AddParakeetNpuEngine();
+                }
                 services.AddSingleton<LocalizationService>();
                 services.AddSingleton<AppStatusViewModel>();
                 services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();
@@ -68,7 +73,7 @@ public partial class App : Application
                     sp.GetServices<echo.Abstractions.Engines.ITranscriptionEngine>(),
                     sp.GetRequiredService<LocalizationService>(),
                     sp.GetService<DirectMlRuntimeInstaller>(),
-                    sp.GetService<NpuRuntimeInstaller>()));
+                    sp.GetService<IParakeetNpuModelSupport>()));
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<ShellViewModel>();

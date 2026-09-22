@@ -29,7 +29,7 @@ public sealed record UiLanguageChoice(string Code, string Label)
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private static readonly string[] AllEngineIds = ["gigaam", "whisper", "omnilingual"];
+    private static readonly string[] BaseEngineIds = ["gigaam", "whisper", "omnilingual", "parakeet_npu"];
 
     private readonly DictationCoordinator _coordinator;
     private readonly IAudioCapture _audio;
@@ -43,7 +43,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ModelSettingsController _models;
     private readonly LocalizationService _loc;
     private readonly DirectMlRuntimeInstaller? _directMlInstaller;
-    private readonly NpuRuntimeInstaller? _npuInstaller;
+    private readonly IParakeetNpuModelSupport? _parakeetNpuSupport;
     private readonly HashSet<string> _registeredEngineIds;
     private bool _isLoadingFromConfig;
 
@@ -108,7 +108,7 @@ public partial class SettingsViewModel : ObservableObject
         IEnumerable<ITranscriptionEngine> engines,
         LocalizationService loc,
         DirectMlRuntimeInstaller? directMlInstaller = null,
-        NpuRuntimeInstaller? npuInstaller = null)
+        IParakeetNpuModelSupport? parakeetNpuSupport = null)
     {
         _coordinator = coordinator;
         _audio = audio;
@@ -122,7 +122,7 @@ public partial class SettingsViewModel : ObservableObject
         _models = models;
         _loc = loc;
         _directMlInstaller = directMlInstaller;
-        _npuInstaller = npuInstaller;
+        _parakeetNpuSupport = parakeetNpuSupport;
 
         _registeredEngineIds = engines.Select(e => e.EngineId).ToHashSet(StringComparer.Ordinal);
         RebuildEngineOptions();
@@ -170,7 +170,8 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsGigaAm => Engine == "gigaam";
     public bool IsWhisper => Engine == "whisper";
     public bool IsOmnilingual => Engine == "omnilingual";
-    public bool IsDeviceVisible => Engine != "whisper";
+    public bool IsParakeetNpu => Engine == "parakeet_npu";
+    public bool IsDeviceVisible => Engine is not ("whisper" or "parakeet_npu");
 
     partial void OnIsApplyingChanged(bool value) => OnPropertyChanged(nameof(IsSettingsEnabled));
 
@@ -192,7 +193,12 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsGigaAm));
         OnPropertyChanged(nameof(IsWhisper));
         OnPropertyChanged(nameof(IsOmnilingual));
+        OnPropertyChanged(nameof(IsParakeetNpu));
         OnPropertyChanged(nameof(IsDeviceVisible));
+        if (!_isLoadingFromConfig && value == "parakeet_npu")
+        {
+            SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.NpuDevice);
+        }
         SyncSelectedEngine();
         RebuildComputeDeviceOptions();
         OnPropertyChanged(nameof(ComputeDeviceOptions));
@@ -246,10 +252,26 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        if (value.Id == ExecutionProviderResolver.NpuDevice && _npuInstaller is not null)
+        if (value.Id == ExecutionProviderResolver.NpuDevice)
         {
-            _ = EnsureNpuThenApplyAsync();
-            return;
+            if (!_isLoadingFromConfig && Engine != "parakeet_npu")
+            {
+                _isLoadingFromConfig = true;
+                try
+                {
+                    Engine = "parakeet_npu";
+                }
+                finally
+                {
+                    _isLoadingFromConfig = false;
+                }
+            }
+
+            if (_parakeetNpuSupport is not null)
+            {
+                _ = EnsureNpuThenApplyAsync();
+                return;
+            }
         }
 
         ScheduleApply();
@@ -450,7 +472,7 @@ public partial class SettingsViewModel : ObservableObject
 
     private async Task EnsureNpuThenApplyAsync()
     {
-        if (_npuInstaller is null)
+        if (_parakeetNpuSupport is null)
         {
             ScheduleApply();
             return;
@@ -463,7 +485,7 @@ public partial class SettingsViewModel : ObservableObject
             var progress = _applyService.CreateProgressReporter(
                 null,
                 s => _status.SetStatus(s, busy: true));
-            await _npuInstaller.EnsureInstalledAsync(progress).ConfigureAwait(false);
+            await _parakeetNpuSupport.EnsureRuntimeAsync(progress).ConfigureAwait(false);
             await Dispatcher.UIThread.InvokeAsync(ScheduleApply);
         }
         catch (Exception)
@@ -471,6 +493,11 @@ public partial class SettingsViewModel : ObservableObject
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
+                if (Engine == "parakeet_npu")
+                {
+                    Engine = "gigaam";
+                }
+
                 _status.SetStatusTemporary(
                     "Loc.Status.NpuFailed",
                     SettingsApplyService.StatusClearMs,
@@ -575,7 +602,8 @@ public partial class SettingsViewModel : ObservableObject
 
     private void RebuildEngineOptions()
     {
-        var localized = AllEngineIds
+        var localized = BaseEngineIds
+            .Where(id => id != "parakeet_npu" || _npuAvailability.IsLikelyPlatform)
             .Select(id => new EngineOption(id, GetEngineDisplayName(id)))
             .ToList();
         EngineOptions = localized.Where(o => _registeredEngineIds.Contains(o.Id)).ToList();
@@ -590,6 +618,7 @@ public partial class SettingsViewModel : ObservableObject
         "gigaam" => _loc.Get("Loc.Engine.GigaAm"),
         "whisper" => _loc.Get("Loc.Engine.Whisper"),
         "omnilingual" => _loc.Get("Loc.Engine.Omnilingual"),
+        "parakeet_npu" => _loc.Get("Loc.Engine.ParakeetNpu"),
         _ => id,
     };
 
@@ -689,8 +718,9 @@ public partial class SettingsViewModel : ObservableObject
         if (_npuAvailability.IsLikelyPlatform)
         {
             var enabled = _npuAvailability.IsAvailable;
+            var runtimeReady = _parakeetNpuSupport?.IsRuntimeInstalled == true;
             var npuTooltip = enabled
-                ? (_npuInstaller?.IsInstalled == true
+                ? (runtimeReady
                     ? _loc.Get("Loc.Device.Npu.Tooltip")
                     : _loc.Format("Loc.Device.Npu.TooltipPending", _npuAvailability.StatusDetail))
                 : _loc.Format("Loc.Device.Npu.TooltipUnavailable", _npuAvailability.StatusDetail);

@@ -60,6 +60,7 @@
   <sys:String x:Key="Loc.Engine.GigaAm">GigaAM (русский)</sys:String>
   <sys:String x:Key="Loc.Engine.Whisper">Whisper (мультиязычный)</sys:String>
   <sys:String x:Key="Loc.Engine.Omnilingual">Omnilingual (1600 языков)</sys:String>
+  <sys:String x:Key="Loc.Engine.ParakeetNpu">Parakeet NPU (эксперимент)</sys:String>
   <sys:String x:Key="Loc.Device.Cpu">Процессор</sys:String>
   <sys:String x:Key="Loc.Device.Cpu.Tooltip">Универсальный режим. Работает на любом ПК.</sys:String>
   <sys:String x:Key="Loc.Device.DirectMl">GPU (DirectML)</sys:String>

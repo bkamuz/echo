@@ -38,6 +38,7 @@
     <ProjectReference Include="..\Echo.Abstractions\Echo.Abstractions.csproj" />
     <ProjectReference Include="..\Echo.Core\Echo.Core.csproj" />
     <ProjectReference Include="..\Echo.Engines\Echo.Engines.csproj" />
+    <ProjectReference Include="..\Echo.Engines.ParakeetNpu\Echo.Engines.ParakeetNpu.csproj" />
     <ProjectReference Include="..\Echo.Platform.Windows\Echo.Platform.Windows.csproj" />
     <ProjectReference Include="..\Echo.Platform.Linux\Echo.Platform.Linux.csproj" />
     <ProjectReference Include="..\Echo.Platform.MacOS\Echo.Platform.MacOS.csproj" Condition="'$(IncludeMacOs)' == 'true'" />

@@ -10,7 +10,8 @@ public sealed class AppConfig
     public static IReadOnlyList<string> WhisperSizes => ModelRegistry.WhisperSizes;
     public static IReadOnlyList<string> GigaAmSizes => ModelRegistry.GigaAmSizes;
 
-    public static IReadOnlyList<string> Engines { get; } = ["gigaam", "whisper", "omnilingual"];
+    public static IReadOnlyList<string> Engines { get; } =
+        ["gigaam", "whisper", "omnilingual", "parakeet_npu"];
     public static IReadOnlyList<string> Devices => ExecutionProviderResolver.AllDeviceIds;
 
     [JsonPropertyName("hotkey")]

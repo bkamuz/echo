@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 using Microsoft.Win32;
 
@@ -12,7 +13,7 @@ public sealed class WindowsNpuAvailability : INpuAvailability
 
     public bool IsHardwareDetected => IsLikelyPlatform && ProbeHardware(out _);
 
-    public bool IsAvailable => IsLikelyPlatform && (IsHardwareDetected || NpuPaths.IsInstalled);
+    public bool IsAvailable => IsLikelyPlatform && IsSnapdragonXElite();
 
     public string StatusDetail
     {
@@ -32,6 +33,11 @@ public sealed class WindowsNpuAvailability : INpuAvailability
                 ? detail
                 : "Snapdragon NPU not detected on this ARM64 PC.";
         }
+    }
+
+    internal static bool IsSnapdragonXElite()
+    {
+        return ProbeHardware(out _) && TryReadProcessorName(out var name) && IsXEliteName(name);
     }
 
     internal static bool ProbeHardware(out string detail)
@@ -83,6 +89,16 @@ public sealed class WindowsNpuAvailability : INpuAvailability
         return false;
     }
 
+    private static bool TryReadProcessorName(out string name) =>
+        TryReadProcessorVendor(out name);
+
+    private static bool IsXEliteName(string processor)
+    {
+        var normalized = processor.ToLowerInvariant();
+        return normalized.Contains("snapdragon")
+            && (normalized.Contains("x elite") || normalized.Contains("x1e"));
+    }
+
     private static bool TryReadProcessorVendor(out string vendor)
     {
         vendor = string.Empty;
@@ -90,8 +106,8 @@ public sealed class WindowsNpuAvailability : INpuAvailability
         {
             using var key = Registry.LocalMachine.OpenSubKey(
                 @"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
-            vendor = key?.GetValue("VendorIdentifier")?.ToString()
-                ?? key?.GetValue("ProcessorNameString")?.ToString()
+            vendor = key?.GetValue("ProcessorNameString")?.ToString()
+                ?? key?.GetValue("VendorIdentifier")?.ToString()
                 ?? string.Empty;
             return !string.IsNullOrWhiteSpace(vendor);
         }
