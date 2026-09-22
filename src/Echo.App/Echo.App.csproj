@@ -38,7 +38,9 @@
     <ProjectReference Include="..\Echo.Abstractions\Echo.Abstractions.csproj" />
     <ProjectReference Include="..\Echo.Core\Echo.Core.csproj" />
     <ProjectReference Include="..\Echo.Engines\Echo.Engines.csproj" />
-    <ProjectReference Include="..\Echo.Engines.ParakeetNpu\Echo.Engines.ParakeetNpu.csproj" />
+    <!-- Parakeet/QNN is ARM64-only; keep ML.ORT out of win-x64 publish to avoid Sherpa native conflicts. -->
+    <ProjectReference Include="..\Echo.Engines.ParakeetNpu\Echo.Engines.ParakeetNpu.csproj"
+                      Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-arm64'))" />
     <ProjectReference Include="..\Echo.Platform.Windows\Echo.Platform.Windows.csproj" />
     <ProjectReference Include="..\Echo.Platform.Linux\Echo.Platform.Linux.csproj" />
     <ProjectReference Include="..\Echo.Platform.MacOS\Echo.Platform.MacOS.csproj" Condition="'$(IncludeMacOs)' == 'true'" />
@@ -85,7 +87,10 @@
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
         Condition="'$(RuntimeIdentifier)' == 'win-x64'
                   And ($([System.String]::Copy('%(RelativePath)').Contains('runtimes/win-arm64'))
-                    Or $([System.String]::Copy('%(RelativePath)').Contains('runtimes/win-x86')))" />
+                    Or $([System.String]::Copy('%(RelativePath)').Contains('runtimes/win-x86'))
+                    Or $([System.String]::Copy('%(RelativePath)').Contains('Echo.Engines.ParakeetNpu'))
+                    Or ('%(NuGetPackageId)' == 'Microsoft.ML.OnnxRuntime'
+                        And $([System.String]::Copy('%(RelativePath)').Contains('runtimes/'))))" />
       <!-- Parakeet downloads ORT+QNN to %APPDATA%\Echo\qnn\ on first use.
            Bundling ML.ORT win-arm64 natives alongside Sherpa's onnxruntime causes
            single-file extract conflicts and can abort GigaAM startup on Snapdragon. -->

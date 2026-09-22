@@ -8,7 +8,6 @@ namespace echo.App.ViewModels;
 public partial class HomeViewModel : ObservableObject
 {
     private readonly DictationCoordinator _coordinator;
-    private readonly TranscriptionService _transcription;
     private readonly LocalizationService _loc;
 
     [ObservableProperty]
@@ -25,11 +24,9 @@ public partial class HomeViewModel : ObservableObject
 
     public HomeViewModel(
         DictationCoordinator coordinator,
-        TranscriptionService transcription,
         LocalizationService loc)
     {
         _coordinator = coordinator;
-        _transcription = transcription;
         _loc = loc;
         _coordinator.OutcomeChanged += OnOutcomeChanged;
         _loc.LanguageChanged += (_, _) =>
@@ -56,14 +53,7 @@ public partial class HomeViewModel : ObservableObject
 
     private void UpdateModelInfo()
     {
-        try
-        {
-            ModelInfo = _transcription.Resolve(_coordinator.Config).DisplayName;
-        }
-        catch
-        {
-            ModelInfo = _coordinator.Config.Engine;
-        }
+        ModelInfo = EngineDisplayNames.ForConfig(_coordinator.Config);
 
         var spec = ModelRegistry.SpecForEngine(
             _coordinator.Config.Engine,

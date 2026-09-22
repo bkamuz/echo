@@ -1,7 +1,6 @@
 using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 using Microsoft.Extensions.Logging;
-using System.Runtime.InteropServices;
 
 namespace echo.Core;
 
@@ -174,12 +173,10 @@ public sealed class DictationCoordinator : IDisposable
     /// </summary>
     public void ScheduleStartupWarmup()
     {
-        if (OperatingSystem.IsWindows()
-            && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        if (StartupWarmupPolicy.ShouldDeferWarmup(OperatingSystem.IsWindows()))
         {
-            // Sherpa/ORT native abort is uncatchable; defer load until first dictation or settings apply.
             _logger.LogInformation(
-                "Skipping startup warmup on Windows ARM64 — engine loads on first use");
+                "Skipping startup warmup on Windows — engine loads on first dictation or settings apply");
             return;
         }
 
