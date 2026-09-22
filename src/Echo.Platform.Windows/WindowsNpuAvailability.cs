@@ -39,7 +39,7 @@ public sealed class WindowsNpuAvailability : INpuAvailability
 
     internal static bool IsSnapdragonXElite()
     {
-        return TryReadProcessorName(out var name) && IsXEliteName(name);
+        return TryReadProcessorName(out var name) && SnapdragonProcessorMatcher.IsSupportedHtpProcessor(name);
     }
 
     internal static bool ProbeHardware(out string detail)
@@ -93,13 +93,6 @@ public sealed class WindowsNpuAvailability : INpuAvailability
 
     private static bool TryReadProcessorName(out string name) =>
         TryReadProcessorVendor(out name);
-
-    private static bool IsXEliteName(string processor)
-    {
-        var normalized = processor.ToLowerInvariant();
-        return normalized.Contains("snapdragon")
-            && (normalized.Contains("x elite") || normalized.Contains("x1e"));
-    }
 
     private static bool TryReadProcessorVendor(out string vendor)
     {
