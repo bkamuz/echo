@@ -1,4 +1,6 @@
+using System.Reflection;
 using echo.Abstractions.Core;
+using echo.Abstractions.Platform;
 
 namespace echo.Core.Diagnostics;
 
@@ -30,41 +32,71 @@ public static class StartupDiagnostics
                 WriteFatal("TaskScheduler.UnobservedTaskException", args.Exception);
                 args.SetObserved();
             };
+
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                WriteMilestone("ProcessExit");
+            };
         }
+    }
+
+    public static void WriteStartupContext()
+    {
+        var path = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            try
+            {
+                path = ApplicationLauncher.ResolveExecutablePath();
+            }
+            catch
+            {
+                path = "unknown";
+            }
+        }
+
+        var entry = Assembly.GetEntryAssembly();
+        var informational = entry?
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        var version = informational
+            ?? entry?.GetName().Version?.ToString()
+            ?? "unknown";
+
+        WriteMilestone($"Process path={path} version={version}");
     }
 
     public static void WriteMilestone(string stage)
     {
-        try
-        {
-            AppPaths.EnsureDirectories();
-            var line =
-                $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} [Info] Startup: {stage}{Environment.NewLine}";
-
-            lock (Gate)
-            {
-                File.AppendAllText(AppPaths.LogPath, line);
-            }
-        }
-        catch
-        {
-            // Last-resort logging must never throw.
-        }
+        AppendLine(
+            $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} [Info] Startup: {stage}{Environment.NewLine}");
     }
 
     public static void WriteFatal(string source, Exception? exception)
     {
+        var message = exception is null
+            ? source
+            : $"{source}{Environment.NewLine}{exception}";
+        AppendLine(
+            $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} [Fatal] Startup: {message}{Environment.NewLine}");
+    }
+
+    private static void AppendLine(string line)
+    {
         try
         {
             AppPaths.EnsureDirectories();
-            var message = exception is null
-                ? source
-                : $"{source}{Environment.NewLine}{exception}";
-            var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} [Fatal] Startup: {message}{Environment.NewLine}";
 
             lock (Gate)
             {
-                File.AppendAllText(AppPaths.LogPath, line);
+                using var stream = new FileStream(
+                    AppPaths.LogPath,
+                    FileMode.Append,
+                    FileAccess.Write,
+                    FileShare.ReadWrite);
+                using var writer = new StreamWriter(stream) { AutoFlush = true };
+                writer.Write(line);
+                stream.Flush(flushToDisk: true);
             }
         }
         catch

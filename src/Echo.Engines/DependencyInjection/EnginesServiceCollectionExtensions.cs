@@ -8,25 +8,25 @@ public static class EnginesServiceCollectionExtensions
     public static IServiceCollection UseEchoEngines(this IServiceCollection services)
     {
 #if INCLUDE_WHISPER
-        services.AddSingleton<Whisper.WhisperEngine>();
         services.AddSingleton<IWhisperModelSupport, Whisper.WhisperModelSupport>();
         services.AddSingleton(new EngineRegistration
         {
             EngineId = "whisper",
-            Factory = sp => sp.GetRequiredService<Whisper.WhisperEngine>(),
+            Factory = sp => new Whisper.WhisperEngine(
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Whisper.WhisperEngine>>()),
         });
 #endif
-        services.AddSingleton<GigaAm.GigaAmEngine>();
-        services.AddSingleton<Omnilingual.OmnilingualEngine>();
         services.AddSingleton(new EngineRegistration
         {
             EngineId = "gigaam",
-            Factory = sp => sp.GetRequiredService<GigaAm.GigaAmEngine>(),
+            Factory = sp => new GigaAm.GigaAmEngine(
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<GigaAm.GigaAmEngine>>()),
         });
         services.AddSingleton(new EngineRegistration
         {
             EngineId = "omnilingual",
-            Factory = sp => sp.GetRequiredService<Omnilingual.OmnilingualEngine>(),
+            Factory = sp => new Omnilingual.OmnilingualEngine(
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Omnilingual.OmnilingualEngine>>()),
         });
         return services;
     }
