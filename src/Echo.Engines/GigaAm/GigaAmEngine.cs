@@ -27,6 +27,7 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
                 "rnnt" => $"GigaAM v3 rnnt ({device})",
                 "e2e-ctc" => $"GigaAM v3 e2e-ctc ({device})",
                 "multilingual" => $"GigaAM Multilingual CTC ({device})",
+                "multilingual-large" => $"GigaAM Multilingual Large CTC ({device})",
                 _ => $"GigaAM v3 e2e ({device})",
             };
         }
@@ -38,11 +39,11 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
         "Не удалось загрузить GigaAM. Проверьте целостность модели.";
 
     /// <summary>
-    /// Multilingual CTC (~225MB int8) often aborts the process under DirectML EP;
-    /// keep it on CPU. Managed DirectML failures are caught, native aborts are not.
+    /// Multilingual CTC variants often abort the process under DirectML EP;
+    /// keep them on CPU. Managed DirectML failures are caught, native aborts are not.
     /// </summary>
     protected override string PreferProvider(string requestedProvider) =>
-        Config.GigaAmModelSize == "multilingual" && requestedProvider == "directml"
+        Config.GigaAmModelSize is "multilingual" or "multilingual-large" && requestedProvider == "directml"
             ? "cpu"
             : requestedProvider;
 
