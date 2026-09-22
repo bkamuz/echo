@@ -6,13 +6,48 @@ namespace echo.Core.Tests;
 public class StartupDiagnosticsTests
 {
     [Fact]
+    public void WriteMilestone_FlushesToEchoLog()
+    {
+        var tempRoot = CreateTempConfigRoot(out var previousAppData, out var previousXdg);
+
+        try
+        {
+            var marker = Guid.NewGuid().ToString("N");
+            StartupDiagnostics.WriteMilestone($"marker={marker}");
+
+            var log = File.ReadAllText(AppPaths.LogPath);
+            Assert.Contains(marker, log);
+            Assert.Contains("[Info] Startup:", log);
+        }
+        finally
+        {
+            RestoreConfigRoot(tempRoot, previousAppData, previousXdg);
+        }
+    }
+
+    [Fact]
+    public void WriteStartupContext_WritesProcessPathAndVersion()
+    {
+        var tempRoot = CreateTempConfigRoot(out var previousAppData, out var previousXdg);
+
+        try
+        {
+            StartupDiagnostics.WriteStartupContext();
+
+            var log = File.ReadAllText(AppPaths.LogPath);
+            Assert.Contains("Process path=", log);
+            Assert.Contains("version=", log);
+        }
+        finally
+        {
+            RestoreConfigRoot(tempRoot, previousAppData, previousXdg);
+        }
+    }
+
+    [Fact]
     public void WriteFatal_AppendsToEchoLog()
     {
-        var tempRoot = Path.Combine(Path.GetTempPath(), "echo-startup-diag-" + Guid.NewGuid().ToString("N"));
-        var previousAppData = Environment.GetEnvironmentVariable("APPDATA");
-        var previousXdg = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-        Environment.SetEnvironmentVariable("APPDATA", tempRoot);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", tempRoot);
+        var tempRoot = CreateTempConfigRoot(out var previousAppData, out var previousXdg);
 
         try
         {
@@ -25,16 +60,31 @@ public class StartupDiagnosticsTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("APPDATA", previousAppData);
-            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdg);
-            try
-            {
-                Directory.Delete(tempRoot, recursive: true);
-            }
-            catch
-            {
-                // Best-effort cleanup.
-            }
+            RestoreConfigRoot(tempRoot, previousAppData, previousXdg);
+        }
+    }
+
+    private static string CreateTempConfigRoot(out string? previousAppData, out string? previousXdg)
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "echo-startup-diag-" + Guid.NewGuid().ToString("N"));
+        previousAppData = Environment.GetEnvironmentVariable("APPDATA");
+        previousXdg = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        Environment.SetEnvironmentVariable("APPDATA", tempRoot);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", tempRoot);
+        return tempRoot;
+    }
+
+    private static void RestoreConfigRoot(string tempRoot, string? previousAppData, string? previousXdg)
+    {
+        Environment.SetEnvironmentVariable("APPDATA", previousAppData);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdg);
+        try
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+        catch
+        {
+            // Best-effort cleanup.
         }
     }
 }

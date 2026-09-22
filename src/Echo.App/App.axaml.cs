@@ -53,6 +53,7 @@ public partial class App : Application
         AppPaths.EnsureDirectories();
         StartupDiagnostics.WriteMilestone("InitializeApplication begin");
 
+        StartupDiagnostics.WriteMilestone("Building DI host");
         var host = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
@@ -62,7 +63,11 @@ public partial class App : Application
                 });
                 services.UseEcho();
                 services.UsePlatform();
-                services.UseEchoEngines();
+                // Windows registers Sherpa engines lazily via reflection (see SherpaEnginesAssemblyLoader).
+                if (!OperatingSystem.IsWindows())
+                {
+                    services.UseEchoEngines();
+                }
                 services.AddSingleton<LocalizationService>();
                 services.AddSingleton<AppStatusViewModel>();
                 services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();
@@ -132,6 +137,7 @@ public partial class App : Application
             var startMinimized = (desktop.Args ?? [])
                 .Any(arg => string.Equals(arg, ApplicationLauncher.MinimizedArgument, StringComparison.OrdinalIgnoreCase));
 
+            StartupDiagnostics.WriteMilestone("Resolving ShellViewModel");
             desktop.MainWindow = new MainWindow
             {
                 DataContext = Services.GetRequiredService<ShellViewModel>(),
@@ -141,6 +147,7 @@ public partial class App : Application
             if (Services.GetRequiredService<ITrayStateService>() is AvaloniaTrayService tray)
             {
                 tray.AttachMainWindow(desktop.MainWindow);
+                StartupDiagnostics.WriteMilestone("Tray attached");
             }
 
             var startupHandled = false;

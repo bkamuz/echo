@@ -18,6 +18,7 @@ public static class WindowsServiceCollectionExtensions
         services.AddSingleton<ICursorPosition, WindowsCursorPosition>();
         services.AddSingleton<IDirectMlAvailability, WindowsDirectMlAvailability>();
         services.AddSingleton<INpuAvailability, WindowsNpuAvailability>();
+        SherpaEnginesAssemblyLoader.RegisterEngines(services);
         if (ParakeetAssemblyLoader.IsSupported)
         {
             ParakeetAssemblyLoader.RegisterEngine(services);
