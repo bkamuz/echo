@@ -39,6 +39,7 @@ public static class AppPaths
     public static string GigaAmMultilingualDir => Path.Combine(ModelsDir, "gigaam-multilingual");
     public static string OmnilingualDir => Path.Combine(ModelsDir, "omnilingual-300m");
     public static string DirectMlDir => Path.Combine(BaseDir, "directml");
+    public static string NpuDir => Path.Combine(BaseDir, "qnn");
 
     public static void EnsureDirectories()
     {

@@ -59,6 +59,10 @@
   <sys:String x:Key="Loc.Device.Cpu.Tooltip">Universal mode. Works on any PC.</sys:String>
   <sys:String x:Key="Loc.Device.DirectMl">GPU (DirectML)</sys:String>
   <sys:String x:Key="Loc.Device.DirectMl.Tooltip">Acceleration via DirectML on Windows (AMD Radeon, Intel, NVIDIA). First selection downloads ~30 MB.</sys:String>
+  <sys:String x:Key="Loc.Device.Npu">NPU (Qualcomm QNN)</sys:String>
+  <sys:String x:Key="Loc.Device.Npu.Tooltip">Acceleration via Qualcomm Hexagon NPU on Snapdragon Windows PCs. Requires a QNN runtime download (experimental).</sys:String>
+  <sys:String x:Key="Loc.Device.Npu.TooltipPending">Experimental Snapdragon NPU path. {0} First selection downloads the QNN runtime when published.</sys:String>
+  <sys:String x:Key="Loc.Device.Npu.TooltipUnavailable">NPU unavailable on this PC: {0}</sys:String>
   <sys:String x:Key="Loc.Input.Clipboard">Clipboard paste</sys:String>
   <sys:String x:Key="Loc.Input.Clipboard.Tooltip">Fast paste. Clipboard contents are restored after paste.</sys:String>
   <sys:String x:Key="Loc.Input.Type">Type</sys:String>
@@ -84,6 +88,7 @@
   <sys:String x:Key="Loc.Status.LoadingModel">Loading model…</sys:String>
   <sys:String x:Key="Loc.Status.ModelBusy">Model is loading — dictation is paused</sys:String>
   <sys:String x:Key="Loc.Status.PreparingDirectMl">Preparing DirectML…</sys:String>
+  <sys:String x:Key="Loc.Status.PreparingNpu">Preparing QNN runtime…</sys:String>
   <sys:String x:Key="Loc.Status.DownloadingUpdate">Downloading update…</sys:String>
   <sys:String x:Key="Loc.Status.PreparingUpdate">Preparing update…</sys:String>
   <sys:String x:Key="Loc.Status.InstallingUpdate">Installing update…</sys:String>
@@ -91,6 +96,7 @@
   <sys:String x:Key="Loc.Status.ModelMissing">Model not loaded — download it in Settings</sys:String>
   <sys:String x:Key="Loc.Status.ApplyError">Failed to apply settings</sys:String>
   <sys:String x:Key="Loc.Status.DirectMlFailed">Could not download DirectML — kept CPU</sys:String>
+  <sys:String x:Key="Loc.Status.NpuFailed">Could not prepare QNN runtime — kept CPU</sys:String>
   <sys:String x:Key="Loc.Status.HotkeyCapture">Hold the combination and release all keys…</sys:String>
   <sys:String x:Key="Loc.Status.Copied">Copied</sys:String>
   <sys:String x:Key="Loc.Status.Restarting">Restarting…</sys:String>

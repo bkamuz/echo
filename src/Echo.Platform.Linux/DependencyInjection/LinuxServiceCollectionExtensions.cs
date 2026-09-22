@@ -13,6 +13,7 @@ public static class LinuxServiceCollectionExtensions
         services.AddSingleton<IFocusTarget, LinuxFocusTarget>();
         services.AddSingleton<ICursorPosition, LinuxCursorPosition>();
         services.AddSingleton<IDirectMlAvailability, UnsupportedDirectMlAvailability>();
+        services.AddSingleton<INpuAvailability, UnsupportedNpuAvailability>();
         services.AddSingleton<IAutoStartService, LinuxAutoStartService>();
         services.AddSingleton<IUpdateApplier, UnsupportedUpdateApplier>();
         return services;

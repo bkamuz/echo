@@ -61,12 +61,14 @@ public partial class App : Application
                     sp.GetRequiredService<AppStatusViewModel>(),
                     sp.GetRequiredService<SettingsApplyService>(),
                     sp.GetRequiredService<IDirectMlAvailability>(),
+                    sp.GetRequiredService<INpuAvailability>(),
                     sp.GetRequiredService<IAutoStartService>(),
                     sp.GetRequiredService<HotkeyCaptureController>(),
                     sp.GetRequiredService<ModelSettingsController>(),
                     sp.GetServices<echo.Abstractions.Engines.ITranscriptionEngine>(),
                     sp.GetRequiredService<LocalizationService>(),
-                    sp.GetService<DirectMlRuntimeInstaller>()));
+                    sp.GetService<DirectMlRuntimeInstaller>(),
+                    sp.GetService<NpuRuntimeInstaller>()));
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<ShellViewModel>();

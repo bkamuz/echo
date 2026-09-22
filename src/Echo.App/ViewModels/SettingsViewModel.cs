@@ -37,11 +37,13 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppStatusViewModel _status;
     private readonly SettingsApplyService _applyService;
     private readonly IDirectMlAvailability _directMlAvailability;
+    private readonly INpuAvailability _npuAvailability;
     private readonly IAutoStartService _autoStartService;
     private readonly HotkeyCaptureController _hotkeyCapture;
     private readonly ModelSettingsController _models;
     private readonly LocalizationService _loc;
     private readonly DirectMlRuntimeInstaller? _directMlInstaller;
+    private readonly NpuRuntimeInstaller? _npuInstaller;
     private readonly HashSet<string> _registeredEngineIds;
     private bool _isLoadingFromConfig;
 
@@ -99,12 +101,14 @@ public partial class SettingsViewModel : ObservableObject
         AppStatusViewModel status,
         SettingsApplyService applyService,
         IDirectMlAvailability directMlAvailability,
+        INpuAvailability npuAvailability,
         IAutoStartService autoStartService,
         HotkeyCaptureController hotkeyCapture,
         ModelSettingsController models,
         IEnumerable<ITranscriptionEngine> engines,
         LocalizationService loc,
-        DirectMlRuntimeInstaller? directMlInstaller = null)
+        DirectMlRuntimeInstaller? directMlInstaller = null,
+        NpuRuntimeInstaller? npuInstaller = null)
     {
         _coordinator = coordinator;
         _audio = audio;
@@ -112,11 +116,13 @@ public partial class SettingsViewModel : ObservableObject
         _status = status;
         _applyService = applyService;
         _directMlAvailability = directMlAvailability;
+        _npuAvailability = npuAvailability;
         _autoStartService = autoStartService;
         _hotkeyCapture = hotkeyCapture;
         _models = models;
         _loc = loc;
         _directMlInstaller = directMlInstaller;
+        _npuInstaller = npuInstaller;
 
         _registeredEngineIds = engines.Select(e => e.EngineId).ToHashSet(StringComparer.Ordinal);
         RebuildEngineOptions();
@@ -228,9 +234,21 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
+        if (!value.IsEnabled)
+        {
+            SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
+            return;
+        }
+
         if (value.Id == ExecutionProviderResolver.DirectMlDevice && _directMlInstaller is not null)
         {
             _ = EnsureDirectMlThenApplyAsync();
+            return;
+        }
+
+        if (value.Id == ExecutionProviderResolver.NpuDevice && _npuInstaller is not null)
+        {
+            _ = EnsureNpuThenApplyAsync();
             return;
         }
 
@@ -423,6 +441,38 @@ public partial class SettingsViewModel : ObservableObject
                 SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
                 _status.SetStatusTemporary(
                     "Loc.Status.DirectMlFailed",
+                    SettingsApplyService.StatusClearMs,
+                    alert: true);
+                IsApplying = false;
+            });
+        }
+    }
+
+    private async Task EnsureNpuThenApplyAsync()
+    {
+        if (_npuInstaller is null)
+        {
+            ScheduleApply();
+            return;
+        }
+
+        IsApplying = true;
+        _status.SetStatus("Loc.Status.PreparingNpu", busy: true);
+        try
+        {
+            var progress = _applyService.CreateProgressReporter(
+                null,
+                s => _status.SetStatus(s, busy: true));
+            await _npuInstaller.EnsureInstalledAsync(progress).ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(ScheduleApply);
+        }
+        catch (Exception)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
+                _status.SetStatusTemporary(
+                    "Loc.Status.NpuFailed",
                     SettingsApplyService.StatusClearMs,
                     alert: true);
                 IsApplying = false;
@@ -626,16 +676,32 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        ComputeDeviceOptions = _directMlAvailability.IsAvailable
-            ?
-            [
-                cpu,
-                new(
-                    ExecutionProviderResolver.DirectMlDevice,
-                    _loc.Get("Loc.Device.DirectMl"),
-                    _loc.Get("Loc.Device.DirectMl.Tooltip")),
-            ]
-            : [cpu];
+        var options = new List<ComputeDeviceOption> { cpu };
+
+        if (_directMlAvailability.IsAvailable)
+        {
+            options.Add(new(
+                ExecutionProviderResolver.DirectMlDevice,
+                _loc.Get("Loc.Device.DirectMl"),
+                _loc.Get("Loc.Device.DirectMl.Tooltip")));
+        }
+
+        if (_npuAvailability.IsLikelyPlatform)
+        {
+            var enabled = _npuAvailability.IsAvailable;
+            var npuTooltip = enabled
+                ? (_npuInstaller?.IsInstalled == true
+                    ? _loc.Get("Loc.Device.Npu.Tooltip")
+                    : _loc.Format("Loc.Device.Npu.TooltipPending", _npuAvailability.StatusDetail))
+                : _loc.Format("Loc.Device.Npu.TooltipUnavailable", _npuAvailability.StatusDetail);
+            options.Add(new(
+                ExecutionProviderResolver.NpuDevice,
+                _loc.Get("Loc.Device.Npu"),
+                npuTooltip,
+                enabled));
+        }
+
+        ComputeDeviceOptions = options;
     }
 
     private void RefreshLocalizedOptions()

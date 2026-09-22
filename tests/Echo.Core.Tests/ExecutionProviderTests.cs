@@ -8,6 +8,7 @@ public class ExecutionProviderTests
     [Theory]
     [InlineData(ExecutionProvider.Cpu, "cpu")]
     [InlineData(ExecutionProvider.DirectMl, "directml")]
+    [InlineData(ExecutionProvider.Npu, "qnn")]
     public void ToSherpaProvider_MapsKnownValues(ExecutionProvider provider, string expected)
     {
         Assert.Equal(expected, ExecutionProviderResolver.ToSherpaProvider(provider));
@@ -16,6 +17,8 @@ public class ExecutionProviderTests
     [Theory]
     [InlineData("cpu", ExecutionProvider.Cpu)]
     [InlineData("directml", ExecutionProvider.DirectMl)]
+    [InlineData("npu", ExecutionProvider.Npu)]
+    [InlineData("qnn", ExecutionProvider.Npu)]
     [InlineData("cuda", ExecutionProvider.Cpu)]
     [InlineData("unknown", ExecutionProvider.Cpu)]
     [InlineData(null, ExecutionProvider.Cpu)]
@@ -41,10 +44,32 @@ public class ExecutionProviderTests
     }
 
     [Fact]
-    public void AppConfig_Devices_ListsCpuAndDirectMlOnly()
+    public void AppConfig_Devices_ListsCpuDirectMlAndNpu()
     {
         Assert.Equal(
-            [ExecutionProviderResolver.CpuDevice, ExecutionProviderResolver.DirectMlDevice],
+            [
+                ExecutionProviderResolver.CpuDevice,
+                ExecutionProviderResolver.DirectMlDevice,
+                ExecutionProviderResolver.NpuDevice,
+            ],
             AppConfig.Devices);
+    }
+
+    [Fact]
+    public void AppConfig_Normalize_KeepsNpu()
+    {
+        var config = new AppConfig { Device = ExecutionProviderResolver.NpuDevice };
+        config.Normalize();
+        Assert.Equal(ExecutionProviderResolver.NpuDevice, config.Device);
+    }
+
+    [Theory]
+    [InlineData(ExecutionProvider.Cpu, "cpu")]
+    [InlineData(ExecutionProvider.DirectMl, "directml")]
+    [InlineData(ExecutionProvider.Npu, "npu")]
+    public void ToConfigDevice_RoundTrips(ExecutionProvider provider, string expected)
+    {
+        Assert.Equal(expected, ExecutionProviderResolver.ToConfigDevice(provider));
+        Assert.Equal(provider, ExecutionProviderResolver.FromConfigDevice(expected));
     }
 }

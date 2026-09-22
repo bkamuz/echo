@@ -111,9 +111,12 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
             return true;
         }
 
-        if (requestedProvider == "directml")
+        if (requestedProvider is "directml" or "qnn")
         {
-            _logger.LogWarning("DirectML load failed for {Engine}; falling back to CPU", EngineId);
+            _logger.LogWarning(
+                "{Provider} load failed for {Engine}; falling back to CPU",
+                requestedProvider,
+                EngineId);
             if (TryCreateRecognizer("cpu", out recognizer))
             {
                 resolvedProvider = "cpu";
