@@ -29,7 +29,7 @@ public sealed record UiLanguageChoice(string Code, string Label)
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private static readonly string[] AllEngineIds = ["gigaam", "whisper", "omnilingual"];
+    private static readonly string[] BaseEngineIds = ["gigaam", "whisper", "omnilingual", "parakeet_npu"];
 
     private readonly DictationCoordinator _coordinator;
     private readonly IAudioCapture _audio;
@@ -37,11 +37,13 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppStatusViewModel _status;
     private readonly SettingsApplyService _applyService;
     private readonly IDirectMlAvailability _directMlAvailability;
+    private readonly INpuAvailability _npuAvailability;
     private readonly IAutoStartService _autoStartService;
     private readonly HotkeyCaptureController _hotkeyCapture;
     private readonly ModelSettingsController _models;
     private readonly LocalizationService _loc;
     private readonly DirectMlRuntimeInstaller? _directMlInstaller;
+    private readonly IParakeetNpuModelSupport? _parakeetNpuSupport;
     private readonly HashSet<string> _registeredEngineIds;
     private bool _isLoadingFromConfig;
 
@@ -99,12 +101,14 @@ public partial class SettingsViewModel : ObservableObject
         AppStatusViewModel status,
         SettingsApplyService applyService,
         IDirectMlAvailability directMlAvailability,
+        INpuAvailability npuAvailability,
         IAutoStartService autoStartService,
         HotkeyCaptureController hotkeyCapture,
         ModelSettingsController models,
         IEnumerable<ITranscriptionEngine> engines,
         LocalizationService loc,
-        DirectMlRuntimeInstaller? directMlInstaller = null)
+        DirectMlRuntimeInstaller? directMlInstaller = null,
+        IParakeetNpuModelSupport? parakeetNpuSupport = null)
     {
         _coordinator = coordinator;
         _audio = audio;
@@ -112,11 +116,13 @@ public partial class SettingsViewModel : ObservableObject
         _status = status;
         _applyService = applyService;
         _directMlAvailability = directMlAvailability;
+        _npuAvailability = npuAvailability;
         _autoStartService = autoStartService;
         _hotkeyCapture = hotkeyCapture;
         _models = models;
         _loc = loc;
         _directMlInstaller = directMlInstaller;
+        _parakeetNpuSupport = parakeetNpuSupport;
 
         _registeredEngineIds = engines.Select(e => e.EngineId).ToHashSet(StringComparer.Ordinal);
         RebuildEngineOptions();
@@ -164,7 +170,8 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsGigaAm => Engine == "gigaam";
     public bool IsWhisper => Engine == "whisper";
     public bool IsOmnilingual => Engine == "omnilingual";
-    public bool IsDeviceVisible => Engine != "whisper";
+    public bool IsParakeetNpu => Engine == "parakeet_npu";
+    public bool IsDeviceVisible => Engine is not ("whisper" or "parakeet_npu");
 
     partial void OnIsApplyingChanged(bool value) => OnPropertyChanged(nameof(IsSettingsEnabled));
 
@@ -186,7 +193,12 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsGigaAm));
         OnPropertyChanged(nameof(IsWhisper));
         OnPropertyChanged(nameof(IsOmnilingual));
+        OnPropertyChanged(nameof(IsParakeetNpu));
         OnPropertyChanged(nameof(IsDeviceVisible));
+        if (!_isLoadingFromConfig && value == "parakeet_npu")
+        {
+            SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.NpuDevice);
+        }
         SyncSelectedEngine();
         RebuildComputeDeviceOptions();
         OnPropertyChanged(nameof(ComputeDeviceOptions));
@@ -228,10 +240,38 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
+        if (!value.IsEnabled)
+        {
+            SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
+            return;
+        }
+
         if (value.Id == ExecutionProviderResolver.DirectMlDevice && _directMlInstaller is not null)
         {
             _ = EnsureDirectMlThenApplyAsync();
             return;
+        }
+
+        if (value.Id == ExecutionProviderResolver.NpuDevice)
+        {
+            if (!_isLoadingFromConfig && Engine != "parakeet_npu")
+            {
+                _isLoadingFromConfig = true;
+                try
+                {
+                    Engine = "parakeet_npu";
+                }
+                finally
+                {
+                    _isLoadingFromConfig = false;
+                }
+            }
+
+            if (_parakeetNpuSupport is not null)
+            {
+                _ = EnsureNpuThenApplyAsync();
+                return;
+            }
         }
 
         ScheduleApply();
@@ -430,6 +470,43 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    private async Task EnsureNpuThenApplyAsync()
+    {
+        if (_parakeetNpuSupport is null)
+        {
+            ScheduleApply();
+            return;
+        }
+
+        IsApplying = true;
+        _status.SetStatus("Loc.Status.PreparingNpu", busy: true);
+        try
+        {
+            var progress = _applyService.CreateProgressReporter(
+                null,
+                s => _status.SetStatus(s, busy: true));
+            await _parakeetNpuSupport.EnsureRuntimeAsync(progress).ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(ScheduleApply);
+        }
+        catch (Exception)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.CpuDevice);
+                if (Engine == "parakeet_npu")
+                {
+                    Engine = "gigaam";
+                }
+
+                _status.SetStatusTemporary(
+                    "Loc.Status.NpuFailed",
+                    SettingsApplyService.StatusClearMs,
+                    alert: true);
+                IsApplying = false;
+            });
+        }
+    }
+
     private async Task<AppConfig> PrepareConfigForApplyAsync()
     {
         return await Dispatcher.UIThread.InvokeAsync(() =>
@@ -525,7 +602,8 @@ public partial class SettingsViewModel : ObservableObject
 
     private void RebuildEngineOptions()
     {
-        var localized = AllEngineIds
+        var localized = BaseEngineIds
+            .Where(id => id != "parakeet_npu" || _npuAvailability.IsLikelyPlatform)
             .Select(id => new EngineOption(id, GetEngineDisplayName(id)))
             .ToList();
         EngineOptions = localized.Where(o => _registeredEngineIds.Contains(o.Id)).ToList();
@@ -540,6 +618,7 @@ public partial class SettingsViewModel : ObservableObject
         "gigaam" => _loc.Get("Loc.Engine.GigaAm"),
         "whisper" => _loc.Get("Loc.Engine.Whisper"),
         "omnilingual" => _loc.Get("Loc.Engine.Omnilingual"),
+        "parakeet_npu" => _loc.Get("Loc.Engine.ParakeetNpu"),
         _ => id,
     };
 
@@ -626,16 +705,33 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        ComputeDeviceOptions = _directMlAvailability.IsAvailable
-            ?
-            [
-                cpu,
-                new(
-                    ExecutionProviderResolver.DirectMlDevice,
-                    _loc.Get("Loc.Device.DirectMl"),
-                    _loc.Get("Loc.Device.DirectMl.Tooltip")),
-            ]
-            : [cpu];
+        var options = new List<ComputeDeviceOption> { cpu };
+
+        if (_directMlAvailability.IsAvailable)
+        {
+            options.Add(new(
+                ExecutionProviderResolver.DirectMlDevice,
+                _loc.Get("Loc.Device.DirectMl"),
+                _loc.Get("Loc.Device.DirectMl.Tooltip")));
+        }
+
+        if (_npuAvailability.IsLikelyPlatform)
+        {
+            var enabled = _npuAvailability.IsAvailable;
+            var runtimeReady = _parakeetNpuSupport?.IsRuntimeInstalled == true;
+            var npuTooltip = enabled
+                ? (runtimeReady
+                    ? _loc.Get("Loc.Device.Npu.Tooltip")
+                    : _loc.Format("Loc.Device.Npu.TooltipPending", _npuAvailability.StatusDetail))
+                : _loc.Format("Loc.Device.Npu.TooltipUnavailable", _npuAvailability.StatusDetail);
+            options.Add(new(
+                ExecutionProviderResolver.NpuDevice,
+                _loc.Get("Loc.Device.Npu"),
+                npuTooltip,
+                enabled));
+        }
+
+        ComputeDeviceOptions = options;
     }
 
     private void RefreshLocalizedOptions()

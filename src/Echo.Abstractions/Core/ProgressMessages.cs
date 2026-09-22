@@ -37,6 +37,8 @@ public static class ProgressMessages
 
     public static string PreparingDirectMl() => $"{WorkingPrefix}PreparingDirectMl";
 
+    public static string PreparingNpu() => $"{WorkingPrefix}PreparingNpu";
+
     public static string DownloadingUpdate() => $"{WorkingPrefix}DownloadingUpdate";
 
     public static string PreparingUpdate() => $"{WorkingPrefix}PreparingUpdate";

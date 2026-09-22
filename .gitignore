@@ -74,6 +74,8 @@ Desktop.ini
 .cache/
 native/win-x64/directml/*.dll
 native/win-x64/directml/directml.enabled
+native/win-arm64/qnn/*.dll
+native/win-arm64/qnn/qnn.enabled
 
 ## Legacy local data + cached models
 backup/

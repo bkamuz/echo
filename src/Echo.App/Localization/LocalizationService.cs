@@ -145,6 +145,7 @@ public sealed class LocalizationService
                 "Saving" => Get("Loc.Status.Saving"),
                 "LoadingModel" => Get("Loc.Status.LoadingModel"),
                 "PreparingDirectMl" => Get("Loc.Status.PreparingDirectMl"),
+                "PreparingNpu" => Get("Loc.Status.PreparingNpu"),
                 "DownloadingUpdate" => Get("Loc.Status.DownloadingUpdate"),
                 "PreparingUpdate" => Get("Loc.Status.PreparingUpdate"),
                 "InstallingUpdate" => Get("Loc.Status.InstallingUpdate"),

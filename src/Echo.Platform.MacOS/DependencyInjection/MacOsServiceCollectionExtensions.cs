@@ -13,6 +13,7 @@ public static class MacOsServiceCollectionExtensions
         services.AddSingleton<IFocusTarget, MacOsFocusTarget>();
         services.AddSingleton<ICursorPosition, MacOsCursorPosition>();
         services.AddSingleton<IDirectMlAvailability, UnsupportedDirectMlAvailability>();
+        services.AddSingleton<INpuAvailability, UnsupportedNpuAvailability>();
         services.AddSingleton<IAutoStartService, MacOsAutoStartService>();
         services.AddSingleton<IUpdateApplier, UnsupportedUpdateApplier>();
         return services;

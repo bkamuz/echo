@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using echo.Abstractions.Core;
+using echo.Abstractions.Engines;
 using echo.Abstractions.Platform;
 using echo.App.DependencyInjection;
 using echo.App.Localization;
@@ -14,6 +15,7 @@ using echo.App.Views;
 using echo.Core;
 using echo.Core.DependencyInjection;
 using echo.Engines.DependencyInjection;
+using echo.Engines.ParakeetNpu.DependencyInjection;
 using echo.Platform.Linux;
 using echo.Platform.Windows;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +47,10 @@ public partial class App : Application
                 services.UseEcho();
                 services.UsePlatform();
                 services.UseEchoEngines();
+                if (OperatingSystem.IsWindows())
+                {
+                    services.AddParakeetNpuEngine();
+                }
                 services.AddSingleton<LocalizationService>();
                 services.AddSingleton<AppStatusViewModel>();
                 services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();
@@ -61,12 +67,14 @@ public partial class App : Application
                     sp.GetRequiredService<AppStatusViewModel>(),
                     sp.GetRequiredService<SettingsApplyService>(),
                     sp.GetRequiredService<IDirectMlAvailability>(),
+                    sp.GetRequiredService<INpuAvailability>(),
                     sp.GetRequiredService<IAutoStartService>(),
                     sp.GetRequiredService<HotkeyCaptureController>(),
                     sp.GetRequiredService<ModelSettingsController>(),
                     sp.GetServices<echo.Abstractions.Engines.ITranscriptionEngine>(),
                     sp.GetRequiredService<LocalizationService>(),
-                    sp.GetService<DirectMlRuntimeInstaller>()));
+                    sp.GetService<DirectMlRuntimeInstaller>(),
+                    sp.GetService<IParakeetNpuModelSupport>()));
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<ShellViewModel>();

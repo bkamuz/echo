@@ -260,12 +260,20 @@ public static class ModelRegistry
             ? ResolveGigaAmCtc(dir, variant) is not null
             : ResolveGigaAmBundle(dir, variant) is not null;
 
+    public static ModelSpec ParakeetNpuSpec() => new(
+        Id: "parakeet-npu-htp",
+        Title: "Parakeet TDT 0.6B (HTP)",
+        Engine: "parakeet_npu",
+        RepoId: "trsdn/parakeet-tdt-0.6b-v3-htp-int8-8s",
+        LocalDir: AppPaths.ParakeetNpuDir);
+
     public static ModelSpec? SpecForEngine(string engine, string whisperModelSize, string gigaAmModelSize) =>
         engine switch
         {
             "gigaam" => GigaAmSpecFor(gigaAmModelSize),
             "whisper" => WhisperSpec(whisperModelSize),
             "omnilingual" => OmnilingualSpec(),
+            "parakeet_npu" => ParakeetNpuSpec(),
             _ => null,
         };
 

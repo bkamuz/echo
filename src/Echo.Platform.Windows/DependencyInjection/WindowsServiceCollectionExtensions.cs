@@ -16,6 +16,7 @@ public static class WindowsServiceCollectionExtensions
         services.AddSingleton<IFocusTarget, WindowsFocusTarget>();
         services.AddSingleton<ICursorPosition, WindowsCursorPosition>();
         services.AddSingleton<IDirectMlAvailability, WindowsDirectMlAvailability>();
+        services.AddSingleton<INpuAvailability, WindowsNpuAvailability>();
         services.AddHttpClient<DirectMlRuntimeInstaller>();
         services.AddSingleton<IAutoStartService, WindowsAutoStartService>();
         services.AddHttpClient<IUpdateApplier, WindowsUpdateApplier>();

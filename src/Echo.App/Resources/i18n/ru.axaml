@@ -60,10 +60,15 @@
   <sys:String x:Key="Loc.Engine.GigaAm">GigaAM (русский)</sys:String>
   <sys:String x:Key="Loc.Engine.Whisper">Whisper (мультиязычный)</sys:String>
   <sys:String x:Key="Loc.Engine.Omnilingual">Omnilingual (1600 языков)</sys:String>
+  <sys:String x:Key="Loc.Engine.ParakeetNpu">Parakeet NPU (эксперимент)</sys:String>
   <sys:String x:Key="Loc.Device.Cpu">Процессор</sys:String>
   <sys:String x:Key="Loc.Device.Cpu.Tooltip">Универсальный режим. Работает на любом ПК.</sys:String>
   <sys:String x:Key="Loc.Device.DirectMl">GPU (DirectML)</sys:String>
   <sys:String x:Key="Loc.Device.DirectMl.Tooltip">Ускорение через DirectML на Windows (AMD Radeon, Intel, NVIDIA). При первом выборе скачается ~30 МБ.</sys:String>
+  <sys:String x:Key="Loc.Device.Npu">NPU (Qualcomm QNN)</sys:String>
+  <sys:String x:Key="Loc.Device.Npu.Tooltip">Ускорение через Qualcomm Hexagon NPU на Snapdragon Windows. Нужна загрузка QNN runtime (эксперимент).</sys:String>
+  <sys:String x:Key="Loc.Device.Npu.TooltipPending">Экспериментальный путь Snapdragon NPU. {0} При первом выборе скачается QNN runtime, когда он будет опубликован.</sys:String>
+  <sys:String x:Key="Loc.Device.Npu.TooltipUnavailable">NPU недоступен на этом ПК: {0}</sys:String>
   <sys:String x:Key="Loc.Input.Clipboard">Вставка из буфера</sys:String>
   <sys:String x:Key="Loc.Input.Clipboard.Tooltip">Быстрая вставка. Содержимое буфера обмена восстанавливается после вставки.</sys:String>
   <sys:String x:Key="Loc.Input.Type">Печать</sys:String>
@@ -90,6 +95,7 @@
   <sys:String x:Key="Loc.Status.LoadingModel">Загрузка модели…</sys:String>
   <sys:String x:Key="Loc.Status.ModelBusy">Модель загружается — диктовка временно недоступна</sys:String>
   <sys:String x:Key="Loc.Status.PreparingDirectMl">Подготовка DirectML…</sys:String>
+  <sys:String x:Key="Loc.Status.PreparingNpu">Подготовка QNN runtime…</sys:String>
   <sys:String x:Key="Loc.Status.DownloadingUpdate">Скачивание обновления…</sys:String>
   <sys:String x:Key="Loc.Status.PreparingUpdate">Подготовка обновления…</sys:String>
   <sys:String x:Key="Loc.Status.InstallingUpdate">Установка обновления…</sys:String>
@@ -97,6 +103,7 @@
   <sys:String x:Key="Loc.Status.ModelMissing">Модель не загружена — скачайте в «Настройках»</sys:String>
   <sys:String x:Key="Loc.Status.ApplyError">Ошибка применения настроек</sys:String>
   <sys:String x:Key="Loc.Status.DirectMlFailed">Не удалось скачать DirectML — оставлен CPU</sys:String>
+  <sys:String x:Key="Loc.Status.NpuFailed">Не удалось подготовить QNN runtime — оставлен CPU</sys:String>
   <sys:String x:Key="Loc.Status.HotkeyCapture">Удерживайте комбинацию и отпустите все клавиши…</sys:String>
   <sys:String x:Key="Loc.Status.Copied">Скопировано</sys:String>
   <sys:String x:Key="Loc.Status.Restarting">Перезапуск…</sys:String>

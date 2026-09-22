@@ -22,7 +22,26 @@ public sealed record ModelSpec(
                 LocalDir,
                 ModelRegistry.GigaAmVariantFromSpecId(Id)),
             "whisper" => ModelRegistry.IsWhisperDownloaded(ModelRegistry.WhisperSizeFromSpecId(Id)),
+            "parakeet_npu" => IsParakeetNpuDownloaded(),
             _ => Directory.EnumerateFiles(LocalDir).Any(),
         };
+    }
+
+    private bool IsParakeetNpuDownloaded()
+    {
+        if (!Directory.Exists(LocalDir))
+        {
+            return false;
+        }
+
+        var required = new[]
+        {
+            "encoder-model.onnx",
+            "encoder-model.bin",
+            "decoder_joint-model.int8.onnx",
+            "nemo128.onnx",
+            "vocab.txt",
+        };
+        return required.All(file => File.Exists(Path.Combine(LocalDir, file)));
     }
 }

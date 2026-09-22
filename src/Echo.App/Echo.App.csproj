@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>1.9.0</Version>
+    <Version>1.9.5</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
@@ -38,6 +38,7 @@
     <ProjectReference Include="..\Echo.Abstractions\Echo.Abstractions.csproj" />
     <ProjectReference Include="..\Echo.Core\Echo.Core.csproj" />
     <ProjectReference Include="..\Echo.Engines\Echo.Engines.csproj" />
+    <ProjectReference Include="..\Echo.Engines.ParakeetNpu\Echo.Engines.ParakeetNpu.csproj" />
     <ProjectReference Include="..\Echo.Platform.Windows\Echo.Platform.Windows.csproj" />
     <ProjectReference Include="..\Echo.Platform.Linux\Echo.Platform.Linux.csproj" />
     <ProjectReference Include="..\Echo.Platform.MacOS\Echo.Platform.MacOS.csproj" Condition="'$(IncludeMacOs)' == 'true'" />
