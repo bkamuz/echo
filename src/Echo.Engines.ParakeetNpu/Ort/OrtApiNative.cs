@@ -142,144 +142,147 @@ internal enum OrtHardwareDeviceType
     Npu = 2,
 }
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtStatusCreateDelegate(int code, nint msg);
+internal static unsafe class OrtNativeDelegates
+{
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint StatusCreateDelegate(int code, nint msg);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetErrorMessageDelegate(nint status);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetErrorMessageDelegate(nint status);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate void OrtReleaseStatusDelegate(nint status);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate void ReleaseStatusDelegate(nint status);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtCreateEnvDelegate(OrtLoggingLevel level, nint logId, nint* env);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint CreateEnvDelegate(OrtLoggingLevel level, nint logId, nint* env);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate void OrtReleaseEnvDelegate(nint env);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate void ReleaseEnvDelegate(nint env);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtCreateSessionOptionsDelegate(nint* sessionOptions);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint CreateSessionOptionsDelegate(nint* sessionOptions);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate void OrtReleaseSessionOptionsDelegate(nint sessionOptions);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate void ReleaseSessionOptionsDelegate(nint sessionOptions);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtSetSessionGraphOptimizationLevelDelegate(nint sessionOptions, OrtGraphOptimizationLevel level);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint SetSessionGraphOptimizationLevelDelegate(nint sessionOptions, OrtGraphOptimizationLevel level);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtSessionOptionsAppendExecutionProviderV2Delegate(
-    nint sessionOptions,
-    nint env,
-    nint* epDevices,
-    nuint numEpDevices,
-    nint* epOptionKeys,
-    nint* epOptionValues,
-    nuint numEpOptions);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint SessionOptionsAppendExecutionProviderV2Delegate(
+        nint sessionOptions,
+        nint env,
+        nint* epDevices,
+        nuint numEpDevices,
+        nint* epOptionKeys,
+        nint* epOptionValues,
+        nuint numEpOptions);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtCreateSessionDelegate(nint env, nint modelPath, nint sessionOptions, nint* session);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint CreateSessionDelegate(nint env, nint modelPath, nint sessionOptions, nint* session);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate void OrtReleaseSessionDelegate(nint session);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate void ReleaseSessionDelegate(nint session);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtCreateCpuMemoryInfoDelegate(OrtAllocatorType allocatorType, OrtMemType memType, nint* memoryInfo);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint CreateCpuMemoryInfoDelegate(OrtAllocatorType allocatorType, OrtMemType memType, nint* memoryInfo);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate void OrtReleaseMemoryInfoDelegate(nint memoryInfo);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate void ReleaseMemoryInfoDelegate(nint memoryInfo);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtCreateTensorWithDataAsOrtValueDelegate(
-    nint memoryInfo,
-    nint data,
-    nuint dataSize,
-    nint dimensions,
-    nuint dimensionCount,
-    OrtTensorElementType elementType,
-    nint* value);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint CreateTensorWithDataAsOrtValueDelegate(
+        nint memoryInfo,
+        nint data,
+        nuint dataSize,
+        nint dimensions,
+        nuint dimensionCount,
+        OrtTensorElementType elementType,
+        nint* value);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate void OrtReleaseValueDelegate(nint value);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate void ReleaseValueDelegate(nint value);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtRunDelegate(
-    nint session,
-    nint runOptions,
-    nint* inputNames,
-    nint* inputValues,
-    nuint inputCount,
-    nint* outputNames,
-    nuint outputCount,
-    nint* outputValues);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint RunDelegate(
+        nint session,
+        nint runOptions,
+        nint* inputNames,
+        nint* inputValues,
+        nuint inputCount,
+        nint* outputNames,
+        nuint outputCount,
+        nint* outputValues);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetTensorTypeAndShapeDelegate(nint value, nint* typeAndShape);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetTensorTypeAndShapeDelegate(nint value, nint* typeAndShape);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate void OrtReleaseTensorTypeAndShapeInfoDelegate(nint typeAndShape);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate void ReleaseTensorTypeAndShapeInfoDelegate(nint typeAndShape);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetTensorElementTypeDelegate(nint typeAndShape, OrtTensorElementType* elementType);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetTensorElementTypeDelegate(nint typeAndShape, OrtTensorElementType* elementType);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetDimensionsCountDelegate(nint typeAndShape, nuint* count);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetDimensionsCountDelegate(nint typeAndShape, nuint* count);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetDimensionsDelegate(nint typeAndShape, long* dimensions, nuint count);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetDimensionsDelegate(nint typeAndShape, long* dimensions, nuint count);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetTensorMutableDataDelegate(nint value, nint* data);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetTensorMutableDataDelegate(nint value, nint* data);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtSessionGetInputCountDelegate(nint session, nuint* count);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint SessionGetInputCountDelegate(nint session, nuint* count);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtSessionGetOutputCountDelegate(nint session, nuint* count);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint SessionGetOutputCountDelegate(nint session, nuint* count);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetAllocatorWithDefaultOptionsDelegate(nint* allocator);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetAllocatorWithDefaultOptionsDelegate(nint* allocator);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtSessionGetInputNameDelegate(nint session, nuint index, nint allocator, nint* name);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint SessionGetInputNameDelegate(nint session, nuint index, nint allocator, nint* name);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtSessionGetOutputNameDelegate(nint session, nuint index, nint allocator, nint* name);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint SessionGetOutputNameDelegate(nint session, nuint index, nint allocator, nint* name);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate void OrtReleaseTypeInfoDelegate(nint typeInfo);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate void ReleaseTypeInfoDelegate(nint typeInfo);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtSessionGetInputTypeInfoDelegate(nint session, nuint index, nint* typeInfo);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint SessionGetInputTypeInfoDelegate(nint session, nuint index, nint* typeInfo);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtSessionGetOutputTypeInfoDelegate(nint session, nuint index, nint* typeInfo);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint SessionGetOutputTypeInfoDelegate(nint session, nuint index, nint* typeInfo);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetOnnxTypeFromTypeInfoDelegate(nint typeInfo, OrtOnnxType* onnxType);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetOnnxTypeFromTypeInfoDelegate(nint typeInfo, OrtOnnxType* onnxType);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtCastTypeInfoToTensorInfoDelegate(nint typeInfo, nint* tensorInfo);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint CastTypeInfoToTensorInfoDelegate(nint typeInfo, nint* tensorInfo);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtAllocatorFreeDelegate(nint allocator, nint pointer);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint AllocatorFreeDelegate(nint allocator, nint pointer);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtRegisterExecutionProviderLibraryDelegate(nint env, nint registrationName, nint path);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint RegisterExecutionProviderLibraryDelegate(nint env, nint registrationName, nint path);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtUnregisterExecutionProviderLibraryDelegate(nint env, nint registrationName);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint UnregisterExecutionProviderLibraryDelegate(nint env, nint registrationName);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtGetEpDevicesDelegate(nint env, nint** epDevices, nuint* numEpDevices);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint GetEpDevicesDelegate(nint env, nint** epDevices, nuint* numEpDevices);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate OrtHardwareDeviceType OrtHardwareDeviceTypeDelegate(nint device);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate OrtHardwareDeviceType HardwareDeviceTypeDelegate(nint device);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtEpDeviceEpNameDelegate(nint epDevice);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint EpDeviceEpNameDelegate(nint epDevice);
 
-[UnmanagedFunctionPointer(CallingConvention.Winapi)]
-internal delegate nint OrtEpDeviceDeviceDelegate(nint epDevice);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate nint EpDeviceDeviceDelegate(nint epDevice);
+}
 
 internal static class OrtApiIndices
 {
@@ -329,119 +332,119 @@ internal sealed unsafe class OrtApiTable
 
     public OrtApiTable(nint api) => _api = api;
 
-    public OrtGetErrorMessageDelegate GetErrorMessage =>
-        GetFn<OrtGetErrorMessageDelegate>(OrtApiIndices.GetErrorMessage);
+    public OrtNativeDelegates.GetErrorMessageDelegate GetErrorMessage =>
+        GetFn<OrtNativeDelegates.GetErrorMessageDelegate>(OrtApiIndices.GetErrorMessage);
 
-    public OrtReleaseStatusDelegate ReleaseStatus =>
-        GetFn<OrtReleaseStatusDelegate>(OrtApiIndices.ReleaseStatus);
+    public OrtNativeDelegates.ReleaseStatusDelegate ReleaseStatus =>
+        GetFn<OrtNativeDelegates.ReleaseStatusDelegate>(OrtApiIndices.ReleaseStatus);
 
-    public OrtCreateEnvDelegate CreateEnv =>
-        GetFn<OrtCreateEnvDelegate>(OrtApiIndices.CreateEnv);
+    public OrtNativeDelegates.CreateEnvDelegate CreateEnv =>
+        GetFn<OrtNativeDelegates.CreateEnvDelegate>(OrtApiIndices.CreateEnv);
 
-    public OrtReleaseEnvDelegate ReleaseEnv =>
-        GetFn<OrtReleaseEnvDelegate>(OrtApiIndices.ReleaseEnv);
+    public OrtNativeDelegates.ReleaseEnvDelegate ReleaseEnv =>
+        GetFn<OrtNativeDelegates.ReleaseEnvDelegate>(OrtApiIndices.ReleaseEnv);
 
-    public OrtCreateSessionOptionsDelegate CreateSessionOptions =>
-        GetFn<OrtCreateSessionOptionsDelegate>(OrtApiIndices.CreateSessionOptions);
+    public OrtNativeDelegates.CreateSessionOptionsDelegate CreateSessionOptions =>
+        GetFn<OrtNativeDelegates.CreateSessionOptionsDelegate>(OrtApiIndices.CreateSessionOptions);
 
-    public OrtReleaseSessionOptionsDelegate ReleaseSessionOptions =>
-        GetFn<OrtReleaseSessionOptionsDelegate>(OrtApiIndices.ReleaseSessionOptions);
+    public OrtNativeDelegates.ReleaseSessionOptionsDelegate ReleaseSessionOptions =>
+        GetFn<OrtNativeDelegates.ReleaseSessionOptionsDelegate>(OrtApiIndices.ReleaseSessionOptions);
 
-    public OrtSetSessionGraphOptimizationLevelDelegate SetSessionGraphOptimizationLevel =>
-        GetFn<OrtSetSessionGraphOptimizationLevelDelegate>(OrtApiIndices.SetSessionGraphOptimizationLevel);
+    public OrtNativeDelegates.SetSessionGraphOptimizationLevelDelegate SetSessionGraphOptimizationLevel =>
+        GetFn<OrtNativeDelegates.SetSessionGraphOptimizationLevelDelegate>(OrtApiIndices.SetSessionGraphOptimizationLevel);
 
-    public OrtSessionOptionsAppendExecutionProviderV2Delegate SessionOptionsAppendExecutionProviderV2 =>
-        GetFn<OrtSessionOptionsAppendExecutionProviderV2Delegate>(OrtApiIndices.SessionOptionsAppendExecutionProviderV2);
+    public OrtNativeDelegates.SessionOptionsAppendExecutionProviderV2Delegate SessionOptionsAppendExecutionProviderV2 =>
+        GetFn<OrtNativeDelegates.SessionOptionsAppendExecutionProviderV2Delegate>(OrtApiIndices.SessionOptionsAppendExecutionProviderV2);
 
-    public OrtCreateSessionDelegate CreateSession =>
-        GetFn<OrtCreateSessionDelegate>(OrtApiIndices.CreateSession);
+    public OrtNativeDelegates.CreateSessionDelegate CreateSession =>
+        GetFn<OrtNativeDelegates.CreateSessionDelegate>(OrtApiIndices.CreateSession);
 
-    public OrtReleaseSessionDelegate ReleaseSession =>
-        GetFn<OrtReleaseSessionDelegate>(OrtApiIndices.ReleaseSession);
+    public OrtNativeDelegates.ReleaseSessionDelegate ReleaseSession =>
+        GetFn<OrtNativeDelegates.ReleaseSessionDelegate>(OrtApiIndices.ReleaseSession);
 
-    public OrtCreateCpuMemoryInfoDelegate CreateCpuMemoryInfo =>
-        GetFn<OrtCreateCpuMemoryInfoDelegate>(OrtApiIndices.CreateCpuMemoryInfo);
+    public OrtNativeDelegates.CreateCpuMemoryInfoDelegate CreateCpuMemoryInfo =>
+        GetFn<OrtNativeDelegates.CreateCpuMemoryInfoDelegate>(OrtApiIndices.CreateCpuMemoryInfo);
 
-    public OrtReleaseMemoryInfoDelegate ReleaseMemoryInfo =>
-        GetFn<OrtReleaseMemoryInfoDelegate>(OrtApiIndices.ReleaseMemoryInfo);
+    public OrtNativeDelegates.ReleaseMemoryInfoDelegate ReleaseMemoryInfo =>
+        GetFn<OrtNativeDelegates.ReleaseMemoryInfoDelegate>(OrtApiIndices.ReleaseMemoryInfo);
 
-    public OrtCreateTensorWithDataAsOrtValueDelegate CreateTensorWithDataAsOrtValue =>
-        GetFn<OrtCreateTensorWithDataAsOrtValueDelegate>(OrtApiIndices.CreateTensorWithDataAsOrtValue);
+    public OrtNativeDelegates.CreateTensorWithDataAsOrtValueDelegate CreateTensorWithDataAsOrtValue =>
+        GetFn<OrtNativeDelegates.CreateTensorWithDataAsOrtValueDelegate>(OrtApiIndices.CreateTensorWithDataAsOrtValue);
 
-    public OrtReleaseValueDelegate ReleaseValue =>
-        GetFn<OrtReleaseValueDelegate>(OrtApiIndices.ReleaseValue);
+    public OrtNativeDelegates.ReleaseValueDelegate ReleaseValue =>
+        GetFn<OrtNativeDelegates.ReleaseValueDelegate>(OrtApiIndices.ReleaseValue);
 
-    public OrtRunDelegate Run =>
-        GetFn<OrtRunDelegate>(OrtApiIndices.Run);
+    public OrtNativeDelegates.RunDelegate Run =>
+        GetFn<OrtNativeDelegates.RunDelegate>(OrtApiIndices.Run);
 
-    public OrtGetTensorTypeAndShapeDelegate GetTensorTypeAndShape =>
-        GetFn<OrtGetTensorTypeAndShapeDelegate>(OrtApiIndices.GetTensorTypeAndShape);
+    public OrtNativeDelegates.GetTensorTypeAndShapeDelegate GetTensorTypeAndShape =>
+        GetFn<OrtNativeDelegates.GetTensorTypeAndShapeDelegate>(OrtApiIndices.GetTensorTypeAndShape);
 
-    public OrtReleaseTensorTypeAndShapeInfoDelegate ReleaseTensorTypeAndShapeInfo =>
-        GetFn<OrtReleaseTensorTypeAndShapeInfoDelegate>(OrtApiIndices.ReleaseTensorTypeAndShapeInfo);
+    public OrtNativeDelegates.ReleaseTensorTypeAndShapeInfoDelegate ReleaseTensorTypeAndShapeInfo =>
+        GetFn<OrtNativeDelegates.ReleaseTensorTypeAndShapeInfoDelegate>(OrtApiIndices.ReleaseTensorTypeAndShapeInfo);
 
-    public OrtGetTensorElementTypeDelegate GetTensorElementType =>
-        GetFn<OrtGetTensorElementTypeDelegate>(OrtApiIndices.GetTensorElementType);
+    public OrtNativeDelegates.GetTensorElementTypeDelegate GetTensorElementType =>
+        GetFn<OrtNativeDelegates.GetTensorElementTypeDelegate>(OrtApiIndices.GetTensorElementType);
 
-    public OrtGetDimensionsCountDelegate GetDimensionsCount =>
-        GetFn<OrtGetDimensionsCountDelegate>(OrtApiIndices.GetDimensionsCount);
+    public OrtNativeDelegates.GetDimensionsCountDelegate GetDimensionsCount =>
+        GetFn<OrtNativeDelegates.GetDimensionsCountDelegate>(OrtApiIndices.GetDimensionsCount);
 
-    public OrtGetDimensionsDelegate GetDimensions =>
-        GetFn<OrtGetDimensionsDelegate>(OrtApiIndices.GetDimensions);
+    public OrtNativeDelegates.GetDimensionsDelegate GetDimensions =>
+        GetFn<OrtNativeDelegates.GetDimensionsDelegate>(OrtApiIndices.GetDimensions);
 
-    public OrtGetTensorMutableDataDelegate GetTensorMutableData =>
-        GetFn<OrtGetTensorMutableDataDelegate>(OrtApiIndices.GetTensorMutableData);
+    public OrtNativeDelegates.GetTensorMutableDataDelegate GetTensorMutableData =>
+        GetFn<OrtNativeDelegates.GetTensorMutableDataDelegate>(OrtApiIndices.GetTensorMutableData);
 
-    public OrtSessionGetInputCountDelegate SessionGetInputCount =>
-        GetFn<OrtSessionGetInputCountDelegate>(OrtApiIndices.SessionGetInputCount);
+    public OrtNativeDelegates.SessionGetInputCountDelegate SessionGetInputCount =>
+        GetFn<OrtNativeDelegates.SessionGetInputCountDelegate>(OrtApiIndices.SessionGetInputCount);
 
-    public OrtSessionGetOutputCountDelegate SessionGetOutputCount =>
-        GetFn<OrtSessionGetOutputCountDelegate>(OrtApiIndices.SessionGetOutputCount);
+    public OrtNativeDelegates.SessionGetOutputCountDelegate SessionGetOutputCount =>
+        GetFn<OrtNativeDelegates.SessionGetOutputCountDelegate>(OrtApiIndices.SessionGetOutputCount);
 
-    public OrtGetAllocatorWithDefaultOptionsDelegate GetAllocatorWithDefaultOptions =>
-        GetFn<OrtGetAllocatorWithDefaultOptionsDelegate>(OrtApiIndices.GetAllocatorWithDefaultOptions);
+    public OrtNativeDelegates.GetAllocatorWithDefaultOptionsDelegate GetAllocatorWithDefaultOptions =>
+        GetFn<OrtNativeDelegates.GetAllocatorWithDefaultOptionsDelegate>(OrtApiIndices.GetAllocatorWithDefaultOptions);
 
-    public OrtSessionGetInputNameDelegate SessionGetInputName =>
-        GetFn<OrtSessionGetInputNameDelegate>(OrtApiIndices.SessionGetInputName);
+    public OrtNativeDelegates.SessionGetInputNameDelegate SessionGetInputName =>
+        GetFn<OrtNativeDelegates.SessionGetInputNameDelegate>(OrtApiIndices.SessionGetInputName);
 
-    public OrtSessionGetOutputNameDelegate SessionGetOutputName =>
-        GetFn<OrtSessionGetOutputNameDelegate>(OrtApiIndices.SessionGetOutputName);
+    public OrtNativeDelegates.SessionGetOutputNameDelegate SessionGetOutputName =>
+        GetFn<OrtNativeDelegates.SessionGetOutputNameDelegate>(OrtApiIndices.SessionGetOutputName);
 
-    public OrtReleaseTypeInfoDelegate ReleaseTypeInfo =>
-        GetFn<OrtReleaseTypeInfoDelegate>(OrtApiIndices.ReleaseTypeInfo);
+    public OrtNativeDelegates.ReleaseTypeInfoDelegate ReleaseTypeInfo =>
+        GetFn<OrtNativeDelegates.ReleaseTypeInfoDelegate>(OrtApiIndices.ReleaseTypeInfo);
 
-    public OrtSessionGetInputTypeInfoDelegate SessionGetInputTypeInfo =>
-        GetFn<OrtSessionGetInputTypeInfoDelegate>(OrtApiIndices.SessionGetInputTypeInfo);
+    public OrtNativeDelegates.SessionGetInputTypeInfoDelegate SessionGetInputTypeInfo =>
+        GetFn<OrtNativeDelegates.SessionGetInputTypeInfoDelegate>(OrtApiIndices.SessionGetInputTypeInfo);
 
-    public OrtSessionGetOutputTypeInfoDelegate SessionGetOutputTypeInfo =>
-        GetFn<OrtSessionGetOutputTypeInfoDelegate>(OrtApiIndices.SessionGetOutputTypeInfo);
+    public OrtNativeDelegates.SessionGetOutputTypeInfoDelegate SessionGetOutputTypeInfo =>
+        GetFn<OrtNativeDelegates.SessionGetOutputTypeInfoDelegate>(OrtApiIndices.SessionGetOutputTypeInfo);
 
-    public OrtGetOnnxTypeFromTypeInfoDelegate GetOnnxTypeFromTypeInfo =>
-        GetFn<OrtGetOnnxTypeFromTypeInfoDelegate>(OrtApiIndices.GetOnnxTypeFromTypeInfo);
+    public OrtNativeDelegates.GetOnnxTypeFromTypeInfoDelegate GetOnnxTypeFromTypeInfo =>
+        GetFn<OrtNativeDelegates.GetOnnxTypeFromTypeInfoDelegate>(OrtApiIndices.GetOnnxTypeFromTypeInfo);
 
-    public OrtCastTypeInfoToTensorInfoDelegate CastTypeInfoToTensorInfo =>
-        GetFn<OrtCastTypeInfoToTensorInfoDelegate>(OrtApiIndices.CastTypeInfoToTensorInfo);
+    public OrtNativeDelegates.CastTypeInfoToTensorInfoDelegate CastTypeInfoToTensorInfo =>
+        GetFn<OrtNativeDelegates.CastTypeInfoToTensorInfoDelegate>(OrtApiIndices.CastTypeInfoToTensorInfo);
 
-    public OrtAllocatorFreeDelegate AllocatorFree =>
-        GetFn<OrtAllocatorFreeDelegate>(OrtApiIndices.AllocatorFree);
+    public OrtNativeDelegates.AllocatorFreeDelegate AllocatorFree =>
+        GetFn<OrtNativeDelegates.AllocatorFreeDelegate>(OrtApiIndices.AllocatorFree);
 
-    public OrtRegisterExecutionProviderLibraryDelegate RegisterExecutionProviderLibrary =>
-        GetFn<OrtRegisterExecutionProviderLibraryDelegate>(OrtApiIndices.RegisterExecutionProviderLibrary);
+    public OrtNativeDelegates.RegisterExecutionProviderLibraryDelegate RegisterExecutionProviderLibrary =>
+        GetFn<OrtNativeDelegates.RegisterExecutionProviderLibraryDelegate>(OrtApiIndices.RegisterExecutionProviderLibrary);
 
-    public OrtUnregisterExecutionProviderLibraryDelegate UnregisterExecutionProviderLibrary =>
-        GetFn<OrtUnregisterExecutionProviderLibraryDelegate>(OrtApiIndices.UnregisterExecutionProviderLibrary);
+    public OrtNativeDelegates.UnregisterExecutionProviderLibraryDelegate UnregisterExecutionProviderLibrary =>
+        GetFn<OrtNativeDelegates.UnregisterExecutionProviderLibraryDelegate>(OrtApiIndices.UnregisterExecutionProviderLibrary);
 
-    public OrtGetEpDevicesDelegate GetEpDevices =>
-        GetFn<OrtGetEpDevicesDelegate>(OrtApiIndices.GetEpDevices);
+    public OrtNativeDelegates.GetEpDevicesDelegate GetEpDevices =>
+        GetFn<OrtNativeDelegates.GetEpDevicesDelegate>(OrtApiIndices.GetEpDevices);
 
-    public OrtHardwareDeviceTypeDelegate HardwareDeviceType =>
-        GetFn<OrtHardwareDeviceTypeDelegate>(OrtApiIndices.HardwareDeviceType);
+    public OrtNativeDelegates.HardwareDeviceTypeDelegate HardwareDeviceType =>
+        GetFn<OrtNativeDelegates.HardwareDeviceTypeDelegate>(OrtApiIndices.HardwareDeviceType);
 
-    public OrtEpDeviceEpNameDelegate EpDeviceEpName =>
-        GetFn<OrtEpDeviceEpNameDelegate>(OrtApiIndices.EpDeviceEpName);
+    public OrtNativeDelegates.EpDeviceEpNameDelegate EpDeviceEpName =>
+        GetFn<OrtNativeDelegates.EpDeviceEpNameDelegate>(OrtApiIndices.EpDeviceEpName);
 
-    public OrtEpDeviceDeviceDelegate EpDeviceDevice =>
-        GetFn<OrtEpDeviceDeviceDelegate>(OrtApiIndices.EpDeviceDevice);
+    public OrtNativeDelegates.EpDeviceDeviceDelegate EpDeviceDevice =>
+        GetFn<OrtNativeDelegates.EpDeviceDeviceDelegate>(OrtApiIndices.EpDeviceDevice);
 
     private T GetFn<T>(int index) where T : Delegate
     {

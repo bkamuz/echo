@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Microsoft.Win32;
 
 namespace echo.Engines.ParakeetNpu;
@@ -5,6 +6,7 @@ namespace echo.Engines.ParakeetNpu;
 /// <summary>
 /// Chipset gating for Hexagon V73 HTP binaries (Snapdragon X Elite).
 /// </summary>
+[SupportedOSPlatform("windows")]
 public static class SnapdragonHardware
 {
     public static bool IsWindowsArm64 =>

@@ -1,10 +1,12 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using echo.Abstractions.Core;
 using echo.Abstractions.Platform;
 using Microsoft.Win32;
 
 namespace echo.Platform.Windows;
 
+[SupportedOSPlatform("windows")]
 public sealed class WindowsNpuAvailability : INpuAvailability
 {
     public bool IsLikelyPlatform =>
@@ -37,7 +39,7 @@ public sealed class WindowsNpuAvailability : INpuAvailability
 
     internal static bool IsSnapdragonXElite()
     {
-        return ProbeHardware(out _) && TryReadProcessorName(out var name) && IsXEliteName(name);
+        return TryReadProcessorName(out var name) && IsXEliteName(name);
     }
 
     internal static bool ProbeHardware(out string detail)
