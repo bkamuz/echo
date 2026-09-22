@@ -12,6 +12,7 @@ public static class CoreServiceCollectionExtensions
     {
         services.AddSingleton<ConfigStore>();
         services.AddSingleton<HistoryStore>();
+        services.AddSingleton<ITranscriptionEngineRegistry, TranscriptionEngineRegistry>();
         services.AddSingleton<TranscriptionService>();
         services.AddSingleton<DictationCoordinator>();
         services.AddHttpClient("echo-models", (_, client) =>

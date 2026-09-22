@@ -14,6 +14,7 @@ class Program
     public static void Main(string[] args)
     {
         StartupDiagnostics.RegisterUnhandledExceptionHandlers();
+        StartupDiagnostics.WriteMilestone("Program.Main enter");
 
         if (OperatingSystem.IsLinux()
             && args.Contains(LinuxHotkeyBridge.Argument, StringComparer.Ordinal))

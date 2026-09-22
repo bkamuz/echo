@@ -33,6 +33,25 @@ public static class StartupDiagnostics
         }
     }
 
+    public static void WriteMilestone(string stage)
+    {
+        try
+        {
+            AppPaths.EnsureDirectories();
+            var line =
+                $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} [Info] Startup: {stage}{Environment.NewLine}";
+
+            lock (Gate)
+            {
+                File.AppendAllText(AppPaths.LogPath, line);
+            }
+        }
+        catch
+        {
+            // Last-resort logging must never throw.
+        }
+    }
+
     public static void WriteFatal(string source, Exception? exception)
     {
         try
