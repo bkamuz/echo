@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using echo.Abstractions.Core;
 using Microsoft.Extensions.Logging;

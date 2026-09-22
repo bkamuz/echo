@@ -211,12 +211,17 @@ internal sealed unsafe class OrtQnnSession : IDisposable
                 api.CreateCpuMemoryInfo(OrtAllocatorType.ArenaAllocator, OrtMemType.Default, &memoryInfo),
                 "CreateCpuMemoryInfo");
 
-            inputNamePtrs = contract.Inputs
-                .Select(spec => (byte*)Marshal.StringToCoTaskMemUTF8(spec.Name))
-                .ToArray();
-            outputNamePtrs = contract.Outputs
-                .Select(spec => (byte*)Marshal.StringToCoTaskMemUTF8(spec.Name))
-                .ToArray();
+            inputNamePtrs = new byte*[contract.Inputs.Count];
+            for (var i = 0; i < contract.Inputs.Count; i++)
+            {
+                inputNamePtrs[i] = (byte*)Marshal.StringToCoTaskMemUTF8(contract.Inputs[i].Name);
+            }
+
+            outputNamePtrs = new byte*[contract.Outputs.Count];
+            for (var i = 0; i < contract.Outputs.Count; i++)
+            {
+                outputNamePtrs[i] = (byte*)Marshal.StringToCoTaskMemUTF8(contract.Outputs[i].Name);
+            }
 
             return new OrtQnnSession(
                 api,
@@ -290,12 +295,12 @@ internal sealed unsafe class OrtQnnSession : IDisposable
                     _api.Run(
                         _session,
                         0,
-                        (nint)inputNames,
-                        (nint)inputValuePtrs,
+                        (nint*)inputNames,
+                        inputValuePtrs,
                         (nuint)inputs.Count,
-                        (nint)outputNames,
+                        (nint*)outputNames,
                         (nuint)_contract.Outputs.Count,
-                        (nint)outputValuePtrs),
+                        outputValuePtrs),
                     "Run");
             }
 
@@ -661,8 +666,22 @@ internal sealed unsafe class OrtQnnSession : IDisposable
 
         foreach (var spec in expected)
         {
-            var input = inputs.FirstOrDefault(i => i.Name == spec.Name)
-                ?? throw new InvalidOperationException($"Missing input {spec.Name}.");
+            var found = false;
+            var input = default(OrtTensorInput);
+            foreach (var candidate in inputs)
+            {
+                if (candidate.Name == spec.Name)
+                {
+                    input = candidate;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                throw new InvalidOperationException($"Missing input {spec.Name}.");
+            }
             if (spec.ElementType != input.Kind)
             {
                 throw new InvalidOperationException(

@@ -171,7 +171,7 @@ public sealed class ParakeetPipeline : IDisposable
         }
 
         var waveforms = new DenseTensor<float>(pcm, [1, pcm.Length]);
-        var waveformsLens = new DenseTensor<long>([validSamples], [1]);
+        var waveformsLens = new DenseTensor<long>(new[] { (long)validSamples }, new[] { 1 });
         using var preOut = _preprocessor.Run([
             NamedOnnxValue.CreateFromTensor("waveforms", waveforms),
             NamedOnnxValue.CreateFromTensor("waveforms_lens", waveformsLens),
@@ -203,7 +203,7 @@ public sealed class ParakeetPipeline : IDisposable
 
         using var encOut = _cpuEncoder.Run([
             NamedOnnxValue.CreateFromTensor("audio_signal", features),
-            NamedOnnxValue.CreateFromTensor("length", new DenseTensor<long>(featuresLens, [1])),
+            NamedOnnxValue.CreateFromTensor("length", new DenseTensor<long>(featuresLens, new[] { 1 })),
         ]);
 
         var encoderOut = encOut.First(r => r.Name == "outputs").AsTensor<float>().ToArray();
@@ -248,7 +248,7 @@ public sealed class ParakeetPipeline : IDisposable
 
         var (_, encodedLengths) = outputs[1].IntoInt32();
         var encodedLen = encodedLengths.Length > 0 ? encodedLengths[0] : outputDims[2];
-        var validT = Math.Min((int)outputDims[2], encodedLen);
+        var validT = Math.Min((int)outputDims[2], (int)encodedLen);
         return (outputValues, validT);
     }
 

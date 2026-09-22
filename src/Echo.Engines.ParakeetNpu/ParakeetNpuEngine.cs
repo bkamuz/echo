@@ -11,7 +11,6 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
     private readonly ILogger<ParakeetNpuEngine> _logger;
 
     private ParakeetPipeline? _pipeline;
-    private bool _loadedOnNpu;
     private string _resolvedProvider = "cpu";
 
     public ParakeetNpuEngine(
@@ -63,7 +62,6 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
                 "Loading Parakeet NPU pipeline (provider=qnn/htp, model={ModelDir})",
                 modelDir);
             _pipeline = ParakeetPipeline.LoadNpu(modelDir, runtimeDir, _logger);
-            _loadedOnNpu = true;
             _resolvedProvider = "qnn/htp";
             _logger.LogInformation("Parakeet NPU ready — encoder on Hexagon HTP via ORT QNN EP");
         }
@@ -99,7 +97,6 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
     {
         _pipeline?.Dispose();
         _pipeline = null;
-        _loadedOnNpu = false;
         _resolvedProvider = "cpu";
     }
 

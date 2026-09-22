@@ -6,7 +6,7 @@ namespace echo.Engines.ParakeetNpu.Ort;
 /// <summary>
 /// Initializes ORT + QNN runtime DLLs and registers the QNN execution provider.
 /// </summary>
-internal static class OrtQnnBootstrap
+internal static unsafe class OrtQnnBootstrap
 {
     private const string QnnProviderName = "QNNExecutionProvider";
     private static readonly object Gate = new();
@@ -110,10 +110,10 @@ internal static class OrtQnnBootstrap
         EnsureComApartment();
 
         var api = OrtApiNative.Api;
-        nint devicesPtr = 0;
+        nint* devicesPtr = null;
         nuint count = 0;
         OrtApiNative.Check(api.GetEpDevices(_env, &devicesPtr, &count), "GetEpDevices");
-        if (count == 0 || devicesPtr == 0)
+        if (count == 0 || devicesPtr == null)
         {
             logger?.LogWarning("GetEpDevices returned no execution-provider devices.");
             return Array.Empty<nint>();
@@ -122,7 +122,7 @@ internal static class OrtQnnBootstrap
         var qnnDevices = new List<nint>();
         for (nuint i = 0; i < count; i++)
         {
-            var device = *(nint*)(devicesPtr + (int)(i * (nuint)sizeof(nint)));
+            var device = devicesPtr[i];
             if (device == 0)
             {
                 continue;
