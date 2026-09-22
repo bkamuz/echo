@@ -174,9 +174,6 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsDeviceVisible =>
         Engine is not "whisper"
         && (Engine is not "parakeet_npu" || _npuAvailability.IsLikelyPlatform);
-    public bool IsSherpaUnavailableOnPlatform => !SherpaWorkerPolicy.IsSupported;
-    public string SherpaArm64UnavailableHint => _loc.Get("Loc.Settings.SherpaArm64Unavailable");
-
     partial void OnIsApplyingChanged(bool value) => OnPropertyChanged(nameof(IsSettingsEnabled));
 
     partial void OnSelectedEngineChanged(EngineOption? value)
@@ -602,15 +599,13 @@ public partial class SettingsViewModel : ObservableObject
     {
         var localized = BaseEngineIds
             .Where(id => id != "parakeet_npu" || _npuAvailability.IsLikelyPlatform)
-            .Where(id => !SherpaWorkerPolicy.IsSherpaEngineId(id) || SherpaWorkerPolicy.IsSupported)
             .Select(id => new EngineOption(id, GetEngineDisplayName(id)))
             .ToList();
         EngineOptions = localized.Where(o => _registeredEngineIds.Contains(o.Id)).ToList();
         if (EngineOptions.Count == 0)
         {
             EngineOptions = localized
-                .Where(o => o.Id == "parakeet_npu"
-                    || (SherpaWorkerPolicy.IsSupported && o.Id == "gigaam"))
+                .Where(o => o.Id is "parakeet_npu" or "gigaam")
                 .ToList();
         }
     }
@@ -801,7 +796,6 @@ public partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(ModelDownloadTooltip));
             OnPropertyChanged(nameof(ModelDeleteTooltip));
             OnPropertyChanged(nameof(TypeSpeedTooltip));
-            OnPropertyChanged(nameof(SherpaArm64UnavailableHint));
             OnPropertyChanged(nameof(IsTypeInput));
             UpdateModelStatus();
         }

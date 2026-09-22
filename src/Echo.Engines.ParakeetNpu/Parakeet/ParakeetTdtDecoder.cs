@@ -49,10 +49,10 @@ public sealed class ParakeetTdtDecoder
                     new DenseTensor<float>(encFrame, [batch, featureDim, 1])),
                 NamedOnnxValue.CreateFromTensor(
                     "targets",
-                    new DenseTensor<long>(new long[] { prevToken }, new int[] { batch, 1 })),
+                    new DenseTensor<int>(new[] { prevToken }, new[] { batch, 1 })),
                 NamedOnnxValue.CreateFromTensor(
                     "target_length",
-                    new DenseTensor<long>(new long[] { 1 }, new int[] { 1 })),
+                    new DenseTensor<int>(new[] { 1 }, new[] { 1 })),
                 NamedOnnxValue.CreateFromTensor(
                     "input_states_1",
                     new DenseTensor<float>(state1, [_state1Shape.Dim0, _state1Shape.Dim1, _state1Shape.Dim2])),

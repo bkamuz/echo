@@ -34,6 +34,39 @@ public class ParakeetRuntimeProbeTests
     }
 
     [Fact]
+    public void IsRuntimeInstalled_ReturnsFalse_WhenRequiredFileIsEmpty()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "echo-parakeet-probe-" + Guid.NewGuid().ToString("N"));
+        var qnnDir = Path.Combine(tempRoot, "echo", "qnn");
+        var previousAppData = Environment.GetEnvironmentVariable("APPDATA");
+        var previousXdg = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        Environment.SetEnvironmentVariable("APPDATA", tempRoot);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", tempRoot);
+
+        try
+        {
+            Directory.CreateDirectory(qnnDir);
+            File.WriteAllBytes(Path.Combine(qnnDir, "onnxruntime.dll"), []);
+            File.WriteAllText(Path.Combine(qnnDir, "onnxruntime_providers_qnn.dll"), "stub");
+
+            Assert.False(ParakeetRuntimeProbe.IsRuntimeInstalled);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("APPDATA", previousAppData);
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", previousXdg);
+            try
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup.
+            }
+        }
+    }
+
+    [Fact]
     public void IsRuntimeInstalled_ReturnsTrue_WhenRequiredFilesPresent()
     {
         var tempRoot = Path.Combine(Path.GetTempPath(), "echo-parakeet-probe-" + Guid.NewGuid().ToString("N"));
