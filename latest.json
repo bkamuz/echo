@@ -1,6 +1,6 @@
 {
-  "version": "1.9.5",
-  "downloadUrl": "https://github.com/bkamuz/echo/releases/download/v1.9.5/Echo-1.9.5-win-x64-portable.zip",
-  "downloadUrlWinArm64": "https://github.com/bkamuz/echo/releases/download/v1.9.5/Echo-1.9.5-win-arm64-portable.zip",
-  "releaseNotesUrl": "https://github.com/bkamuz/echo/releases/tag/v1.9.5"
+  "version": "1.9.6",
+  "downloadUrl": "https://github.com/bkamuz/echo/releases/download/v1.9.6/Echo-1.9.6-win-x64-portable.zip",
+  "downloadUrlWinArm64": "https://github.com/bkamuz/echo/releases/download/v1.9.6/Echo-1.9.6-win-arm64-portable.zip",
+  "releaseNotesUrl": "https://github.com/bkamuz/echo/releases/tag/v1.9.6"
 }
