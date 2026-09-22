@@ -1,6 +1,10 @@
 using Avalonia;
+using echo.Abstractions.Core;
+using echo.App.Logging;
 using echo.Core.Diagnostics;
 using echo.Platform.Linux;
+using echo.Platform.Windows;
+using Microsoft.Extensions.Logging;
 using System;
 
 namespace echo.App;
@@ -25,6 +29,24 @@ class Program
                 ? args[bridgeIndex + 1]
                 : string.Empty;
             Environment.Exit(LinuxHotkeyBridge.Run(socketPath));
+            return;
+        }
+
+        if (OperatingSystem.IsWindows()
+            && args.Contains(SherpaWorkerBridge.Argument, StringComparer.Ordinal))
+        {
+            var workerIndex = Array.IndexOf(args, SherpaWorkerBridge.Argument);
+            var pipeName = workerIndex >= 0 && workerIndex + 1 < args.Length
+                ? args[workerIndex + 1]
+                : string.Empty;
+            AppPaths.EnsureDirectories();
+            StartupDiagnostics.WriteMilestone("Sherpa worker mode enter");
+            using var workerLogFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddProvider(new FileLoggerProvider(AppPaths.LogPath));
+                builder.SetMinimumLevel(LogLevel.Information);
+            });
+            Environment.Exit(SherpaWorkerBridge.Run(pipeName, workerLogFactory));
             return;
         }
 

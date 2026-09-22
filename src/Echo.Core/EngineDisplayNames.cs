@@ -15,15 +15,32 @@ public static class EngineDisplayNames
             .ToString()
             .ToUpperInvariant();
 
-        return config.Engine switch
+        return ForEngine(config.Engine, config.WhisperModelSize, config.GigaAmModelSize, device);
+    }
+
+    public static string ForOptions(string engineId, EngineOptions options)
+    {
+        var device = ExecutionProviderResolver
+            .FromConfigDevice(options.Device)
+            .ToString()
+            .ToUpperInvariant();
+
+        return ForEngine(engineId, options.WhisperModelSize, options.GigaAmModelSize, device);
+    }
+
+    private static string ForEngine(
+        string engineId,
+        string whisperModelSize,
+        string gigaAmModelSize,
+        string device) =>
+        engineId switch
         {
-            "gigaam" => FormatGigaAm(config.GigaAmModelSize, device),
-            "whisper" => $"Whisper {config.WhisperModelSize} ({device})",
+            "gigaam" => FormatGigaAm(gigaAmModelSize, device),
+            "whisper" => $"Whisper {whisperModelSize} ({device})",
             "omnilingual" => $"Omnilingual ASR 300M ({device})",
             "parakeet_npu" => "Parakeet NPU (experimental)",
-            _ => config.Engine,
+            _ => engineId,
         };
-    }
 
     private static string FormatGigaAm(string modelSize, string device) => modelSize switch
     {

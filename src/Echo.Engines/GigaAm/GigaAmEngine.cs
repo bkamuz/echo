@@ -70,7 +70,7 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
         return new OfflineModelConfig
         {
             Tokens = bundle.Tokens,
-            NumThreads = Math.Max(1, Environment.ProcessorCount),
+            NumThreads = SherpaNativeEnvironment.ResolveNumThreads(),
             Provider = provider,
             Transducer = new OfflineTransducerModelConfig
             {
@@ -95,7 +95,7 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
         return new OfflineModelConfig
         {
             Tokens = ctc.Tokens,
-            NumThreads = Math.Max(1, Environment.ProcessorCount),
+            NumThreads = SherpaNativeEnvironment.ResolveNumThreads(),
             Provider = provider,
             NeMoCtc = new OfflineNemoEncDecCtcModelConfig
             {
