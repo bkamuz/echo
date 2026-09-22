@@ -6,6 +6,9 @@
     <SupportedOSPlatform>windows</SupportedOSPlatform>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Echo.Core.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />

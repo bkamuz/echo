@@ -1,4 +1,5 @@
 using Avalonia;
+using echo.Core.Diagnostics;
 using echo.Platform.Linux;
 using System;
 
@@ -12,6 +13,8 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        StartupDiagnostics.RegisterUnhandledExceptionHandlers();
+
         if (OperatingSystem.IsLinux()
             && args.Contains(LinuxHotkeyBridge.Argument, StringComparer.Ordinal))
         {
@@ -23,7 +26,15 @@ class Program
             return;
         }
 
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        try
+        {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteFatal("Avalonia startup failed", ex);
+            throw;
+        }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.
