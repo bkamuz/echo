@@ -56,6 +56,7 @@
   <sys:String x:Key="Loc.Engine.Whisper">Whisper (multilingual)</sys:String>
   <sys:String x:Key="Loc.Engine.Omnilingual">Omnilingual (1600 languages)</sys:String>
   <sys:String x:Key="Loc.Engine.ParakeetNpu">Parakeet NPU (experimental)</sys:String>
+  <sys:String x:Key="Loc.Settings.SherpaArm64Unavailable">GigaAM, Whisper, and Omnilingual (Sherpa) are not available on Windows ARM64 yet. Use Parakeet NPU for on-device recognition on Snapdragon PCs.</sys:String>
   <sys:String x:Key="Loc.Device.Cpu">CPU</sys:String>
   <sys:String x:Key="Loc.Device.Cpu.Tooltip">Universal mode. Works on any PC.</sys:String>
   <sys:String x:Key="Loc.Device.DirectMl">GPU (DirectML)</sys:String>

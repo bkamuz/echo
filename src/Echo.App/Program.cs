@@ -17,9 +17,17 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        StartupDiagnostics.RegisterUnhandledExceptionHandlers();
-        StartupDiagnostics.WriteMilestone("Program.Main enter");
-        StartupDiagnostics.WriteStartupContext();
+        if (SherpaWorkerDiagnostics.IsWorkerProcess())
+        {
+            SherpaWorkerDiagnostics.RegisterUnhandledExceptionHandlersIfWorker();
+            SherpaWorkerDiagnostics.WriteProcessStart("Program.Main enter");
+        }
+        else
+        {
+            StartupDiagnostics.RegisterUnhandledExceptionHandlers();
+            StartupDiagnostics.WriteMilestone("Program.Main enter");
+            StartupDiagnostics.WriteStartupContext();
+        }
 
         if (OperatingSystem.IsLinux()
             && args.Contains(LinuxHotkeyBridge.Argument, StringComparer.Ordinal))
@@ -40,15 +48,16 @@ class Program
                 ? args[workerIndex + 1]
                 : string.Empty;
             AppPaths.EnsureDirectories();
-            StartupDiagnostics.WriteMilestone("Sherpa worker mode enter");
-            StartupDiagnostics.WriteMilestone(
-                $"Sherpa worker env before scrub: {SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
+            SherpaWorkerDiagnostics.WriteMilestone("Sherpa worker mode enter");
+            SherpaWorkerDiagnostics.WriteMilestone(
+                $"env before scrub: {SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
             SherpaNativeEnvironmentScrubber.PrepareForLoad();
-            StartupDiagnostics.WriteMilestone(
-                $"Sherpa worker env after scrub: {SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
+            SherpaWorkerDiagnostics.WriteMilestone(
+                $"env after scrub: {SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
+            SherpaWorkerDiagnostics.WriteMilestone("before SherpaWorkerBridge.Run");
             using var workerLogFactory = LoggerFactory.Create(builder =>
             {
-                builder.AddProvider(new FileLoggerProvider(AppPaths.LogPath));
+                builder.AddProvider(new FileLoggerProvider(AppPaths.SherpaWorkerLogPath));
                 builder.SetMinimumLevel(LogLevel.Information);
             });
             Environment.Exit(SherpaWorkerBridge.Run(pipeName, workerLogFactory));

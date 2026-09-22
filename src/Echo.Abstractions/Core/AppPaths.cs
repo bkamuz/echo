@@ -33,6 +33,7 @@ public static class AppPaths
     public static string ConfigPath => Path.Combine(BaseDir, "config.json");
     public static string HistoryPath => Path.Combine(BaseDir, "history.jsonl");
     public static string LogPath => Path.Combine(BaseDir, "echo.log");
+    public static string SherpaWorkerLogPath => Path.Combine(BaseDir, "echo-sherpa-worker.log");
 
     public static string WhisperDir(string modelSize) => Path.Combine(ModelsDir, "whisper", modelSize);
     public static string GigaAmDir => Path.Combine(ModelsDir, "gigaam-v3");

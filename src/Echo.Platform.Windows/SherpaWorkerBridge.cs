@@ -30,8 +30,8 @@ public static class SherpaWorkerBridge
 
         AppPaths.EnsureDirectories();
         SherpaNativeEnvironmentScrubber.PrepareForLoad();
-        StartupDiagnostics.WriteMilestone(
-            $"Sherpa worker bridge env: {SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
+        SherpaWorkerDiagnostics.WriteMilestone(
+            $"SherpaWorkerBridge.Run enter env={SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
 
         using var ownedLoggerFactory = loggerFactory is null ? CreateDefaultLoggerFactory() : null;
         loggerFactory ??= ownedLoggerFactory!;
@@ -48,7 +48,9 @@ public static class SherpaWorkerBridge
                 pipeName,
                 PipeDirection.InOut,
                 PipeOptions.Asynchronous);
+            SherpaWorkerDiagnostics.WriteMilestone("before pipe.Connect");
             pipe.Connect(15_000);
+            SherpaWorkerDiagnostics.WriteMilestone($"pipe connected name={pipeName}");
             logger.LogInformation("Connected to Sherpa worker pipe {Pipe}", pipeName);
 
             while (true)
@@ -76,8 +78,8 @@ public static class SherpaWorkerBridge
                     case SherpaWorkerCommand.EnsureLoaded:
                     {
                         EnsureEngineReady(engine);
-                        StartupDiagnostics.WriteMilestone(
-                            $"Sherpa worker EnsureLoaded begin engine={currentEngineId} device={currentOptions.Device} gigaam={currentOptions.GigaAmModelSize}");
+                        SherpaWorkerDiagnostics.WriteMilestone(
+                            $"EnsureLoaded begin engine={currentEngineId} device={currentOptions.Device} gigaam={currentOptions.GigaAmModelSize} env={SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
                         logger.LogInformation(
                             "EnsureLoaded begin engine={EngineId} device={Device} gigaam={GigaAmModelSize} env={Env}",
                             currentEngineId,
@@ -85,8 +87,8 @@ public static class SherpaWorkerBridge
                             currentOptions.GigaAmModelSize,
                             SherpaNativeEnvironmentScrubber.DescribeSnapshot());
                         engine!.EnsureLoadedAsync().GetAwaiter().GetResult();
-                        StartupDiagnostics.WriteMilestone(
-                            $"Sherpa worker EnsureLoaded done engine={currentEngineId}");
+                        SherpaWorkerDiagnostics.WriteMilestone(
+                            $"EnsureLoaded done engine={currentEngineId}");
                         WriteOk(pipe, SherpaWorkerProtocol.SerializeText(engine.DisplayName));
                         break;
                     }
@@ -123,6 +125,7 @@ public static class SherpaWorkerBridge
         }
         catch (Exception ex)
         {
+            SherpaWorkerDiagnostics.WriteFatal("Sherpa worker failed", ex);
             logger.LogError(ex, "Sherpa worker failed");
             return 1;
         }
@@ -150,8 +153,13 @@ public static class SherpaWorkerBridge
             throw new InvalidOperationException($"Engine '{engineId}' is not supported by the Sherpa worker.");
         }
 
+        SherpaWorkerDiagnostics.WriteMilestone($"before LoadAssemblyForWorker engine={engineId} type={typeName}");
         var assembly = SherpaEnginesAssemblyLoader.LoadAssemblyForWorker();
-        return ReflectionEngineFactory.CreateEngine(loggerFactory, assembly, typeName);
+        SherpaWorkerDiagnostics.WriteMilestone($"after LoadAssemblyForWorker engine={engineId} assembly={assembly.FullName}");
+        SherpaWorkerDiagnostics.WriteMilestone($"before CreateEngine engine={engineId}");
+        var engine = ReflectionEngineFactory.CreateEngine(loggerFactory, assembly, typeName);
+        SherpaWorkerDiagnostics.WriteMilestone($"after CreateEngine engine={engineId}");
+        return engine;
     }
 
     private static void EnsureEngineReady(ITranscriptionEngine? engine)
