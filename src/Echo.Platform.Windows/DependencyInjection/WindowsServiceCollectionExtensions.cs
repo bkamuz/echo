@@ -1,4 +1,5 @@
 using echo.Abstractions.Core;
+using echo.Abstractions.Engines;
 using echo.Abstractions.Platform;
 using Microsoft.Extensions.DependencyInjection;
 using System.Runtime.Versioning;
@@ -17,6 +18,11 @@ public static class WindowsServiceCollectionExtensions
         services.AddSingleton<ICursorPosition, WindowsCursorPosition>();
         services.AddSingleton<IDirectMlAvailability, WindowsDirectMlAvailability>();
         services.AddSingleton<INpuAvailability, WindowsNpuAvailability>();
+        if (ParakeetAssemblyLoader.IsSupported)
+        {
+            ParakeetAssemblyLoader.RegisterEngine(services);
+            services.AddSingleton<IParakeetNpuModelSupport, WindowsParakeetNpuProbe>();
+        }
         services.AddHttpClient<DirectMlRuntimeInstaller>();
         services.AddSingleton<IAutoStartService, WindowsAutoStartService>();
         services.AddHttpClient<IUpdateApplier, WindowsUpdateApplier>();

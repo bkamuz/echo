@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace echo.Engines.ParakeetNpu.DependencyInjection;
 
+[Obsolete("Parakeet is registered lazily via echo.Platform.Windows.ParakeetAssemblyLoader.")]
 public static class ParakeetNpuServiceCollectionExtensions
 {
     public static IServiceCollection AddParakeetNpuEngine(this IServiceCollection services)

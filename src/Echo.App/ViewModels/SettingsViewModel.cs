@@ -105,7 +105,7 @@ public partial class SettingsViewModel : ObservableObject
         IAutoStartService autoStartService,
         HotkeyCaptureController hotkeyCapture,
         ModelSettingsController models,
-        IEnumerable<ITranscriptionEngine> engines,
+        ITranscriptionEngineRegistry engines,
         LocalizationService loc,
         DirectMlRuntimeInstaller? directMlInstaller = null,
         IParakeetNpuModelSupport? parakeetNpuSupport = null)
@@ -124,7 +124,7 @@ public partial class SettingsViewModel : ObservableObject
         _directMlInstaller = directMlInstaller;
         _parakeetNpuSupport = parakeetNpuSupport;
 
-        _registeredEngineIds = engines.Select(e => e.EngineId).ToHashSet(StringComparer.Ordinal);
+        _registeredEngineIds = engines.RegisteredEngineIds.ToHashSet(StringComparer.Ordinal);
         RebuildEngineOptions();
         RebuildTypeSpeedOptions();
         RebuildPostReleaseOptions();

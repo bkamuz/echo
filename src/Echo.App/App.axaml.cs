@@ -16,7 +16,6 @@ using echo.Core;
 using echo.Core.DependencyInjection;
 using echo.Core.Diagnostics;
 using echo.Engines.DependencyInjection;
-using echo.Engines.ParakeetNpu.DependencyInjection;
 using echo.Platform.Linux;
 using echo.Platform.Windows;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,6 +51,7 @@ public partial class App : Application
     private void InitializeApplication()
     {
         AppPaths.EnsureDirectories();
+        StartupDiagnostics.WriteMilestone("InitializeApplication begin");
 
         var host = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
@@ -63,10 +63,6 @@ public partial class App : Application
                 services.UseEcho();
                 services.UsePlatform();
                 services.UseEchoEngines();
-                if (OperatingSystem.IsWindows())
-                {
-                    services.AddParakeetNpuEngine();
-                }
                 services.AddSingleton<LocalizationService>();
                 services.AddSingleton<AppStatusViewModel>();
                 services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();
@@ -87,7 +83,7 @@ public partial class App : Application
                     sp.GetRequiredService<IAutoStartService>(),
                     sp.GetRequiredService<HotkeyCaptureController>(),
                     sp.GetRequiredService<ModelSettingsController>(),
-                    sp.GetServices<echo.Abstractions.Engines.ITranscriptionEngine>(),
+                    sp.GetRequiredService<echo.Abstractions.Engines.ITranscriptionEngineRegistry>(),
                     sp.GetRequiredService<LocalizationService>(),
                     sp.GetService<DirectMlRuntimeInstaller>(),
                     sp.GetService<IParakeetNpuModelSupport>()));
@@ -103,6 +99,7 @@ public partial class App : Application
             .Build();
 
         Services = host.Services;
+        StartupDiagnostics.WriteMilestone("DI host built");
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -111,6 +108,7 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             var coordinator = Services.GetRequiredService<DictationCoordinator>();
+            StartupDiagnostics.WriteMilestone("DictationCoordinator resolved");
             var loc = Services.GetRequiredService<LocalizationService>();
             loc.Apply(coordinator.Config.UiLanguage);
 
@@ -138,6 +136,7 @@ public partial class App : Application
             {
                 DataContext = Services.GetRequiredService<ShellViewModel>(),
             };
+            StartupDiagnostics.WriteMilestone("MainWindow created");
 
             if (Services.GetRequiredService<ITrayStateService>() is AvaloniaTrayService tray)
             {
@@ -155,6 +154,7 @@ public partial class App : Application
 
                 startupHandled = true;
                 desktop.MainWindow!.Opened -= onMainWindowOpened;
+                StartupDiagnostics.WriteMilestone("MainWindow opened");
 
                 coordinator.Start();
                 coordinator.ScheduleStartupWarmup();

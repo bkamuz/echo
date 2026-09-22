@@ -4,10 +4,10 @@ namespace echo.Core;
 
 public sealed class TranscriptionService
 {
-    private readonly IEnumerable<ITranscriptionEngine> _engines;
+    private readonly ITranscriptionEngineRegistry _engines;
     private readonly SemaphoreSlim _engineGate = new(1, 1);
 
-    public TranscriptionService(IEnumerable<ITranscriptionEngine> engines)
+    public TranscriptionService(ITranscriptionEngineRegistry engines)
     {
         _engines = engines;
     }
@@ -15,8 +15,7 @@ public sealed class TranscriptionService
     public ITranscriptionEngine Resolve(AppConfig config)
     {
         var engineId = config.Engine;
-        var engine = _engines.FirstOrDefault(e => e.EngineId == engineId)
-            ?? throw new InvalidOperationException($"Engine '{engineId}' is not registered.");
+        var engine = _engines.GetRequired(engineId);
 
         engine.Configure(new EngineOptions
         {
