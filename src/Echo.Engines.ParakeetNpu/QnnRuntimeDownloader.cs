@@ -11,6 +11,8 @@ namespace echo.Engines.ParakeetNpu;
 /// </summary>
 public sealed class QnnRuntimeDownloader
 {
+    private const int MaxDownloadRetries = 3;
+
     private readonly HttpClient _http;
     private readonly ILogger<QnnRuntimeDownloader> _logger;
 
@@ -28,17 +30,33 @@ public sealed class QnnRuntimeDownloader
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        if (IsInstalled)
+        var manifest = ManifestLoader.LoadRuntimeManifest();
+        Directory.CreateDirectory(RuntimeDir);
+
+        var missingFiles = manifest.RequiredFiles
+            .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(RuntimeDir, file)))
+            .ToList();
+
+        if (missingFiles.Count == 0)
         {
             QnnRuntimePaths.PrepareNativeSearchPath();
             return;
         }
 
-        var manifest = ManifestLoader.LoadRuntimeManifest();
-        Directory.CreateDirectory(RuntimeDir);
+        _logger.LogInformation(
+            "QNN runtime incomplete ({MissingCount} file(s) missing); downloading required wheels.",
+            missingFiles.Count);
 
         foreach (var package in manifest.Packages)
         {
+            var neededMappings = package.Files
+                .Where(mapping => missingFiles.Contains(mapping.Target))
+                .ToList();
+            if (neededMappings.Count == 0)
+            {
+                continue;
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(ProgressMessages.Downloading(package.Wheel));
             _logger.LogInformation("Downloading QNN runtime wheel {Wheel} from {Url}", package.Wheel, package.Url);
@@ -48,7 +66,7 @@ public sealed class QnnRuntimeDownloader
                 .ConfigureAwait(false);
 
             using var archive = new ZipArchive(wheelStream, ZipArchiveMode.Read, leaveOpen: true);
-            foreach (var mapping in package.Files)
+            foreach (var mapping in neededMappings)
             {
                 var entry = archive.GetEntry(mapping.Source.Replace('\\', '/'))
                     ?? throw new InvalidOperationException($"Wheel {package.Wheel} missing entry {mapping.Source}");
@@ -64,9 +82,14 @@ public sealed class QnnRuntimeDownloader
         WriteRuntimeReceipt(manifest);
         QnnRuntimePaths.PrepareNativeSearchPath();
 
-        if (!IsInstalled)
+        var stillMissing = manifest.RequiredFiles
+            .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(RuntimeDir, file)))
+            .ToList();
+        if (stillMissing.Count > 0)
         {
-            throw new InvalidOperationException("QNN runtime extraction finished but verification failed.");
+            throw new InvalidOperationException(
+                "QNN runtime extraction finished but required files are still missing: "
+                + string.Join(", ", stillMissing));
         }
 
         progress?.Report(ProgressMessages.Done("QNN runtime"));
@@ -75,13 +98,38 @@ public sealed class QnnRuntimeDownloader
 
     private async Task<MemoryStream> DownloadWheelAsync(string url, CancellationToken cancellationToken)
     {
-        using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        var memory = new MemoryStream();
-        await response.Content.CopyToAsync(memory, cancellationToken).ConfigureAwait(false);
-        memory.Position = 0;
-        return memory;
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= MaxDownloadRetries; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                var memory = new MemoryStream();
+                await response.Content.CopyToAsync(memory, cancellationToken).ConfigureAwait(false);
+                if (memory.Length == 0)
+                {
+                    throw new InvalidOperationException("Downloaded wheel is empty.");
+                }
+
+                memory.Position = 0;
+                return memory;
+            }
+            catch (Exception ex) when (attempt < MaxDownloadRetries)
+            {
+                lastError = ex;
+                _logger.LogWarning(ex, "QNN wheel download attempt {Attempt}/{Max} failed for {Url}", attempt, MaxDownloadRetries, url);
+                await Task.Delay(1000 * attempt, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+            }
+        }
+
+        throw new InvalidOperationException($"Failed to download QNN wheel from {url}.", lastError);
     }
 
     private static void WriteRuntimeReceipt(QnnRuntimeManifest manifest)
@@ -113,9 +161,12 @@ internal static class QnnRuntimePaths
         get
         {
             var manifest = ManifestLoader.LoadRuntimeManifest();
-            return manifest.RequiredFiles.All(file => File.Exists(Path.Combine(UserDir, file)));
+            return manifest.RequiredFiles.All(file => IsFilePresent(Path.Combine(UserDir, file)));
         }
     }
+
+    internal static bool IsFilePresent(string path) =>
+        File.Exists(path) && new FileInfo(path).Length > 0;
 
     public static void PrepareNativeSearchPath()
     {
@@ -125,7 +176,13 @@ internal static class QnnRuntimePaths
             return;
         }
 
-        Environment.SetEnvironmentVariable("ORT_DYLIB_PATH", Path.Combine(dir, "onnxruntime.dll"));
+        var ortDll = Path.Combine(dir, "onnxruntime.dll");
+        if (!IsFilePresent(ortDll))
+        {
+            return;
+        }
+
+        Environment.SetEnvironmentVariable("ORT_DYLIB_PATH", ortDll);
 
         try
         {
@@ -133,7 +190,7 @@ internal static class QnnRuntimePaths
             NativeLibrary.Load(Path.Combine(dir, "QnnHtpPrepare.dll"));
             NativeLibrary.Load(Path.Combine(dir, "QnnHtpNetRunExtensions.dll"));
             NativeLibrary.Load(Path.Combine(dir, "QnnHtp.dll"));
-            NativeLibrary.Load(Path.Combine(dir, "onnxruntime.dll"));
+            NativeLibrary.Load(ortDll);
         }
         catch
         {

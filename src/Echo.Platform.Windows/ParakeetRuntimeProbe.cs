@@ -30,8 +30,14 @@ internal static class ParakeetRuntimeProbe
     ];
 
     public static bool IsRuntimeInstalled =>
-        RequiredRuntimeFiles.All(file => File.Exists(Path.Combine(AppPaths.NpuDir, file)));
+        RequiredRuntimeFiles.All(file => IsPresent(AppPaths.NpuDir, file));
 
     public static bool IsModelInstalled =>
-        RequiredModelFiles.All(file => File.Exists(Path.Combine(AppPaths.ParakeetNpuDir, file)));
+        RequiredModelFiles.All(file => IsPresent(AppPaths.ParakeetNpuDir, file));
+
+    private static bool IsPresent(string directory, string fileName)
+    {
+        var path = Path.Combine(directory, fileName);
+        return File.Exists(path) && new FileInfo(path).Length > 0;
+    }
 }

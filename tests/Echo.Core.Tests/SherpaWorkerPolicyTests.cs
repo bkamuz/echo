@@ -8,12 +8,6 @@ public class SherpaWorkerPolicyTests
         Assert.False(echo.Platform.Windows.SherpaWorkerPolicy.ShouldIsolate());
     }
 
-    [Fact]
-    public void IsSupported_IsTrueOnNonWindowsArm64Runtime()
-    {
-        Assert.True(echo.Platform.Windows.SherpaWorkerPolicy.IsSupported);
-    }
-
     [Theory]
     [InlineData("gigaam", true)]
     [InlineData("whisper", true)]

@@ -5,6 +5,8 @@ namespace echo.Engines.ParakeetNpu;
 
 public sealed class ParakeetModelDownloader
 {
+    private const int MaxDownloadRetries = 3;
+
     private readonly HttpClient _http;
     private readonly ILogger<ParakeetModelDownloader> _logger;
 
@@ -84,17 +86,57 @@ public sealed class ParakeetModelDownloader
 
         Directory.CreateDirectory(ModelDir);
         var tmp = target + ".tmp";
-        using var response = await _http.GetAsync(file.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        await using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-        await using (var fileStream = File.Create(tmp))
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= MaxDownloadRetries; attempt++)
         {
-            await stream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                using var response = await _http.GetAsync(file.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                await using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+                await using (var fileStream = File.Create(tmp))
+                {
+                    await stream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
+                }
+
+                if (new FileInfo(tmp).Length == 0)
+                {
+                    throw new InvalidOperationException($"Downloaded asset '{file.Path}' is empty.");
+                }
+
+                File.Move(tmp, target, overwrite: true);
+                AssetVerifier.VerifyFile(target, file.Bytes, file.Sha256);
+                return;
+            }
+            catch (Exception ex) when (attempt < MaxDownloadRetries)
+            {
+                lastError = ex;
+                if (File.Exists(tmp))
+                {
+                    File.Delete(tmp);
+                }
+
+                _logger.LogWarning(
+                    ex,
+                    "Parakeet asset download attempt {Attempt}/{Max} failed for {File}",
+                    attempt,
+                    MaxDownloadRetries,
+                    file.Path);
+                await Task.Delay(1000 * attempt, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                if (File.Exists(tmp))
+                {
+                    File.Delete(tmp);
+                }
+            }
         }
 
-        File.Move(tmp, target, overwrite: true);
-        AssetVerifier.VerifyFile(target, file.Bytes, file.Sha256);
+        throw new InvalidOperationException($"Failed to download Parakeet asset '{file.Path}'.", lastError);
     }
 
     public void Delete()
