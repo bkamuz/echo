@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipes;
+using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
 using Microsoft.Extensions.Logging;
 
@@ -119,6 +120,7 @@ internal sealed class SherpaWorkerClient : IDisposable
         };
         startInfo.ArgumentList.Add(SherpaWorkerBridge.Argument);
         startInfo.ArgumentList.Add(pipeName);
+        SherpaNativeEnvironmentScrubber.PrepareForLoad(startInfo.Environment);
 
         _process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Failed to start Sherpa worker process.");
@@ -212,7 +214,7 @@ internal sealed class SherpaWorkerClient : IDisposable
         var exitCode = _process is { HasExited: true } ? _process.ExitCode : (int?)null;
         DisposeWorkerUnsafe();
         var detail = exitCode is int code
-            ? $"Sherpa worker exited unexpectedly (code={code})."
+            ? $"Sherpa worker exited unexpectedly ({NativeExitCodes.Describe(code)})."
             : "Sherpa worker stopped unexpectedly.";
         _logger.LogWarning(ex, "{Detail}", detail);
         return new InvalidOperationException(

@@ -19,5 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Echo.Abstractions\Echo.Abstractions.csproj" />
+    <ProjectReference Include="..\Echo.Core\Echo.Core.csproj" />
   </ItemGroup>
 </Project>

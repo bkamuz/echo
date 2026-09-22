@@ -1,3 +1,4 @@
+using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
@@ -95,9 +96,19 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
     protected virtual int FeatureDim => 80;
 
     /// <summary>
-    /// Override to force a safer EP for models that abort natively under DirectML.
+    /// Override to force a safer EP for models that abort natively under DirectML/QNN.
     /// </summary>
-    protected virtual string PreferProvider(string requestedProvider) => requestedProvider;
+    protected virtual string PreferProvider(string requestedProvider)
+    {
+        if (OperatingSystem.IsWindows()
+            && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+            && requestedProvider is "directml" or "qnn")
+        {
+            return "cpu";
+        }
+
+        return requestedProvider;
+    }
 
     private bool TryCreateWithFallback(
         string requestedProvider,
@@ -162,8 +173,15 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
         try
         {
             SherpaNativeEnvironment.PrepareForLoad();
-            _logger.LogInformation("Loading {Engine} (provider={Provider})", EngineId, provider);
+            _logger.LogInformation(
+                "Loading {Engine} (provider={Provider}, threads={Threads}, env={Env})",
+                EngineId,
+                provider,
+                config.ModelConfig.NumThreads,
+                SherpaNativeEnvironmentScrubber.DescribeSnapshot());
+            LogModelPaths(config.ModelConfig);
             recognizer = new OfflineRecognizer(config);
+            _logger.LogInformation("Loaded {Engine} (provider={Provider})", EngineId, provider);
             return true;
         }
         catch (Exception ex)
@@ -176,4 +194,54 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
     private static bool CanFallbackToDirectMl() =>
         !OperatingSystem.IsWindows()
         || RuntimeInformation.ProcessArchitecture is not Architecture.Arm64 and not Architecture.Arm;
+
+    private void LogModelPaths(OfflineModelConfig modelConfig)
+    {
+        if (!string.IsNullOrWhiteSpace(modelConfig.NeMoCtc.Model))
+        {
+            LogModelFile("NeMoCtc", modelConfig.NeMoCtc.Model);
+        }
+
+        if (!string.IsNullOrWhiteSpace(modelConfig.Transducer.Encoder))
+        {
+            LogModelFile("Transducer.encoder", modelConfig.Transducer.Encoder);
+        }
+
+        if (!string.IsNullOrWhiteSpace(modelConfig.Paraformer.Model))
+        {
+            LogModelFile("Paraformer", modelConfig.Paraformer.Model);
+        }
+
+        if (!string.IsNullOrWhiteSpace(modelConfig.Whisper.Encoder))
+        {
+            LogModelFile("Whisper.encoder", modelConfig.Whisper.Encoder);
+        }
+
+        if (!string.IsNullOrWhiteSpace(modelConfig.Tokens))
+        {
+            LogModelFile("Tokens", modelConfig.Tokens);
+        }
+    }
+
+    private void LogModelFile(string label, string path)
+    {
+        long? bytes = null;
+        try
+        {
+            if (File.Exists(path))
+            {
+                bytes = new FileInfo(path).Length;
+            }
+        }
+        catch
+        {
+            // Best-effort diagnostics only.
+        }
+
+        _logger.LogInformation(
+            "Sherpa model {Label}: {Path} ({Size})",
+            label,
+            path,
+            bytes is long size ? $"{size} bytes" : "missing");
+    }
 }
