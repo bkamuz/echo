@@ -159,20 +159,41 @@ public partial class UpdateViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanApply))]
     private async Task ApplyAsync()
     {
-        if (_pendingUpdate is null)
-        {
-            return;
-        }
-
         IsApplying = true;
         ApplyCommand.NotifyCanExecuteChanged();
         CheckForUpdatesCommand.NotifyCanExecuteChanged();
 
         try
         {
+            _statusBar.SetStatus("Loc.Status.CheckingUpdates", busy: true);
+            var resolved = await _updateChecker.ResolveUpdateForApplyAsync().ConfigureAwait(false);
+            if (resolved.Update is null)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (resolved.CheckFailed)
+                    {
+                        _statusBar.SetStatusTemporary("Loc.Status.UpdateCheckFailed", alert: true);
+                    }
+                    else
+                    {
+                        _pendingUpdate = null;
+                        IsAvailable = false;
+                        OnPropertyChanged(nameof(Tooltip));
+                        _statusBar.SetStatusTemporary("Loc.Status.UpToDate", alert: false);
+                    }
+
+                    ApplyCommand.NotifyCanExecuteChanged();
+                });
+                return;
+            }
+
+            _pendingUpdate = resolved.Update;
+            OnPropertyChanged(nameof(Tooltip));
+
             var progress = new Progress<string>(text =>
                 _statusBar.SetStatus(text, busy: true));
-            await _updateApplier.ApplyAndRestartAsync(_pendingUpdate, progress).ConfigureAwait(false);
+            await _updateApplier.ApplyAndRestartAsync(resolved.Update, progress).ConfigureAwait(false);
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 _statusBar.SetStatus("Loc.Status.Restarting", busy: true);
