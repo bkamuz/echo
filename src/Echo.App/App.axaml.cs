@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using echo.Abstractions.Core;
+using echo.Abstractions.Engines;
 using echo.Abstractions.Platform;
 using echo.App.DependencyInjection;
 using echo.App.Localization;
