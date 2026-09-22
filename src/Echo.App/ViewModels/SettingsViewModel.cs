@@ -562,9 +562,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             var config = _coordinator.Config;
             Hotkey = config.Hotkey;
-            Engine = EngineOptions.Any(e => e.Id == config.Engine)
-                ? config.Engine
-                : EngineOptions[0].Id;
+            Engine = ResolveEngineFromConfig(config.Engine);
             WhisperModelSize = config.WhisperModelSize;
             GigaAmModelSize = config.GigaAmModelSize;
             Language = config.Language;
@@ -613,7 +611,8 @@ public partial class SettingsViewModel : ObservableObject
         if (EngineOptions.Count == 0)
         {
             EngineOptions = localized
-                .Where(o => o.Id is "parakeet_npu" or "gigaam")
+                .Where(o => o.Id == "parakeet_npu"
+                    || (SherpaWorkerPolicy.IsSupported && o.Id == "gigaam"))
                 .ToList();
         }
     }
@@ -790,6 +789,18 @@ public partial class SettingsViewModel : ObservableObject
         {
             _isLoadingFromConfig = false;
         }
+    }
+
+    private string ResolveEngineFromConfig(string configuredEngine)
+    {
+        if (EngineOptions.Any(e => e.Id == configuredEngine))
+        {
+            return configuredEngine;
+        }
+
+        return EngineOptions.FirstOrDefault(e => e.Id == "parakeet_npu")?.Id
+            ?? EngineOptions.FirstOrDefault()?.Id
+            ?? configuredEngine;
     }
 
     private void SyncSelectedEngine()

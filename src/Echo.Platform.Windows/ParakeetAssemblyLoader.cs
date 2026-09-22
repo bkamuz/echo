@@ -71,8 +71,8 @@ internal static class ParakeetAssemblyLoader
             assembly,
             "echo.Engines.ParakeetNpu.ParakeetModelDownloader",
             ModelHttpClientName);
-        var logger = services.GetRequiredService<ILoggerFactory>()
-            .CreateLogger("echo.Engines.ParakeetNpu.ParakeetNpuEngine");
+        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+        var logger = CreateTypedLogger(loggerFactory, engineType);
         return (ITranscriptionEngine)Activator.CreateInstance(
             engineType,
             runtimeDownloader,
@@ -88,8 +88,24 @@ internal static class ParakeetAssemblyLoader
     {
         var downloaderType = assembly.GetType(typeName, throwOnError: true)!;
         var http = services.GetRequiredService<IHttpClientFactory>().CreateClient(httpClientName);
-        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeName);
+        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+        var logger = CreateTypedLogger(loggerFactory, downloaderType);
         return Activator.CreateInstance(downloaderType, http, logger)!;
+    }
+
+    /// <summary>
+    /// Activator requires exact parameter types; Parakeet ctors take ILogger&lt;T&gt;, not ILogger.
+    /// </summary>
+    internal static object CreateTypedLogger(ILoggerFactory loggerFactory, Type forType)
+    {
+        var createLogger = typeof(LoggerFactoryExtensions)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Single(method =>
+                method.Name == nameof(LoggerFactoryExtensions.CreateLogger)
+                && method.IsGenericMethodDefinition
+                && method.GetParameters().Length == 1
+                && method.GetParameters()[0].ParameterType == typeof(ILoggerFactory));
+        return createLogger.MakeGenericMethod(forType).Invoke(null, [loggerFactory])!;
     }
 
     private static Assembly LoadAssembly() => Assembly.Load(new AssemblyName(AssemblyName));
