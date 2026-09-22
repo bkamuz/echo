@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
+using echo.Core.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace echo.Platform.Windows;
@@ -28,6 +29,10 @@ public static class SherpaWorkerBridge
         }
 
         AppPaths.EnsureDirectories();
+        SherpaNativeEnvironmentScrubber.PrepareForLoad();
+        StartupDiagnostics.WriteMilestone(
+            $"Sherpa worker bridge env: {SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
+
         using var ownedLoggerFactory = loggerFactory is null ? CreateDefaultLoggerFactory() : null;
         loggerFactory ??= ownedLoggerFactory!;
 
@@ -71,7 +76,17 @@ public static class SherpaWorkerBridge
                     case SherpaWorkerCommand.EnsureLoaded:
                     {
                         EnsureEngineReady(engine);
+                        StartupDiagnostics.WriteMilestone(
+                            $"Sherpa worker EnsureLoaded begin engine={currentEngineId} device={currentOptions.Device} gigaam={currentOptions.GigaAmModelSize}");
+                        logger.LogInformation(
+                            "EnsureLoaded begin engine={EngineId} device={Device} gigaam={GigaAmModelSize} env={Env}",
+                            currentEngineId,
+                            currentOptions.Device,
+                            currentOptions.GigaAmModelSize,
+                            SherpaNativeEnvironmentScrubber.DescribeSnapshot());
                         engine!.EnsureLoadedAsync().GetAwaiter().GetResult();
+                        StartupDiagnostics.WriteMilestone(
+                            $"Sherpa worker EnsureLoaded done engine={currentEngineId}");
                         WriteOk(pipe, SherpaWorkerProtocol.SerializeText(engine.DisplayName));
                         break;
                     }

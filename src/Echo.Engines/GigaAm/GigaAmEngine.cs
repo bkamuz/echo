@@ -39,13 +39,19 @@ public sealed class GigaAmEngine : SherpaOfflineEngine
         "Не удалось загрузить GigaAM. Проверьте целостность модели.";
 
     /// <summary>
-    /// Multilingual CTC variants often abort the process under DirectML EP;
-    /// keep them on CPU. Managed DirectML failures are caught, native aborts are not.
+    /// Multilingual CTC variants often abort the process under GPU/NPU EPs;
+    /// keep them on CPU. Managed EP failures are caught, native aborts are not.
     /// </summary>
-    protected override string PreferProvider(string requestedProvider) =>
-        Config.GigaAmModelSize is "multilingual" or "multilingual-large" && requestedProvider == "directml"
-            ? "cpu"
-            : requestedProvider;
+    protected override string PreferProvider(string requestedProvider)
+    {
+        if (Config.GigaAmModelSize is "multilingual" or "multilingual-large"
+            && requestedProvider is not "cpu")
+        {
+            return "cpu";
+        }
+
+        return base.PreferProvider(requestedProvider);
+    }
 
     protected override OfflineModelConfig CreateModelConfig(string provider)
     {

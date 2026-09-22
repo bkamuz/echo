@@ -41,6 +41,11 @@ class Program
                 : string.Empty;
             AppPaths.EnsureDirectories();
             StartupDiagnostics.WriteMilestone("Sherpa worker mode enter");
+            StartupDiagnostics.WriteMilestone(
+                $"Sherpa worker env before scrub: {SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
+            SherpaNativeEnvironmentScrubber.PrepareForLoad();
+            StartupDiagnostics.WriteMilestone(
+                $"Sherpa worker env after scrub: {SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
             using var workerLogFactory = LoggerFactory.Create(builder =>
             {
                 builder.AddProvider(new FileLoggerProvider(AppPaths.LogPath));
