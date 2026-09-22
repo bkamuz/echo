@@ -40,6 +40,7 @@ public static class AppPaths
     public static string OmnilingualDir => Path.Combine(ModelsDir, "omnilingual-300m");
     public static string DirectMlDir => Path.Combine(BaseDir, "directml");
     public static string NpuDir => Path.Combine(BaseDir, "qnn");
+    public static string ParakeetNpuDir => Path.Combine(ModelsDir, "parakeet-npu");
 
     public static void EnsureDirectories()
     {

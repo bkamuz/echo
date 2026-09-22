@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "parakeet_npu",
+  "version": "trsdn-761c5e09+istupakov-8f23f0c0",
+  "license": "CC-BY-4.0",
+  "target_hardware": "Snapdragon X Elite (Hexagon V73)",
+  "languages": "25 languages (English-first PoC)",
+  "max_window_seconds": 8,
+  "files": [
+    {
+      "path": "encoder-model.onnx",
+      "url": "https://huggingface.co/trsdn/parakeet-tdt-0.6b-v3-htp-int8-8s/resolve/761c5e095a082df49048215c4e5dc0fbb8b92a7e/encoder-model.onnx",
+      "bytes": 408,
+      "sha256": "3459fc342d8546c03ffa9ccde631902da62e0a7649c4456a3e0eec93951ec759"
+    },
+    {
+      "path": "encoder-model.bin",
+      "url": "https://huggingface.co/trsdn/parakeet-tdt-0.6b-v3-htp-int8-8s/resolve/761c5e095a082df49048215c4e5dc0fbb8b92a7e/encoder-model.bin",
+      "bytes": 631586816,
+      "sha256": "46f287222a477915040d63ef2f51b8f8887b11808cf02224dbf6a38c34509637"
+    },
+    {
+      "path": "decoder_joint-model.int8.onnx",
+      "url": "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce/decoder_joint-model.int8.onnx",
+      "bytes": 18202004,
+      "sha256": "eea7483ee3d1a30375daedc8ed83e3960c91b098812127a0d99d1c8977667a70"
+    },
+    {
+      "path": "nemo128.onnx",
+      "url": "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce/nemo128.onnx",
+      "bytes": 139764,
+      "sha256": "a9fde1486ebfcc08f328d75ad4610c67835fea58c73ba57e3209a6f6cf019e9f"
+    },
+    {
+      "path": "vocab.txt",
+      "url": "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce/vocab.txt",
+      "bytes": 93939,
+      "sha256": "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d"
+    },
+    {
+      "path": "config.json",
+      "url": "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce/config.json",
+      "bytes": 97,
+      "sha256": "666903c76b9798caf2c210afd4f6cd60b08a8dbf9800ec8d7a3bc0d2148ac466"
+    }
+  ]
+}
