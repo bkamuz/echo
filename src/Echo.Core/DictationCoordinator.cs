@@ -165,16 +165,25 @@ public sealed class DictationCoordinator : IDisposable
         {
             _logger.LogWarning("Global hotkey is not listening — check Linux input group or hotkey permissions");
         }
-        _ = WarmupModelAsync();
     }
 
-    private async Task WarmupModelAsync()
+    /// <summary>
+    /// Runs model warmup after the UI is visible so a native engine failure cannot
+    /// abort the process before Settings/tray are reachable.
+    /// </summary>
+    public void ScheduleStartupWarmup()
+    {
+        _ = WarmupModelAsync(isStartup: true);
+    }
+
+    private async Task WarmupModelAsync(bool isStartup = false)
     {
         try
         {
-            using (EnterModelBusy())
+            using var busy = EnterModelBusy();
+            if (!await WarmupIfDownloadedAsync(_config))
             {
-                if (!await WarmupIfDownloadedAsync(_config))
+                if (isStartup)
                 {
                     _logger.LogInformation("Model not downloaded — skipping startup warmup");
                 }
@@ -183,6 +192,10 @@ public sealed class DictationCoordinator : IDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Model warmup failed — first dictation may be slower");
+            if (isStartup)
+            {
+                _statusNotifier?.ShowTemporary("Loc.Status.RecognitionError", alert: true);
+            }
         }
     }
 

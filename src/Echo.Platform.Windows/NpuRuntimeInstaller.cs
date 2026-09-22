@@ -182,15 +182,6 @@ internal static class NpuPaths
             return;
         }
 
-        try
-        {
-            NativeLibrary.Load(Path.Combine(dir, "onnxruntime.dll"));
-        }
-        catch
-        {
-            // Best-effort preload so subsequent Sherpa loads prefer this ORT build.
-        }
-
         var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         if (path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Any(p => string.Equals(p, dir, StringComparison.OrdinalIgnoreCase)))

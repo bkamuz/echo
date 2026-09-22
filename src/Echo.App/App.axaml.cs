@@ -14,6 +14,7 @@ using echo.App.ViewModels;
 using echo.App.Views;
 using echo.Core;
 using echo.Core.DependencyInjection;
+using echo.Core.Diagnostics;
 using echo.Engines.DependencyInjection;
 using echo.Engines.ParakeetNpu.DependencyInjection;
 using echo.Platform.Linux;
@@ -34,6 +35,21 @@ public partial class App : Application
     }
 
     public override void OnFrameworkInitializationCompleted()
+    {
+        try
+        {
+            InitializeApplication();
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteFatal("Application initialization failed", ex);
+            throw;
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    private void InitializeApplication()
     {
         AppPaths.EnsureDirectories();
 
@@ -104,8 +120,6 @@ public partial class App : Application
                 autoStart.SetEnabled(coordinator.Config.StartWithSystem);
             }
 
-            coordinator.Start();
-
             var status = Services.GetRequiredService<AppStatusViewModel>();
             if (OperatingSystem.IsLinux())
             {
@@ -125,27 +139,42 @@ public partial class App : Application
                 DataContext = Services.GetRequiredService<ShellViewModel>(),
             };
 
-            if (startMinimized)
-            {
-                // Avalonia Hide() clears _shown, so the next Show() raises Opened again.
-                // Unsubscribe after the first hide or tray restore immediately re-hides the window.
-                desktop.MainWindow.ShowInTaskbar = false;
-                EventHandler hideOnce = null!;
-                hideOnce = (_, _) =>
-                {
-                    desktop.MainWindow.Opened -= hideOnce;
-                    desktop.MainWindow.Hide();
-                };
-                desktop.MainWindow.Opened += hideOnce;
-            }
-            else
-            {
-                desktop.MainWindow.Opened += (_, _) => _ = MaybeShowFirstRunAsync(desktop.MainWindow);
-            }
-
             if (Services.GetRequiredService<ITrayStateService>() is AvaloniaTrayService tray)
             {
                 tray.AttachMainWindow(desktop.MainWindow);
+            }
+
+            var startupHandled = false;
+            EventHandler onMainWindowOpened = null!;
+            onMainWindowOpened = (_, _) =>
+            {
+                if (startupHandled)
+                {
+                    return;
+                }
+
+                startupHandled = true;
+                desktop.MainWindow!.Opened -= onMainWindowOpened;
+
+                coordinator.Start();
+                coordinator.ScheduleStartupWarmup();
+
+                if (startMinimized)
+                {
+                    desktop.MainWindow.ShowInTaskbar = false;
+                    desktop.MainWindow.Hide();
+                }
+                else
+                {
+                    _ = MaybeShowFirstRunAsync(desktop.MainWindow);
+                }
+            };
+            desktop.MainWindow.Opened += onMainWindowOpened;
+
+            if (startMinimized)
+            {
+                // Update restart passes --minimized; Opened still fires after the first Show().
+                desktop.MainWindow.ShowInTaskbar = false;
             }
 
             if (OperatingSystem.IsLinux())
@@ -185,8 +214,6 @@ public partial class App : Application
                 }
             };
         }
-
-        base.OnFrameworkInitializationCompleted();
     }
 
     private static async Task MaybeShowFirstRunAsync(Window mainWindow)
