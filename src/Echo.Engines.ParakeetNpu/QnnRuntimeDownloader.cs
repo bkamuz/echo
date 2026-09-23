@@ -26,26 +26,34 @@ public sealed class QnnRuntimeDownloader
 
     public bool IsInstalled => QnnRuntimePaths.IsInstalled;
 
+    public IReadOnlyList<string> GetMissingFiles() => QnnRuntimePaths.GetMissingFiles();
+
     public async Task EnsureInstalledAsync(
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var manifest = ManifestLoader.LoadRuntimeManifest();
+        if (manifest.RequiredFiles.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "QNN runtime manifest is invalid: required_files is empty.");
+        }
+
         Directory.CreateDirectory(RuntimeDir);
 
-        var missingFiles = manifest.RequiredFiles
-            .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(RuntimeDir, file)))
-            .ToList();
-
+        var missingFiles = QnnRuntimePaths.GetMissingFiles();
         if (missingFiles.Count == 0)
         {
+            _logger.LogDebug("QNN runtime already present in {Dir}", RuntimeDir);
             QnnRuntimePaths.PrepareNativeSearchPath();
             return;
         }
 
         _logger.LogInformation(
-            "QNN runtime incomplete ({MissingCount} file(s) missing); downloading required wheels.",
-            missingFiles.Count);
+            "QNN runtime incomplete in {Dir} ({MissingCount} file(s) missing: {MissingFiles}); downloading required wheels.",
+            RuntimeDir,
+            missingFiles.Count,
+            string.Join(", ", missingFiles));
 
         foreach (var package in manifest.Packages)
         {
@@ -76,6 +84,11 @@ public sealed class QnnRuntimeDownloader
                 await using var fileStream = File.Create(target + ".tmp");
                 await entryStream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
                 File.Move(target + ".tmp", target, overwrite: true);
+                _logger.LogInformation(
+                    "Installed QNN runtime file {File} ({Bytes} bytes) to {Dir}",
+                    mapping.Target,
+                    new FileInfo(target).Length,
+                    RuntimeDir);
             }
         }
 
@@ -156,13 +169,14 @@ internal static class QnnRuntimePaths
 {
     public static string UserDir => AppPaths.NpuDir;
 
-    public static bool IsInstalled
+    public static bool IsInstalled => GetMissingFiles().Count == 0;
+
+    public static IReadOnlyList<string> GetMissingFiles()
     {
-        get
-        {
-            var manifest = ManifestLoader.LoadRuntimeManifest();
-            return manifest.RequiredFiles.All(file => IsFilePresent(Path.Combine(UserDir, file)));
-        }
+        var manifest = ManifestLoader.LoadRuntimeManifest();
+        return manifest.RequiredFiles
+            .Where(file => !IsFilePresent(Path.Combine(UserDir, file)))
+            .ToList();
     }
 
     internal static bool IsFilePresent(string path) =>

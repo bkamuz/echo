@@ -1,5 +1,6 @@
 using System.Reflection;
 using echo.Abstractions.Engines;
+using echo.Core.Update;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -28,8 +29,8 @@ internal static class ParakeetAssemblyLoader
             return;
         }
 
-        services.AddHttpClient(QnnHttpClientName);
-        services.AddHttpClient(ModelHttpClientName);
+        services.AddHttpClient(QnnHttpClientName, ConfigureParakeetHttpClient);
+        services.AddHttpClient(ModelHttpClientName, ConfigureParakeetHttpClient);
         services.AddSingleton(new EngineRegistration
         {
             EngineId = "parakeet_npu",
@@ -106,6 +107,12 @@ internal static class ParakeetAssemblyLoader
                 && method.GetParameters().Length == 1
                 && method.GetParameters()[0].ParameterType == typeof(ILoggerFactory));
         return createLogger.MakeGenericMethod(forType).Invoke(null, [loggerFactory])!;
+    }
+
+    private static void ConfigureParakeetHttpClient(HttpClient client)
+    {
+        client.Timeout = TimeSpan.FromHours(1);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"Echo/{UpdateEnvironment.CurrentVersion}");
     }
 
     private static Assembly LoadAssembly() => Assembly.Load(new AssemblyName(AssemblyName));

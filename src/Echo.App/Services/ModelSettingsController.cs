@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using echo.Abstractions.Core;
+using echo.Abstractions.Engines;
 using echo.App.Localization;
 using echo.App.ViewModels;
 using echo.Core;
@@ -14,6 +15,7 @@ public sealed class ModelSettingsController
     private readonly AppStatusViewModel _status;
     private readonly HomeViewModel _home;
     private readonly LocalizationService _loc;
+    private readonly IParakeetNpuModelSupport? _parakeetNpu;
 
     public ModelSettingsController(
         ModelDownloader downloader,
@@ -21,7 +23,8 @@ public sealed class ModelSettingsController
         SettingsApplyService applyService,
         AppStatusViewModel status,
         HomeViewModel home,
-        LocalizationService loc)
+        LocalizationService loc,
+        IParakeetNpuModelSupport? parakeetNpu = null)
     {
         _downloader = downloader;
         _coordinator = coordinator;
@@ -29,6 +32,7 @@ public sealed class ModelSettingsController
         _status = status;
         _home = home;
         _loc = loc;
+        _parakeetNpu = parakeetNpu;
     }
 
     public ModelSpec? ResolveSpec(string engine, string whisperSize, string gigaAmSize) =>
@@ -46,12 +50,17 @@ public sealed class ModelSettingsController
                 HasModel: false);
         }
 
-        var downloaded = spec.IsDownloaded();
+        var downloaded = IsParakeetAssetsReady(spec);
+        var statusText = downloaded
+            ? _loc.Format("Loc.Model.Loaded", spec.Title)
+            : spec.Engine == "parakeet_npu"
+                && spec.IsDownloaded()
+                && _parakeetNpu?.IsRuntimeInstalled == false
+                ? _loc.Get("Loc.Status.PreparingNpu")
+                : _loc.Format("Loc.Model.NotLoaded", spec.Title);
         return new ModelStatusSnapshot(
             Title: spec.Title,
-            StatusText: downloaded
-                ? _loc.Format("Loc.Model.Loaded", spec.Title)
-                : _loc.Format("Loc.Model.NotLoaded", spec.Title),
+            StatusText: statusText,
             IsDownloaded: downloaded,
             HasModel: true);
     }
@@ -65,7 +74,7 @@ public sealed class ModelSettingsController
         CancellationToken cancellationToken = default)
     {
         var spec = ResolveSpec(engine, whisperSize, gigaAmSize);
-        if (spec is null || spec.IsDownloaded())
+        if (spec is null || !NeedsDownload(spec))
         {
             return false;
         }
@@ -85,7 +94,7 @@ public sealed class ModelSettingsController
             });
             await _downloader.DownloadAsync(spec, progress, cancellationToken).ConfigureAwait(false);
 
-            if (!spec.IsDownloaded())
+            if (!IsParakeetAssetsReady(spec))
             {
                 throw new InvalidOperationException(
                     $"Download finished but '{spec.Title}' is incomplete. Try again.");
@@ -130,6 +139,27 @@ public sealed class ModelSettingsController
         {
             await Dispatcher.UIThread.InvokeAsync(() => setApplying(false));
         }
+    }
+
+    private bool NeedsDownload(ModelSpec spec)
+    {
+        if (spec.Engine != "parakeet_npu")
+        {
+            return !spec.IsDownloaded();
+        }
+
+        return !IsParakeetAssetsReady(spec);
+    }
+
+    private bool IsParakeetAssetsReady(ModelSpec spec)
+    {
+        if (spec.Engine != "parakeet_npu")
+        {
+            return spec.IsDownloaded();
+        }
+
+        var runtimeReady = _parakeetNpu?.IsRuntimeInstalled != false;
+        return spec.IsDownloaded() && runtimeReady;
     }
 
     public bool Delete(string engine, string whisperSize, string gigaAmSize, Action<string> setModelStatus)

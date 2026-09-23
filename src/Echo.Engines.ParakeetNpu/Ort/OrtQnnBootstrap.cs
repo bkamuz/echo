@@ -230,12 +230,13 @@ internal static unsafe class OrtQnnBootstrap
     {
         var manifest = ManifestLoader.LoadRuntimeManifest();
         var missing = manifest.RequiredFiles
-            .Where(file => !File.Exists(Path.Combine(runtimeDir, file)))
+            .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(runtimeDir, file)))
             .ToList();
         if (missing.Count > 0)
         {
             throw new FileNotFoundException(
-                $"QNN runtime is missing required files: {string.Join(", ", missing)}");
+                $"QNN runtime is missing required files in {runtimeDir}: {string.Join(", ", missing)}. "
+                + "Run Download in Settings or switch to NPU to fetch the QNN runtime.");
         }
     }
 

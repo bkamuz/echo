@@ -60,16 +60,25 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
 
         SnapdragonHardware.EnsureWindowsArm64();
 
-        await _modelDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
-
         var modelDir = ParakeetModelDownloader.ModelDir;
 
         if (useNpu)
         {
             SnapdragonHardware.LogHtpCompatibilityWarning(_logger);
 
+            var missingRuntime = _runtimeDownloader.GetMissingFiles();
+            if (missingRuntime.Count > 0)
+            {
+                _logger.LogInformation(
+                    "Parakeet NPU requires QNN runtime ({MissingCount} file(s) missing); installing to {Dir}",
+                    missingRuntime.Count,
+                    QnnRuntimeDownloader.RuntimeDir);
+            }
+
             await _runtimeDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            await _modelDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             var runtimeDir = QnnRuntimeDownloader.RuntimeDir;
@@ -93,6 +102,9 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
 
             return;
         }
+
+        await _modelDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
 
         await _modelDownloader.EnsureCpuEncoderAsync(cancellationToken: cancellationToken)
             .ConfigureAwait(false);
