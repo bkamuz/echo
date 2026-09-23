@@ -161,6 +161,11 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
 
         try
         {
+            if (OperatingSystem.IsWindows())
+            {
+                SherpaNativeEnvironmentScrubber.PrepareForLoad();
+            }
+
             _logger.LogInformation(
                 "Loading {Engine} (provider={Provider}, threads={Threads}, env={Env})",
                 EngineId,
