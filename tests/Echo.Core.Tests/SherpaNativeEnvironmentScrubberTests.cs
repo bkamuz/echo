@@ -34,6 +34,29 @@ public class SherpaNativeEnvironmentScrubberTests
     }
 
     [Fact]
+    public void PrepareForLoad_LeavesUnsetOrtDylibPathUntouched_OnWindows()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var originalOrt = Environment.GetEnvironmentVariable("ORT_DYLIB_PATH");
+        Environment.SetEnvironmentVariable("ORT_DYLIB_PATH", null);
+
+        try
+        {
+            SherpaNativeEnvironmentScrubber.PrepareForLoad();
+
+            Assert.Null(Environment.GetEnvironmentVariable("ORT_DYLIB_PATH"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ORT_DYLIB_PATH", originalOrt);
+        }
+    }
+
+    [Fact]
     public void PrepareForLoad_ScrubsChildEnvironmentDictionary()
     {
         if (!OperatingSystem.IsWindows())

@@ -63,11 +63,9 @@ public partial class App : Application
                 });
                 services.UseEcho();
                 services.UsePlatform();
-                // Windows registers Sherpa engines lazily via reflection (see SherpaEnginesAssemblyLoader).
-                if (!OperatingSystem.IsWindows())
-                {
-                    services.UseEchoEngines();
-                }
+                // Register Sherpa/GigaAM at DI setup on all platforms (stable v1.9.7 win-arm64 path).
+                // Deferred Assembly.Load on Windows (v1.9.8+) regressed native init order on Snapdragon.
+                services.UseEchoEngines();
                 services.AddSingleton<LocalizationService>();
                 services.AddSingleton<AppStatusViewModel>();
                 services.AddSingleton<IUserStatusNotifier, AppStatusNotifier>();

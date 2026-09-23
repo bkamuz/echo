@@ -5,8 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace echo.Platform.Windows;
 
 /// <summary>
-/// Loads Echo.Engines (Sherpa/GigaAM) on first engine use via reflection so SherpaOnnx
-/// natives are not pulled into the Windows startup assembly graph.
+/// Loads Echo.Engines (Sherpa/GigaAM) via reflection for the optional Sherpa worker
+/// process. Main Echo uses compile-time <see cref="echo.Engines.DependencyInjection.EnginesServiceCollectionExtensions.UseEchoEngines"/>
+/// on all platforms (stable v1.9.7 win-arm64 native init order).
 /// </summary>
 internal static class SherpaEnginesAssemblyLoader
 {

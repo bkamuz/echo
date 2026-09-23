@@ -3,9 +3,9 @@ namespace echo.Platform.Windows;
 /// <summary>
 /// Sherpa engine routing on Windows. GigaAM/Sherpa runs in-process on all
 /// Windows targets (including ARM64), matching stable v1.9.7 behavior.
-/// Out-of-process worker isolation (v1.9.9+) AV'd on Snapdragon load; keep
-/// <see cref="echo.Abstractions.Core.SherpaNativeEnvironmentScrubber"/> for ORT
-/// env safety instead.
+/// Out-of-process worker isolation (v1.9.9+) AV'd on Snapdragon load.
+/// <see cref="echo.Abstractions.Core.SherpaNativeEnvironmentScrubber"/> is kept
+/// for the optional worker path only — do not scrub before in-process Sherpa load.
 /// </summary>
 public static class SherpaWorkerPolicy
 {

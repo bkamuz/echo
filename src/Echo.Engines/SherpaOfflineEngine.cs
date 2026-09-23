@@ -1,7 +1,6 @@
 using echo.Abstractions.Core;
 using echo.Abstractions.Engines;
 using Microsoft.Extensions.Logging;
-using System.Runtime.InteropServices;
 using SherpaOnnx;
 
 namespace echo.Engines;
@@ -96,19 +95,9 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
     protected virtual int FeatureDim => 80;
 
     /// <summary>
-    /// Override to force a safer EP for models that abort natively under DirectML/QNN.
+    /// Override to force a safer EP for models that abort natively under DirectML.
     /// </summary>
-    protected virtual string PreferProvider(string requestedProvider)
-    {
-        if (OperatingSystem.IsWindows()
-            && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
-            && requestedProvider is "directml" or "qnn")
-        {
-            return "cpu";
-        }
-
-        return requestedProvider;
-    }
+    protected virtual string PreferProvider(string requestedProvider) => requestedProvider;
 
     private bool TryCreateWithFallback(
         string requestedProvider,
@@ -135,7 +124,7 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
                 return true;
             }
         }
-        else if (requestedProvider == "cpu" && CanFallbackToDirectMl())
+        else if (requestedProvider == "cpu")
         {
             _logger.LogWarning("CPU provider failed for {Engine}; falling back to DirectML", EngineId);
             if (TryCreateRecognizer("directml", out recognizer))
@@ -172,7 +161,6 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
 
         try
         {
-            SherpaNativeEnvironment.PrepareForLoad();
             _logger.LogInformation(
                 "Loading {Engine} (provider={Provider}, threads={Threads}, env={Env})",
                 EngineId,
@@ -190,10 +178,6 @@ public abstract class SherpaOfflineEngine : ITranscriptionEngine, IDisposable
             return false;
         }
     }
-
-    private static bool CanFallbackToDirectMl() =>
-        !OperatingSystem.IsWindows()
-        || RuntimeInformation.ProcessArchitecture is not Architecture.Arm64 and not Architecture.Arm;
 
     private void LogModelPaths(OfflineModelConfig modelConfig)
     {

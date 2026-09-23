@@ -40,7 +40,7 @@ public sealed class OmnilingualEngine : SherpaOfflineEngine
         return new OfflineModelConfig
         {
             Tokens = tokensPath,
-            NumThreads = SherpaNativeEnvironment.ResolveNumThreads(),
+            NumThreads = Math.Max(1, Environment.ProcessorCount),
             Provider = provider,
             Omnilingual = new OfflineOmnilingualAsrCtcModelConfig
             {
