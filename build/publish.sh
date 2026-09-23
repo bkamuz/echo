@@ -11,11 +11,6 @@ if [[ "$rid" == win-* ]]; then
   main_exe="Echo.App.exe"
 fi
 
-compression_flag="-p:EnableCompressionInSingleFile=true"
-if [[ "$rid" == "win-arm64" ]]; then
-  compression_flag="-p:EnableCompressionInSingleFile=false"
-fi
-
 publish_args=(
   "$root/src/Echo.App/Echo.App.csproj"
   -c Release
@@ -23,7 +18,7 @@ publish_args=(
   --self-contained true
   -p:PublishSingleFile=true
   -p:IncludeNativeLibrariesForSelfExtract=true
-  "$compression_flag"
+  -p:EnableCompressionInSingleFile=true
   -p:DebugType=none
   -p:DebugSymbols=false
   -o "$out_dir"
