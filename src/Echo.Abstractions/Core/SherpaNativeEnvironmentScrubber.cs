@@ -50,7 +50,6 @@ public static class SherpaNativeEnvironmentScrubber
     {
         if (string.IsNullOrWhiteSpace(ortDylib))
         {
-            Environment.SetEnvironmentVariable("ORT_DYLIB_PATH", null);
             return;
         }
 
