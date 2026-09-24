@@ -41,7 +41,10 @@ internal static class QnnNativeWorker
                 IsBackground = true,
                 Name = "echo-qnn-native",
             };
-            _worker.SetApartmentState(ApartmentState.MTA);
+            if (OperatingSystem.IsWindows())
+            {
+                _worker.SetApartmentState(ApartmentState.MTA);
+            }
             _worker.Start(logger);
         }
     }
@@ -60,7 +63,7 @@ internal static class QnnNativeWorker
     private sealed class BlockingQueue
     {
         private readonly Queue<IWorkItem> _items = new();
-        private readonly Lock _lock = new();
+        private readonly object _lock = new();
 
         public void Enqueue(IWorkItem item)
         {

@@ -61,7 +61,14 @@ public sealed class HtpHardwareProfile
 
     public static HtpHardwareProfile Resolve(string? processorName = null)
     {
-        processorName ??= SnapdragonHardware.TryReadProcessorName();
+        if (processorName is null)
+        {
+            // TryReadProcessorName is Windows-only (registry); default V73 off-Windows.
+            processorName = OperatingSystem.IsWindows()
+                ? SnapdragonHardware.TryReadProcessorName()
+                : null;
+        }
+
         return SnapdragonProcessorMatcher.MayNeedAlternateHtpContext(processorName)
             ? V81X2Elite
             : V73XElite;
