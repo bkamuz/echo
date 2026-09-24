@@ -15,6 +15,7 @@ public sealed class QnnRuntimeDownloader
 
     private readonly HttpClient _http;
     private readonly ILogger<QnnRuntimeDownloader> _logger;
+    private readonly SemaphoreSlim _installLock = new(1, 1);
 
     public QnnRuntimeDownloader(HttpClient http, ILogger<QnnRuntimeDownloader> logger)
     {
@@ -31,6 +32,21 @@ public sealed class QnnRuntimeDownloader
     public async Task EnsureInstalledAsync(
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
+    {
+        await _installLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await EnsureInstalledCoreAsync(progress, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _installLock.Release();
+        }
+    }
+
+    private async Task EnsureInstalledCoreAsync(
+        IProgress<string>? progress,
+        CancellationToken cancellationToken)
     {
         var manifest = ManifestLoader.LoadRuntimeManifest();
         if (manifest.RequiredFiles.Count == 0)
@@ -69,26 +85,36 @@ public sealed class QnnRuntimeDownloader
             progress?.Report(ProgressMessages.Downloading(package.Wheel));
             _logger.LogInformation("Downloading QNN runtime wheel {Wheel} from {Url}", package.Wheel, package.Url);
 
-            await using var wheelStream = await DownloadWheelAsync(package.Url, cancellationToken).ConfigureAwait(false);
-            await AssetVerifier.VerifyWheelSha256Async(wheelStream, package.Sha256, cancellationToken)
-                .ConfigureAwait(false);
-
-            using var archive = new ZipArchive(wheelStream, ZipArchiveMode.Read, leaveOpen: true);
-            foreach (var mapping in neededMappings)
+            try
             {
-                var entry = archive.GetEntry(mapping.Source.Replace('\\', '/'))
-                    ?? throw new InvalidOperationException($"Wheel {package.Wheel} missing entry {mapping.Source}");
-                var target = Path.Combine(RuntimeDir, mapping.Target);
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                await using var entryStream = entry.Open();
-                await using var fileStream = File.Create(target + ".tmp");
-                await entryStream.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
-                File.Move(target + ".tmp", target, overwrite: true);
+                await using var wheelStream = await DownloadWheelAsync(package.Url, cancellationToken)
+                    .ConfigureAwait(false);
+                await AssetVerifier.VerifyWheelSha256Async(wheelStream, package.Sha256, cancellationToken)
+                    .ConfigureAwait(false);
+
                 _logger.LogInformation(
-                    "Installed QNN runtime file {File} ({Bytes} bytes) to {Dir}",
-                    mapping.Target,
-                    new FileInfo(target).Length,
-                    RuntimeDir);
+                    "Downloaded QNN runtime wheel {Wheel} ({Bytes} bytes); extracting {FileCount} file(s).",
+                    package.Wheel,
+                    wheelStream.Length,
+                    neededMappings.Count);
+
+                using var archive = new ZipArchive(wheelStream, ZipArchiveMode.Read, leaveOpen: true);
+                await QnnWheelExtractor.ExtractMappedFilesAsync(
+                    archive,
+                    RuntimeDir,
+                    neededMappings,
+                    package.Wheel,
+                    _logger,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(
+                    ex,
+                    "QNN runtime install failed for wheel {Wheel} from {Url}",
+                    package.Wheel,
+                    package.Url);
+                throw;
             }
         }
 
@@ -100,9 +126,11 @@ public sealed class QnnRuntimeDownloader
             .ToList();
         if (stillMissing.Count > 0)
         {
-            throw new InvalidOperationException(
+            var message =
                 "QNN runtime extraction finished but required files are still missing: "
-                + string.Join(", ", stillMissing));
+                + string.Join(", ", stillMissing);
+            _logger.LogError("{Message}", message);
+            throw new InvalidOperationException(message);
         }
 
         progress?.Report(ProgressMessages.Done("QNN runtime"));
