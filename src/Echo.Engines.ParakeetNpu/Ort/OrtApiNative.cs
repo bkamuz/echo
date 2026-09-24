@@ -26,7 +26,7 @@ internal static unsafe class OrtApiNative
             throw new FileNotFoundException($"onnxruntime.dll not found: {onnxRuntimeDllPath}");
         }
 
-        _library = NativeLibrary.Load(onnxRuntimeDllPath);
+        _library = QnnNativeLoader.LoadLibrary(onnxRuntimeDllPath);
         if (!NativeLibrary.TryGetExport(_library, "OrtGetApiBase", out var getApiBasePtr))
         {
             throw new InvalidOperationException($"{onnxRuntimeDllPath} does not export OrtGetApiBase.");
