@@ -82,22 +82,26 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
                 .ConfigureAwait(false);
 
             var runtimeDir = QnnRuntimeDownloader.RuntimeDir;
+            var htpProfile = HtpHardwareProfile.Resolve();
+            LogX2ContextBinaryGuidanceIfNeeded(htpProfile);
+
             try
             {
                 _logger.LogInformation(
-                    "Loading Parakeet NPU pipeline (provider=qnn/htp, model={ModelDir})",
-                    modelDir);
+                    "Loading Parakeet NPU pipeline (provider=qnn/htp, model={ModelDir}, htp_arch={HtpArch})",
+                    modelDir,
+                    htpProfile.HtpArch);
                 _pipeline = ParakeetPipeline.LoadNpu(modelDir, runtimeDir, _logger);
                 _resolvedProvider = "qnn/htp";
                 _loadedUseNpu = true;
-                _logger.LogInformation("Parakeet NPU ready — encoder on Hexagon HTP via ORT QNN EP");
+                _logger.LogInformation(
+                    "Parakeet NPU ready — encoder on Hexagon HTP via ORT QNN EP (htp_arch={HtpArch})",
+                    htpProfile.HtpArch);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Parakeet NPU (HTP) load failed");
-                throw new InvalidOperationException(
-                    "Could not load Parakeet on the Hexagon NPU. Check echo.log for QNN/HTP details " +
-                    "(missing skel/cat, wrong SoC generation, or incomplete runtime).", ex);
+                throw new InvalidOperationException(BuildNpuLoadFailureMessage(htpProfile, ex), ex);
             }
 
             return;
@@ -155,4 +159,50 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
     }
 
     public void Dispose() => Unload();
+
+    private void LogX2ContextBinaryGuidanceIfNeeded(HtpHardwareProfile profile)
+    {
+        if (profile.Generation != HexagonHtpGeneration.V81)
+        {
+            return;
+        }
+
+        var manifest = ManifestLoader.LoadModelManifest();
+        if (manifest.TargetHardware.Contains("V73", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(
+                "Parakeet encoder context binary targets {ModelTarget}, but this device needs {DeviceTarget}. "
+                + "QNN runtime will use htp_arch={HtpArch}; if session creation fails, a V81 context binary "
+                + "must be compiled for X2 Elite (no published Echo asset yet). CPU fallback remains available.",
+                manifest.TargetHardware,
+                profile.ContextTarget,
+                profile.HtpArch);
+        }
+    }
+
+    private static string BuildNpuLoadFailureMessage(HtpHardwareProfile profile, Exception ex)
+    {
+        var baseMessage =
+            "Could not load Parakeet on the Hexagon NPU. Check echo.log for QNN/HTP details "
+            + "(missing skel/cat, wrong SoC generation, or incomplete runtime).";
+
+        if (profile.Generation != HexagonHtpGeneration.V81)
+        {
+            return baseMessage;
+        }
+
+        var detail = ex.Message;
+        if (detail.Contains("context", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains("htp", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains("QNN", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains("binary", StringComparison.OrdinalIgnoreCase))
+        {
+            return baseMessage
+                + $" This Snapdragon X2 Elite device requires Hexagon V81 HTP assets and a V81 encoder context binary; "
+                + $"the shipped Parakeet model is compiled for V73 (X Elite). Use CPU mode until a V81 context is published.";
+        }
+
+        return baseMessage
+            + $" Ensure {profile.StubDll}, {profile.SkelSo}, and {profile.CatalogCat} are present under %APPDATA%\\Echo\\qnn\\.";
+    }
 }

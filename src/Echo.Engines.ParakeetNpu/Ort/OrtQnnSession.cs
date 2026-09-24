@@ -156,9 +156,24 @@ internal sealed unsafe class OrtQnnSession : IDisposable
             throw new InvalidOperationException("No QNN NPU device was provided.");
         }
 
-        OrtQnnBootstrap.EnsureComApartment(logger);
+        return QnnNativeWorker.Run(
+            () => LoadCore(modelPath, qnnNpuDevices, contract, providerLease, logger),
+            logger);
+    }
+
+    private static OrtQnnSession LoadCore(
+        string modelPath,
+        IReadOnlyList<nint> qnnNpuDevices,
+        OrtSessionContract contract,
+        QnnProviderLease providerLease,
+        ILogger? logger)
+    {
+        ComApartmentHelper.EnsureInitialized(logger);
         var api = OrtApiNative.Api;
         var env = OrtQnnBootstrap.EnvHandle;
+        var profile = OrtQnnBootstrap.HtpProfile;
+        var runtimeDir = OrtQnnBootstrap.RuntimeDirectory;
+        var backendPath = Path.Combine(runtimeDir, "QnnHtp.dll");
 
         nint sessionOptions = 0;
         nint session = 0;
@@ -168,42 +183,76 @@ internal sealed unsafe class OrtQnnSession : IDisposable
 
         try
         {
+            logger?.LogInformation("Creating ORT session options for QNN HTP encoder");
             OrtApiNative.Check(api.CreateSessionOptions(&sessionOptions), "CreateSessionOptions");
             OrtApiNative.Check(
                 api.SetSessionGraphOptimizationLevel(sessionOptions, OrtGraphOptimizationLevel.EnableAll),
                 "SetSessionGraphOptimizationLevel");
 
-            var performanceKey = Marshal.StringToCoTaskMemUTF8("htp_performance_mode");
-            var performanceValue = Marshal.StringToCoTaskMemUTF8("burst");
-            nint* keys = stackalloc nint[1];
-            nint* values = stackalloc nint[1];
-            keys[0] = performanceKey;
-            values[0] = performanceValue;
-            fixed (nint* devicePtr = qnnNpuDevices.ToArray())
+            var epOptions = new (string Key, string Value)[]
             {
-                OrtApiNative.Check(
-                    api.SessionOptionsAppendExecutionProviderV2(
-                        sessionOptions,
-                        env,
-                        devicePtr,
-                        (nuint)qnnNpuDevices.Count,
-                        keys,
-                        values,
-                        1),
-                    "SessionOptionsAppendExecutionProvider_V2");
+                ("backend_path", backendPath),
+                ("htp_arch", profile.HtpArch),
+                ("soc_model", profile.SocModel),
+                ("htp_performance_mode", "burst"),
+            };
+
+            var optionKeys = epOptions.Select(o => Marshal.StringToCoTaskMemUTF8(o.Key)).ToArray();
+            var optionValues = epOptions.Select(o => Marshal.StringToCoTaskMemUTF8(o.Value)).ToArray();
+            try
+            {
+                logger?.LogInformation(
+                    "Appending QNN execution provider to session (backend={BackendPath}, htp_arch={HtpArch}, soc_model={SocModel}, devices={DeviceCount})",
+                    backendPath,
+                    profile.HtpArch,
+                    profile.SocModel,
+                    qnnNpuDevices.Count);
+
+                fixed (nint* keyPtrs = optionKeys)
+                fixed (nint* valuePtrs = optionValues)
+                fixed (nint* devicePtr = qnnNpuDevices.ToArray())
+                {
+                    OrtApiNative.Check(
+                        api.SessionOptionsAppendExecutionProviderV2(
+                            sessionOptions,
+                            env,
+                            devicePtr,
+                            (nuint)qnnNpuDevices.Count,
+                            keyPtrs,
+                            valuePtrs,
+                            (nuint)epOptions.Length),
+                        "SessionOptionsAppendExecutionProvider_V2");
+                }
+            }
+            finally
+            {
+                foreach (var key in optionKeys)
+                {
+                    Marshal.FreeCoTaskMem(key);
+                }
+
+                foreach (var value in optionValues)
+                {
+                    Marshal.FreeCoTaskMem(value);
+                }
             }
 
-            Marshal.FreeCoTaskMem(performanceKey);
-            Marshal.FreeCoTaskMem(performanceValue);
+            var contextBinary = Path.Combine(Path.GetDirectoryName(modelPath) ?? string.Empty, "encoder-model.bin");
+            logger?.LogInformation(
+                "Creating QNN HTP session for {ModelPath} (context binary={ContextBinary}, target={ContextTarget})",
+                modelPath,
+                contextBinary,
+                profile.ContextTarget);
 
             var ortPath = OrtApiNative.ToOrtPath(modelPath);
             fixed (char* pathPtr = ortPath)
             {
-                logger?.LogInformation("Creating QNN HTP session for {ModelPath}", modelPath);
                 OrtApiNative.Check(
                     api.CreateSession(env, (nint)pathPtr, sessionOptions, &session),
                     "CreateSession");
             }
+
+            logger?.LogInformation("QNN HTP session created for {ModelPath}", modelPath);
 
             ValidateSessionContract(api, session, contract);
 
@@ -271,9 +320,12 @@ internal sealed unsafe class OrtQnnSession : IDisposable
         }
     }
 
-    public IReadOnlyList<OrtTensorOutput> Run(IReadOnlyList<OrtTensorInput> inputs)
+    public IReadOnlyList<OrtTensorOutput> Run(IReadOnlyList<OrtTensorInput> inputs) =>
+        QnnNativeWorker.Run(() => RunCore(inputs));
+
+    private IReadOnlyList<OrtTensorOutput> RunCore(IReadOnlyList<OrtTensorInput> inputs)
     {
-        OrtQnnBootstrap.EnsureComApartment();
+        ComApartmentHelper.EnsureInitialized();
         ValidateInputs(_contract.Inputs, inputs);
         ReleasePinnedInputs();
 

@@ -57,8 +57,13 @@ public sealed class ParakeetPipeline : IDisposable
 
     public static ParakeetPipeline LoadNpu(string modelDir, string runtimeDir, ILogger? logger = null)
     {
+        logger?.LogInformation("Initializing ORT/QNN runtime from {RuntimeDir}", runtimeDir);
         OrtQnnBootstrap.Initialize(runtimeDir, logger);
+
+        logger?.LogInformation("Acquiring QNN execution provider lease");
         var providerLease = OrtQnnBootstrap.AcquireQnnProvider(logger);
+
+        logger?.LogInformation("Enumerating QNN NPU devices");
         var npuDevices = OrtQnnBootstrap.EnumerateQnnNpuDevices(logger);
         if (npuDevices.Count == 0)
         {
