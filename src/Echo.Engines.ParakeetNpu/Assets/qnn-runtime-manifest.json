@@ -26,6 +26,9 @@
         { "source": "onnxruntime_qnn/QnnHtpV73Stub.dll", "target": "QnnHtpV73Stub.dll" },
         { "source": "onnxruntime_qnn/libQnnHtpV73Skel.so", "target": "libQnnHtpV73Skel.so" },
         { "source": "onnxruntime_qnn/libqnnhtpv73.cat", "target": "libqnnhtpv73.cat" },
+        { "source": "onnxruntime_qnn/QnnHtpV81Stub.dll", "target": "QnnHtpV81Stub.dll" },
+        { "source": "onnxruntime_qnn/libQnnHtpV81Skel.so", "target": "libQnnHtpV81Skel.so" },
+        { "source": "onnxruntime_qnn/libqnnhtpv81.cat", "target": "libqnnhtpv81.cat" },
         { "source": "onnxruntime_qnn/QnnSystem.dll", "target": "QnnSystem.dll" }
       ]
     }
@@ -39,6 +42,9 @@
     "QnnHtpV73Stub.dll",
     "libQnnHtpV73Skel.so",
     "libqnnhtpv73.cat",
+    "QnnHtpV81Stub.dll",
+    "libQnnHtpV81Skel.so",
+    "libqnnhtpv81.cat",
     "QnnSystem.dll"
   ]
 }

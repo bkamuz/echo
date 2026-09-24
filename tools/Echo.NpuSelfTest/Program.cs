@@ -14,7 +14,7 @@ if (wavPath is null || !File.Exists(wavPath))
     Console.WriteLine("Usage: Echo.NpuSelfTest <path-to-16khz-mono-wav>");
     Console.WriteLine();
     Console.WriteLine("Downloads QNN runtime + Parakeet HTP model on first run, then transcribes.");
-    Console.WriteLine("Requires Snapdragon X Elite (Hexagon V73). Check echo.log-style output below.");
+    Console.WriteLine("Requires Snapdragon X/X2 Elite (Hexagon V73/V81). Check echo.log-style output below.");
     return 1;
 }
 

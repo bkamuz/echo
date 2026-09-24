@@ -62,13 +62,13 @@ public static class SnapdragonHardware
         if (SnapdragonProcessorMatcher.MayNeedAlternateHtpContext(processor))
         {
             logger.LogWarning(
-                "Parakeet HTP context was built for Hexagon V73. Detected: {Processor}. " +
-                "X2 Elite may need a different context binary if QNN load fails.",
+                "Parakeet HTP context was built for Hexagon V73 (Snapdragon X Elite). Detected: {Processor}. " +
+                "X2 Elite uses Hexagon V81 and needs V81 skel/stub/cat in %APPDATA%\\Echo\\qnn\\ plus a V81 encoder context binary if session load fails.",
                 processor);
         }
     }
 
-    private static string? TryReadProcessorName()
+    public static string? TryReadProcessorName()
     {
         try
         {

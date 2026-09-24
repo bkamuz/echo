@@ -10,7 +10,7 @@ internal static unsafe class OrtQnnBootstrap
 {
     private const string QnnProviderName = "QNNExecutionProvider";
     private static readonly object Gate = new();
-    private static readonly string[] PreloadDlls =
+    private static readonly string[] SharedPreloadDlls =
     [
         "QnnSystem.dll",
         "QnnHtpPrepare.dll",
@@ -22,10 +22,8 @@ internal static unsafe class OrtQnnBootstrap
     private static nint _env;
     private static int _providerLeases;
     private static bool _providerRegistered;
+    private static HtpHardwareProfile? _htpProfile;
     private static readonly List<nint> _preloadedModules = [];
-
-    [ThreadStatic]
-    private static ComApartmentHelper.ComApartmentLease? _comApartment;
 
     public static nint EnvHandle
     {
@@ -45,6 +43,15 @@ internal static unsafe class OrtQnnBootstrap
         }
     }
 
+    public static HtpHardwareProfile HtpProfile
+    {
+        get
+        {
+            EnsureInitialized();
+            return _htpProfile ?? HtpHardwareProfile.Resolve();
+        }
+    }
+
     public static void Initialize(string runtimeDir, ILogger? logger = null)
     {
         lock (Gate)
@@ -55,10 +62,18 @@ internal static unsafe class OrtQnnBootstrap
             }
 
             _runtimeDir = Path.GetFullPath(runtimeDir);
-            VerifyRequiredFiles(_runtimeDir);
+            _htpProfile = HtpHardwareProfile.Resolve();
+            logger?.LogInformation(
+                "Parakeet QNN HTP profile: generation={Generation}, htp_arch={HtpArch}, soc_model={SocModel}, contextTarget={ContextTarget}",
+                _htpProfile.Generation,
+                _htpProfile.HtpArch,
+                _htpProfile.SocModel,
+                _htpProfile.ContextTarget);
+
+            VerifyRequiredFiles(_runtimeDir, _htpProfile, logger);
             Environment.SetEnvironmentVariable("ORT_DYLIB_PATH", Path.Combine(_runtimeDir, "onnxruntime.dll"));
             OrtApiNative.Load(Path.Combine(_runtimeDir, "onnxruntime.dll"));
-            PreloadQnnRuntime(_runtimeDir, logger);
+            PreloadQnnRuntime(_runtimeDir, _htpProfile, logger);
             CreateEnvironment(logger);
         }
     }
@@ -66,7 +81,32 @@ internal static unsafe class OrtQnnBootstrap
     public static QnnProviderLease AcquireQnnProvider(ILogger? logger = null)
     {
         EnsureInitialized();
-        EnsureComApartment(logger);
+        return QnnNativeWorker.Run(() => AcquireQnnProviderCore(logger), logger);
+    }
+
+    public static IReadOnlyList<nint> EnumerateQnnNpuDevices(ILogger? logger = null)
+    {
+        EnsureInitialized();
+        return QnnNativeWorker.Run(() => EnumerateQnnNpuDevicesCore(logger), logger);
+    }
+
+    internal static void ReleaseProviderLease(ILogger? logger = null)
+    {
+        QnnNativeWorker.Run(() => ReleaseProviderLeaseCore(logger), logger);
+    }
+
+    public static void EnsureComApartment(ILogger? logger = null)
+    {
+        QnnNativeWorker.Run(() =>
+        {
+            ComApartmentHelper.EnsureInitialized(logger);
+            return 0;
+        }, logger);
+    }
+
+    private static QnnProviderLease AcquireQnnProviderCore(ILogger? logger)
+    {
+        ComApartmentHelper.EnsureInitialized(logger);
 
         lock (Gate)
         {
@@ -77,6 +117,12 @@ internal static unsafe class OrtQnnBootstrap
                 {
                     throw new FileNotFoundException($"QNN provider DLL not found: {providerPath}");
                 }
+
+                logger?.LogInformation(
+                    "Registering QNN execution provider from {ProviderPath} (HTP arch={HtpArch}, soc_model={SocModel})",
+                    providerPath,
+                    HtpProfile.HtpArch,
+                    HtpProfile.SocModel);
 
                 var api = OrtApiNative.Api;
                 var registrationName = Marshal.StringToCoTaskMemUTF8(QnnProviderName);
@@ -104,10 +150,11 @@ internal static unsafe class OrtQnnBootstrap
         }
     }
 
-    public static IReadOnlyList<nint> EnumerateQnnNpuDevices(ILogger? logger = null)
+    private static IReadOnlyList<nint> EnumerateQnnNpuDevicesCore(ILogger? logger)
     {
-        EnsureInitialized();
-        EnsureComApartment(logger);
+        ComApartmentHelper.EnsureInitialized(logger);
+
+        logger?.LogInformation("Calling ORT GetEpDevices to enumerate QNN NPU hardware");
 
         var api = OrtApiNative.Api;
         nint* devicesPtr = null;
@@ -118,6 +165,8 @@ internal static unsafe class OrtQnnBootstrap
             logger?.LogWarning("GetEpDevices returned no execution-provider devices.");
             return Array.Empty<nint>();
         }
+
+        logger?.LogInformation("GetEpDevices returned {Count} execution-provider device(s)", count);
 
         var qnnDevices = new List<nint>();
         for (nuint i = 0; i < count; i++)
@@ -162,8 +211,10 @@ internal static unsafe class OrtQnnBootstrap
         return qnnDevices;
     }
 
-    internal static void ReleaseProviderLease(ILogger? logger = null)
+    private static void ReleaseProviderLeaseCore(ILogger? logger)
     {
+        ComApartmentHelper.EnsureInitialized(logger);
+
         lock (Gate)
         {
             if (_providerLeases == 0)
@@ -174,6 +225,8 @@ internal static unsafe class OrtQnnBootstrap
             _providerLeases--;
             if (_providerLeases == 0 && _providerRegistered)
             {
+                logger?.LogInformation("Unregistering QNN execution provider after final session");
+
                 var api = OrtApiNative.Api;
                 var registrationName = Marshal.StringToCoTaskMemUTF8(QnnProviderName);
                 try
@@ -193,14 +246,6 @@ internal static unsafe class OrtQnnBootstrap
         }
     }
 
-    public static void EnsureComApartment(ILogger? logger = null)
-    {
-        if (_comApartment is null)
-        {
-            _comApartment = ComApartmentHelper.EnsureInitialized(logger);
-        }
-    }
-
     private static void EnsureInitialized()
     {
         if (_env == 0)
@@ -216,6 +261,7 @@ internal static unsafe class OrtQnnBootstrap
         nint env = 0;
         try
         {
+            logger?.LogInformation("Creating ORT environment for Parakeet NPU path");
             OrtApiNative.Check(api.CreateEnv(OrtLoggingLevel.Warning, logId, &env), "CreateEnv");
             _env = env;
             logger?.LogInformation("ORT environment created for Parakeet NPU path.");
@@ -226,41 +272,62 @@ internal static unsafe class OrtQnnBootstrap
         }
     }
 
-    private static void VerifyRequiredFiles(string runtimeDir)
+    private static void VerifyRequiredFiles(string runtimeDir, HtpHardwareProfile profile, ILogger? logger)
     {
         var manifest = ManifestLoader.LoadRuntimeManifest();
-        var missing = manifest.RequiredFiles
+        var required = profile.RequiredRuntimeFiles();
+        var missing = required
             .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(runtimeDir, file)))
             .ToList();
         if (missing.Count > 0)
         {
             throw new FileNotFoundException(
-                $"QNN runtime is missing required files in {runtimeDir}: {string.Join(", ", missing)}. "
+                $"QNN runtime is missing required files for {profile.ContextTarget} in {runtimeDir}: "
+                + $"{string.Join(", ", missing)}. "
                 + "Run Download in Settings or switch to NPU to fetch the QNN runtime.");
+        }
+
+        var manifestMissing = manifest.RequiredFiles
+            .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(runtimeDir, file)))
+            .ToList();
+        if (manifestMissing.Count > 0)
+        {
+            logger?.LogWarning(
+                "QNN runtime is missing optional manifest files (may be needed on other Snapdragon generations): {MissingFiles}",
+                string.Join(", ", manifestMissing));
         }
     }
 
-    private static void PreloadQnnRuntime(string runtimeDir, ILogger? logger)
+    private static void PreloadQnnRuntime(string runtimeDir, HtpHardwareProfile profile, ILogger? logger)
     {
         if (_preloadedModules.Count > 0)
         {
             return;
         }
 
-        foreach (var name in PreloadDlls)
+        foreach (var name in SharedPreloadDlls)
         {
-            var path = Path.Combine(runtimeDir, name);
-            if (!File.Exists(path))
-            {
-                throw new FileNotFoundException($"Required QNN runtime DLL not found: {path}");
-            }
+            PreloadDll(runtimeDir, name, logger);
+        }
 
-            var module = NativeLibrary.Load(path);
-            _preloadedModules.Add(module);
-            logger?.LogDebug("Preloaded QNN runtime DLL {Name}", name);
+        foreach (var name in profile.RequiredHtpFiles.Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+        {
+            PreloadDll(runtimeDir, name, logger);
         }
     }
 
+    private static void PreloadDll(string runtimeDir, string name, ILogger? logger)
+    {
+        var path = Path.Combine(runtimeDir, name);
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Required QNN runtime DLL not found: {path}");
+        }
+
+        logger?.LogDebug("Preloading QNN runtime DLL {Name} from {Path}", name, path);
+        var module = NativeLibrary.Load(path);
+        _preloadedModules.Add(module);
+    }
 }
 
 internal sealed class QnnProviderLease : IDisposable

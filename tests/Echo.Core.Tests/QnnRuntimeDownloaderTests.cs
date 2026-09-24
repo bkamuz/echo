@@ -28,7 +28,8 @@ public class QnnRuntimeDownloaderTests
 
             Assert.Contains("onnxruntime.dll", missing);
             Assert.Contains("onnxruntime_providers_qnn.dll", missing);
-            Assert.True(missing.Count >= 9);
+            Assert.True(missing.Count >= 12);
+            Assert.Contains("QnnHtpV81Stub.dll", missing);
         }
         finally
         {
@@ -42,6 +43,9 @@ public class QnnRuntimeDownloaderTests
         var manifest = ManifestLoader.LoadRuntimeManifest();
         Assert.NotEmpty(manifest.RequiredFiles);
         Assert.Contains("onnxruntime.dll", manifest.RequiredFiles);
+        Assert.Contains("QnnHtpV81Stub.dll", manifest.RequiredFiles);
+        Assert.Contains("libQnnHtpV81Skel.so", manifest.RequiredFiles);
+        Assert.Contains("libqnnhtpv81.cat", manifest.RequiredFiles);
     }
 
     [Fact]
