@@ -156,7 +156,7 @@ internal sealed unsafe class OrtQnnSession : IDisposable
             throw new InvalidOperationException("No QNN NPU device was provided.");
         }
 
-        OrtQnnBootstrap.EnsureComApartment();
+        OrtQnnBootstrap.EnsureComApartment(logger);
         var api = OrtApiNative.Api;
         var env = OrtQnnBootstrap.EnvHandle;
 

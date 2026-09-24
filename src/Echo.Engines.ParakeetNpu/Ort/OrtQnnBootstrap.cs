@@ -25,7 +25,7 @@ internal static unsafe class OrtQnnBootstrap
     private static readonly List<nint> _preloadedModules = [];
 
     [ThreadStatic]
-    private static ComApartment? _comApartment;
+    private static ComApartmentHelper.ComApartmentLease? _comApartment;
 
     public static nint EnvHandle
     {
@@ -66,7 +66,7 @@ internal static unsafe class OrtQnnBootstrap
     public static QnnProviderLease AcquireQnnProvider(ILogger? logger = null)
     {
         EnsureInitialized();
-        EnsureComApartment();
+        EnsureComApartment(logger);
 
         lock (Gate)
         {
@@ -107,7 +107,7 @@ internal static unsafe class OrtQnnBootstrap
     public static IReadOnlyList<nint> EnumerateQnnNpuDevices(ILogger? logger = null)
     {
         EnsureInitialized();
-        EnsureComApartment();
+        EnsureComApartment(logger);
 
         var api = OrtApiNative.Api;
         nint* devicesPtr = null;
@@ -193,11 +193,11 @@ internal static unsafe class OrtQnnBootstrap
         }
     }
 
-    public static void EnsureComApartment()
+    public static void EnsureComApartment(ILogger? logger = null)
     {
         if (_comApartment is null)
         {
-            _comApartment = ComApartment.Initialize();
+            _comApartment = ComApartmentHelper.EnsureInitialized(logger);
         }
     }
 
@@ -261,40 +261,6 @@ internal static unsafe class OrtQnnBootstrap
         }
     }
 
-    private sealed class ComApartment : IDisposable
-    {
-        private bool _initialized;
-
-        public static ComApartment Initialize()
-        {
-            var apartment = new ComApartment();
-            const uint CoinitMultithreaded = 0x0;
-            const uint CoinitDisableOle1Dde = 0x100;
-            var hr = CoInitializeEx(IntPtr.Zero, CoinitMultithreaded | CoinitDisableOle1Dde);
-            if (hr is not 0 and not 1) // S_OK or S_FALSE (already initialized)
-            {
-                throw new InvalidOperationException($"CoInitializeEx failed: 0x{hr:X8}");
-            }
-
-            apartment._initialized = true;
-            return apartment;
-        }
-
-        public void Dispose()
-        {
-            if (_initialized)
-            {
-                CoUninitialize();
-                _initialized = false;
-            }
-        }
-
-        [DllImport("ole32.dll")]
-        private static extern int CoInitializeEx(IntPtr reserved, uint coInit);
-
-        [DllImport("ole32.dll")]
-        private static extern void CoUninitialize();
-    }
 }
 
 internal sealed class QnnProviderLease : IDisposable
