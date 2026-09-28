@@ -75,7 +75,7 @@ internal static unsafe class OrtQnnBootstrap
                 QnnNativeLoader.PrepareSearchPath(_runtimeDir, logger);
                 VerifyRequiredFiles(_runtimeDir, _htpProfile, logger);
                 LogOrtProviderPairDiagnostics(_runtimeDir, logger);
-                OrtApiNative.Load(Path.Combine(_runtimeDir, "onnxruntime.dll"));
+                OrtApiNative.Load(Path.Combine(_runtimeDir, "onnxruntime.dll"), logger);
                 PreloadQnnRuntime(_runtimeDir, logger);
                 CreateEnvironment(logger);
             }
@@ -157,8 +157,9 @@ internal static unsafe class OrtQnnBootstrap
                 }
 
                 logger?.LogInformation(
-                    "Registering QNN execution provider from {ProviderPath} (HTP arch={HtpArch}, soc_model={SocModel})",
+                    "Registering QNN execution provider from {ProviderPath} (ORT {OrtVersion}, HTP arch={HtpArch}, soc_model={SocModel})",
                     providerPath,
+                    OrtApiNative.LoadedVersionString ?? "unknown",
                     HtpProfile.HtpArch,
                     HtpProfile.SocModel);
 

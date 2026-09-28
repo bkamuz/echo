@@ -1,4 +1,5 @@
 using echo.Abstractions.Engines;
+using echo.Abstractions.Platform;
 using Microsoft.Extensions.Logging;
 
 namespace echo.Platform.Windows;
@@ -10,6 +11,8 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
 {
     private readonly IServiceProvider _services;
     private readonly ILogger _logger;
+    private readonly IUserStatusNotifier? _statusNotifier;
+    private readonly ParakeetNpuWorkerSessionGate _workerGate = new();
     private ITranscriptionEngine? _inProcess;
     private ParakeetQnnWorkerClient? _npuWorker;
     private EngineOptions _options = new();
@@ -19,6 +22,7 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
     {
         _services = services;
         _logger = logger;
+        _statusNotifier = services.GetService(typeof(IUserStatusNotifier)) as IUserStatusNotifier;
     }
 
     public string EngineId => "parakeet_npu";
@@ -30,9 +34,13 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
 
     public void Configure(EngineOptions options)
     {
-        var previousNpu = ParakeetQnnWorkerPolicy.IsNpuDevice(_options.Device);
+        var previous = _options;
+        var previousNpu = ParakeetQnnWorkerPolicy.IsNpuDevice(previous.Device);
         _options = CloneOptions(options);
         var wantNpu = ParakeetQnnWorkerPolicy.IsNpuDevice(_options.Device);
+        var optionsChanged = !OptionsEqual(previous, _options);
+
+        _workerGate.OnConfigure(wantNpu, optionsChanged);
 
         if (previousNpu != wantNpu)
         {
@@ -42,20 +50,32 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
         {
             _inProcess.Configure(_options);
         }
+        else if (wantNpu && optionsChanged && _loadedViaWorker)
+        {
+            Unload();
+        }
     }
 
     public async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
     {
         var wantNpu = ParakeetQnnWorkerPolicy.IsNpuDevice(_options.Device);
-        if (wantNpu && ParakeetQnnWorkerPolicy.ShouldIsolateNpu())
+        if (_workerGate.ShouldUseWorker(wantNpu, ParakeetQnnWorkerPolicy.ShouldIsolateNpu()))
         {
             _inProcess?.Unload();
             _inProcess = null;
 
-            _npuWorker ??= new ParakeetQnnWorkerClient(_logger);
-            await _npuWorker.EnsureReadyAsync(_options, cancellationToken).ConfigureAwait(false);
-            _loadedViaWorker = true;
-            return;
+            try
+            {
+                _npuWorker ??= new ParakeetQnnWorkerClient(_logger);
+                await _npuWorker.EnsureReadyAsync(_options, cancellationToken).ConfigureAwait(false);
+                _loadedViaWorker = true;
+                return;
+            }
+            catch (Exception ex)
+            {
+                await FallBackToCpuForSessionAsync(ex, cancellationToken).ConfigureAwait(false);
+                return;
+            }
         }
 
         _npuWorker?.Dispose();
@@ -63,11 +83,11 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
         _loadedViaWorker = false;
 
         _inProcess ??= ParakeetAssemblyLoader.CreateInProcessEngine(_services);
-        _inProcess.Configure(_options);
+        _inProcess.Configure(ResolveInProcessOptions(wantNpu));
         await _inProcess.EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public Task<string> TranscribeAsync(
+    public async Task<string> TranscribeAsync(
         float[] samples,
         int sampleRate,
         CancellationToken cancellationToken = default)
@@ -79,7 +99,15 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
                 throw new InvalidOperationException("Parakeet NPU worker is not loaded.");
             }
 
-            return _npuWorker.TranscribeAsync(samples, sampleRate, cancellationToken);
+            try
+            {
+                return await _npuWorker.TranscribeAsync(samples, sampleRate, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await FallBackToCpuForSessionAsync(ex, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         if (_inProcess is null)
@@ -87,7 +115,7 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
             throw new InvalidOperationException("Parakeet model is not loaded.");
         }
 
-        return _inProcess.TranscribeAsync(samples, sampleRate, cancellationToken);
+        return await _inProcess.TranscribeAsync(samples, sampleRate, cancellationToken).ConfigureAwait(false);
     }
 
     public void Unload()
@@ -101,6 +129,34 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
 
     public void Dispose() => Unload();
 
+    private async Task FallBackToCpuForSessionAsync(Exception ex, CancellationToken cancellationToken)
+    {
+        _logger.LogWarning(ex, "Parakeet NPU worker unavailable; using in-process CPU for this session");
+        _workerGate.MarkWorkerFailed();
+        _statusNotifier?.ShowTemporary("Loc.Status.ParakeetNpuCpuFallback", warning: true);
+
+        _npuWorker?.Dispose();
+        _npuWorker = null;
+        _loadedViaWorker = false;
+
+        _inProcess ??= ParakeetAssemblyLoader.CreateInProcessEngine(_services);
+        _inProcess.Configure(CpuFallbackOptions());
+        await _inProcess.EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private EngineOptions ResolveInProcessOptions(bool wantNpu) =>
+        wantNpu ? CpuFallbackOptions() : _options;
+
+    private EngineOptions CpuFallbackOptions() => new()
+    {
+        Engine = _options.Engine,
+        WhisperModelSize = _options.WhisperModelSize,
+        GigaAmModelSize = _options.GigaAmModelSize,
+        Language = _options.Language,
+        Device = "cpu",
+        SampleRate = _options.SampleRate,
+    };
+
     private static EngineOptions CloneOptions(EngineOptions options) => new()
     {
         Engine = options.Engine,
@@ -110,4 +166,12 @@ public sealed class ParakeetWindowsEngine : ITranscriptionEngine, IDisposable
         Device = options.Device,
         SampleRate = options.SampleRate,
     };
+
+    private static bool OptionsEqual(EngineOptions left, EngineOptions right) =>
+        string.Equals(left.Engine, right.Engine, StringComparison.Ordinal)
+        && string.Equals(left.WhisperModelSize, right.WhisperModelSize, StringComparison.Ordinal)
+        && string.Equals(left.GigaAmModelSize, right.GigaAmModelSize, StringComparison.Ordinal)
+        && string.Equals(left.Language, right.Language, StringComparison.Ordinal)
+        && string.Equals(left.Device, right.Device, StringComparison.Ordinal)
+        && left.SampleRate == right.SampleRate;
 }
