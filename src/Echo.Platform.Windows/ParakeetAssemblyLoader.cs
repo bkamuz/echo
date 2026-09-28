@@ -34,9 +34,12 @@ internal static class ParakeetAssemblyLoader
         services.AddSingleton(new EngineRegistration
         {
             EngineId = "parakeet_npu",
-            Factory = CreateEngine,
+            Factory = CreateRoutedEngine,
         });
     }
+
+    internal static ITranscriptionEngine CreateInProcessEngine(IServiceProvider services) =>
+        CreateEngineCore(services);
 
     public static IParakeetNpuModelSupport CreateModelSupport(IServiceProvider services)
     {
@@ -58,7 +61,34 @@ internal static class ParakeetAssemblyLoader
             modelDownloader)!;
     }
 
-    private static ITranscriptionEngine CreateEngine(IServiceProvider services)
+    private static ITranscriptionEngine CreateRoutedEngine(IServiceProvider services)
+    {
+        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+        var logger = CreateTypedLogger(loggerFactory, typeof(ParakeetWindowsEngine));
+        return new ParakeetWindowsEngine(services, (ILogger)logger);
+    }
+
+    internal static ITranscriptionEngine CreateInProcessEngineForWorker(ILoggerFactory loggerFactory)
+    {
+        var assembly = LoadAssembly();
+        var engineType = assembly.GetType("echo.Engines.ParakeetNpu.ParakeetNpuEngine", throwOnError: true)!;
+        var runtimeDownloader = CreateDownloaderForWorker(
+            loggerFactory,
+            assembly,
+            "echo.Engines.ParakeetNpu.QnnRuntimeDownloader");
+        var modelDownloader = CreateDownloaderForWorker(
+            loggerFactory,
+            assembly,
+            "echo.Engines.ParakeetNpu.ParakeetModelDownloader");
+        var logger = CreateTypedLogger(loggerFactory, engineType);
+        return (ITranscriptionEngine)Activator.CreateInstance(
+            engineType,
+            runtimeDownloader,
+            modelDownloader,
+            logger)!;
+    }
+
+    private static ITranscriptionEngine CreateEngineCore(IServiceProvider services)
     {
         var assembly = LoadAssembly();
         var engineType = assembly.GetType("echo.Engines.ParakeetNpu.ParakeetNpuEngine", throwOnError: true)!;
@@ -79,6 +109,18 @@ internal static class ParakeetAssemblyLoader
             runtimeDownloader,
             modelDownloader,
             logger)!;
+    }
+
+    private static object CreateDownloaderForWorker(
+        ILoggerFactory loggerFactory,
+        Assembly assembly,
+        string typeName)
+    {
+        var downloaderType = assembly.GetType(typeName, throwOnError: true)!;
+        var http = new HttpClient();
+        ConfigureParakeetHttpClient(http);
+        var logger = CreateTypedLogger(loggerFactory, downloaderType);
+        return Activator.CreateInstance(downloaderType, http, logger)!;
     }
 
     private static object CreateDownloader(
