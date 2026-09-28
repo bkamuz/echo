@@ -70,10 +70,10 @@ internal static unsafe class OrtQnnBootstrap
                 _htpProfile.SocModel,
                 _htpProfile.ContextTarget);
 
+            QnnNativeLoader.PrepareSearchPath(_runtimeDir, logger);
             VerifyRequiredFiles(_runtimeDir, _htpProfile, logger);
-            Environment.SetEnvironmentVariable("ORT_DYLIB_PATH", Path.Combine(_runtimeDir, "onnxruntime.dll"));
             OrtApiNative.Load(Path.Combine(_runtimeDir, "onnxruntime.dll"));
-            PreloadQnnRuntime(_runtimeDir, _htpProfile, logger);
+            PreloadQnnRuntime(_runtimeDir, logger);
             CreateEnvironment(logger);
         }
     }
@@ -298,19 +298,16 @@ internal static unsafe class OrtQnnBootstrap
         }
     }
 
-    private static void PreloadQnnRuntime(string runtimeDir, HtpHardwareProfile profile, ILogger? logger)
+    private static void PreloadQnnRuntime(string runtimeDir, ILogger? logger)
     {
         if (_preloadedModules.Count > 0)
         {
             return;
         }
 
+        // Shared QNN backend DLLs only. HTP stub/skel/cat are loaded by QnnHtp.dll at runtime
+        // (stub via Windows loader, skel via ADSP_LIBRARY_PATH) — do not preload them here.
         foreach (var name in SharedPreloadDlls)
-        {
-            PreloadDll(runtimeDir, name, logger);
-        }
-
-        foreach (var name in profile.RequiredHtpFiles.Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
         {
             PreloadDll(runtimeDir, name, logger);
         }
@@ -321,12 +318,21 @@ internal static unsafe class OrtQnnBootstrap
         var path = Path.Combine(runtimeDir, name);
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException($"Required QNN runtime DLL not found: {path}");
+            throw new FileNotFoundException($"Required QNN runtime DLL not found: {path}", path);
         }
 
-        logger?.LogDebug("Preloading QNN runtime DLL {Name} from {Path}", name, path);
-        var module = NativeLibrary.Load(path);
-        _preloadedModules.Add(module);
+        try
+        {
+            var module = QnnNativeLoader.LoadLibrary(path, logger);
+            _preloadedModules.Add(module);
+            logger?.LogDebug("Preloaded QNN runtime DLL {Name} from {Path}", name, path);
+        }
+        catch (DllNotFoundException ex)
+        {
+            throw new DllNotFoundException(
+                $"Failed to preload QNN runtime DLL '{name}' from {path}. {ex.Message}",
+                ex);
+        }
     }
 }
 

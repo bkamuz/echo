@@ -210,40 +210,48 @@ internal static class QnnRuntimePaths
     internal static bool IsFilePresent(string path) =>
         File.Exists(path) && new FileInfo(path).Length > 0;
 
-    public static void PrepareNativeSearchPath()
+    public static void PrepareNativeSearchPath(ILogger? logger = null)
     {
-        var dir = UserDir;
-        if (!Directory.Exists(dir))
+        if (!Directory.Exists(UserDir))
         {
             return;
         }
 
-        var ortDll = Path.Combine(dir, "onnxruntime.dll");
+        QnnNativeLoader.PrepareSearchPath(UserDir, logger);
+
+        var ortDll = Path.Combine(UserDir, "onnxruntime.dll");
         if (!IsFilePresent(ortDll))
         {
             return;
         }
 
-        Environment.SetEnvironmentVariable("ORT_DYLIB_PATH", ortDll);
+        foreach (var name in new[]
+                 {
+                     "QnnSystem.dll",
+                     "QnnHtpPrepare.dll",
+                     "QnnHtpNetRunExtensions.dll",
+                     "QnnHtp.dll",
+                     "onnxruntime.dll",
+                 })
+        {
+            var path = Path.Combine(UserDir, name);
+            if (!IsFilePresent(path))
+            {
+                continue;
+            }
 
-        try
-        {
-            NativeLibrary.Load(Path.Combine(dir, "QnnSystem.dll"));
-            NativeLibrary.Load(Path.Combine(dir, "QnnHtpPrepare.dll"));
-            NativeLibrary.Load(Path.Combine(dir, "QnnHtpNetRunExtensions.dll"));
-            NativeLibrary.Load(Path.Combine(dir, "QnnHtp.dll"));
-            NativeLibrary.Load(ortDll);
-        }
-        catch
-        {
-            // Best-effort preload; session creation will surface errors.
-        }
-
-        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        if (!path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
-            .Any(p => string.Equals(p, dir, StringComparison.OrdinalIgnoreCase)))
-        {
-            Environment.SetEnvironmentVariable("PATH", dir + Path.PathSeparator + path);
+            try
+            {
+                QnnNativeLoader.LoadLibrary(path, logger);
+            }
+            catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
+            {
+                logger?.LogWarning(
+                    ex,
+                    "Best-effort preload skipped for {LibraryName} from {Path}",
+                    name,
+                    path);
+            }
         }
     }
 }
