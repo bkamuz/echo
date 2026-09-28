@@ -140,6 +140,8 @@ public sealed class AppConfig
             Device = ExecutionProviderResolver.CpuDevice;
         }
 
+        Device = SettingsEngineDevicePolicy.NormalizeDeviceForEngine(Engine, Device);
+
         if (string.IsNullOrWhiteSpace(UiLanguage))
         {
             UiLanguage = "system";

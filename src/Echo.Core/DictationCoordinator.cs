@@ -495,7 +495,7 @@ public sealed class DictationCoordinator : IDisposable
             sw.Restart();
             // Drop the processing overlay before paste so it cannot sit as the
             // foreground HWND and steal Ctrl+V from browser chat inputs.
-            _tray.SetState(DictationOverlayState.Hidden);
+            await _tray.SetStateAsync(DictationOverlayState.Hidden).ConfigureAwait(true);
             RestoreInjectionTarget();
 
             var showRecoveryToast = false;

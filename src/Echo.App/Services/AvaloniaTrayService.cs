@@ -77,16 +77,36 @@ public sealed class AvaloniaTrayService : ITrayStateService
             return;
         }
 
+        _ = SetStateAsync(state);
+    }
+
+    public Task SetStateAsync(DictationOverlayState state)
+    {
+        if (_currentState == state)
+        {
+            return Task.CompletedTask;
+        }
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Dispatcher.UIThread.Post(() =>
         {
-            if (_currentState == state)
+            try
             {
-                return;
-            }
+                if (_currentState != state)
+                {
+                    _currentState = state;
+                    ApplyState(state);
+                }
 
-            _currentState = state;
-            ApplyState(state);
+                tcs.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
         });
+
+        return tcs.Task;
     }
 
     private void ApplyTooltipForCurrentState() => ApplyState(_currentState);
