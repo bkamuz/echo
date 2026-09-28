@@ -17,10 +17,18 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        if (SherpaWorkerDiagnostics.IsWorkerProcess())
+        if (SherpaWorkerDiagnostics.IsWorkerProcess() || ParakeetQnnWorkerDiagnostics.IsWorkerProcess())
         {
             SherpaWorkerDiagnostics.RegisterUnhandledExceptionHandlersIfWorker();
-            SherpaWorkerDiagnostics.WriteProcessStart("Program.Main enter");
+            ParakeetQnnWorkerDiagnostics.RegisterUnhandledExceptionHandlersIfWorker();
+            if (ParakeetQnnWorkerDiagnostics.IsWorkerProcess())
+            {
+                ParakeetQnnWorkerDiagnostics.WriteProcessStart("Program.Main enter");
+            }
+            else
+            {
+                SherpaWorkerDiagnostics.WriteProcessStart("Program.Main enter");
+            }
         }
         else
         {
@@ -37,6 +45,25 @@ class Program
                 ? args[bridgeIndex + 1]
                 : string.Empty;
             Environment.Exit(LinuxHotkeyBridge.Run(socketPath));
+            return;
+        }
+
+        if (OperatingSystem.IsWindows()
+            && args.Contains(ParakeetQnnWorkerBridge.Argument, StringComparer.Ordinal))
+        {
+            var workerIndex = Array.IndexOf(args, ParakeetQnnWorkerBridge.Argument);
+            var pipeName = workerIndex >= 0 && workerIndex + 1 < args.Length
+                ? args[workerIndex + 1]
+                : string.Empty;
+            AppPaths.EnsureDirectories();
+            ParakeetQnnWorkerDiagnostics.WriteMilestone("Parakeet QNN worker mode enter");
+            SherpaNativeEnvironmentScrubber.PrepareForLoad();
+            using var workerLogFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddProvider(new FileLoggerProvider(AppPaths.ParakeetQnnWorkerLogPath));
+                builder.SetMinimumLevel(LogLevel.Information);
+            });
+            Environment.Exit(ParakeetQnnWorkerBridge.Run(pipeName, workerLogFactory));
             return;
         }
 

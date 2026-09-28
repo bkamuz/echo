@@ -61,20 +61,58 @@ internal static unsafe class OrtQnnBootstrap
                 return;
             }
 
-            _runtimeDir = Path.GetFullPath(runtimeDir);
-            _htpProfile = HtpHardwareProfile.Resolve();
-            logger?.LogInformation(
-                "Parakeet QNN HTP profile: generation={Generation}, htp_arch={HtpArch}, soc_model={SocModel}, contextTarget={ContextTarget}",
-                _htpProfile.Generation,
-                _htpProfile.HtpArch,
-                _htpProfile.SocModel,
-                _htpProfile.ContextTarget);
+            try
+            {
+                _runtimeDir = Path.GetFullPath(runtimeDir);
+                _htpProfile = HtpHardwareProfile.Resolve();
+                logger?.LogInformation(
+                    "Parakeet QNN HTP profile: generation={Generation}, htp_arch={HtpArch}, soc_model={SocModel}, contextTarget={ContextTarget}",
+                    _htpProfile.Generation,
+                    _htpProfile.HtpArch,
+                    _htpProfile.SocModel,
+                    _htpProfile.ContextTarget);
 
-            QnnNativeLoader.PrepareSearchPath(_runtimeDir, logger);
-            VerifyRequiredFiles(_runtimeDir, _htpProfile, logger);
-            OrtApiNative.Load(Path.Combine(_runtimeDir, "onnxruntime.dll"));
-            PreloadQnnRuntime(_runtimeDir, logger);
-            CreateEnvironment(logger);
+                QnnNativeLoader.PrepareSearchPath(_runtimeDir, logger);
+                VerifyRequiredFiles(_runtimeDir, _htpProfile, logger);
+                LogOrtProviderPairDiagnostics(_runtimeDir, logger);
+                OrtApiNative.Load(Path.Combine(_runtimeDir, "onnxruntime.dll"));
+                PreloadQnnRuntime(_runtimeDir, logger);
+                CreateEnvironment(logger);
+            }
+            catch
+            {
+                ResetPartialState(logger);
+                throw;
+            }
+        }
+    }
+
+    internal static void ResetPartialState(ILogger? logger = null)
+    {
+        lock (Gate)
+        {
+            if (_env != 0)
+            {
+                try
+                {
+                    var api = OrtApiNative.Api;
+                    api.ReleaseEnv(_env);
+                    logger?.LogDebug("Released partial ORT environment during QNN bootstrap reset");
+                }
+                catch
+                {
+                    // Best-effort cleanup after a failed init.
+                }
+            }
+
+            _env = 0;
+            _runtimeDir = null;
+            _htpProfile = null;
+            _providerRegistered = false;
+            _providerLeases = 0;
+            _preloadedModules.Clear();
+            OrtApiNative.Reset();
+            logger?.LogInformation("QNN bootstrap state reset after failed initialization");
         }
     }
 
@@ -296,6 +334,23 @@ internal static unsafe class OrtQnnBootstrap
                 "QNN runtime is missing optional manifest files (may be needed on other Snapdragon generations): {MissingFiles}",
                 string.Join(", ", manifestMissing));
         }
+    }
+
+    private static void LogOrtProviderPairDiagnostics(string runtimeDir, ILogger? logger)
+    {
+        var ortPath = Path.Combine(runtimeDir, "onnxruntime.dll");
+        var providerPath = Path.Combine(runtimeDir, "onnxruntime_providers_qnn.dll");
+        if (!File.Exists(ortPath) || !File.Exists(providerPath))
+        {
+            return;
+        }
+
+        var ortInfo = new FileInfo(ortPath);
+        var providerInfo = new FileInfo(providerPath);
+        logger?.LogInformation(
+            "QNN ORT pair: onnxruntime.dll size={OrtBytes}, onnxruntime_providers_qnn.dll size={ProviderBytes} (both must come from the same onnxruntime-qnn wheel)",
+            ortInfo.Length,
+            providerInfo.Length);
     }
 
     private static void PreloadQnnRuntime(string runtimeDir, ILogger? logger)

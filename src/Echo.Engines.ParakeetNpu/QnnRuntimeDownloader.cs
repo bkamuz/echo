@@ -61,7 +61,7 @@ public sealed class QnnRuntimeDownloader
         if (missingFiles.Count == 0)
         {
             _logger.LogDebug("QNN runtime already present in {Dir}", RuntimeDir);
-            QnnRuntimePaths.PrepareNativeSearchPath();
+            QnnRuntimePaths.PrepareSearchPathOnly();
             return;
         }
 
@@ -119,7 +119,7 @@ public sealed class QnnRuntimeDownloader
         }
 
         WriteRuntimeReceipt(manifest);
-        QnnRuntimePaths.PrepareNativeSearchPath();
+        QnnRuntimePaths.PrepareSearchPathOnly();
 
         var stillMissing = manifest.RequiredFiles
             .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(RuntimeDir, file)))
@@ -210,7 +210,10 @@ internal static class QnnRuntimePaths
     internal static bool IsFilePresent(string path) =>
         File.Exists(path) && new FileInfo(path).Length > 0;
 
-    public static void PrepareNativeSearchPath(ILogger? logger = null)
+    /// <summary>
+    /// PATH/ADSP setup only — does not load QnnHtp or other HTP DLLs (CPU mode must stay off NPU).
+    /// </summary>
+    public static void PrepareSearchPathOnly(ILogger? logger = null)
     {
         if (!Directory.Exists(UserDir))
         {
@@ -218,40 +221,9 @@ internal static class QnnRuntimePaths
         }
 
         QnnNativeLoader.PrepareSearchPath(UserDir, logger);
-
-        var ortDll = Path.Combine(UserDir, "onnxruntime.dll");
-        if (!IsFilePresent(ortDll))
-        {
-            return;
-        }
-
-        foreach (var name in new[]
-                 {
-                     "QnnSystem.dll",
-                     "QnnHtpPrepare.dll",
-                     "QnnHtpNetRunExtensions.dll",
-                     "QnnHtp.dll",
-                     "onnxruntime.dll",
-                 })
-        {
-            var path = Path.Combine(UserDir, name);
-            if (!IsFilePresent(path))
-            {
-                continue;
-            }
-
-            try
-            {
-                QnnNativeLoader.LoadLibrary(path, logger);
-            }
-            catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
-            {
-                logger?.LogWarning(
-                    ex,
-                    "Best-effort preload skipped for {LibraryName} from {Path}",
-                    name,
-                    path);
-            }
-        }
     }
+
+    [Obsolete("Use PrepareSearchPathOnly in the UI process; QNN libraries load only in the Parakeet QNN worker.")]
+    public static void PrepareNativeSearchPath(ILogger? logger = null) =>
+        PrepareSearchPathOnly(logger);
 }

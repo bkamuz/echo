@@ -38,7 +38,6 @@ public sealed class ParakeetPipeline : IDisposable
 
     public static ParakeetPipeline LoadCpu(string modelDir, ILogger? logger = null)
     {
-        QnnRuntimePaths.PrepareNativeSearchPath();
         var preprocessor = CreateCpuSession(Path.Combine(modelDir, "nemo128.onnx"));
         var decoderJoint = CreateCpuSession(Path.Combine(modelDir, "decoder_joint-model.int8.onnx"));
         var encoder = CreateCpuSession(Path.Combine(modelDir, "encoder-model.int8.onnx"));

@@ -14,6 +14,12 @@ internal static unsafe class OrtApiNative
 
     public static OrtApiTable Api => _api ?? throw new InvalidOperationException("ONNX Runtime is not loaded. Call Load first.");
 
+    internal static void Reset()
+    {
+        _api = null;
+        _library = 0;
+    }
+
     public static void Load(string onnxRuntimeDllPath)
     {
         if (_api is not null)
