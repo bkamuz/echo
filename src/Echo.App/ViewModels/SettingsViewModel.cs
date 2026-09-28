@@ -196,11 +196,7 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsOmnilingual));
         OnPropertyChanged(nameof(IsParakeetNpu));
         OnPropertyChanged(nameof(IsDeviceVisible));
-        if (!_isLoadingFromConfig && value == "parakeet_npu")
-        {
-            SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.NpuDevice);
-        }
-        else if (!_isLoadingFromConfig)
+        if (!_isLoadingFromConfig)
         {
             var deviceId = SelectedComputeDevice?.Id ?? ExecutionProviderResolver.CpuDevice;
             var normalizedDevice = SettingsEngineDevicePolicy.NormalizeDeviceForEngine(value, deviceId);
@@ -265,32 +261,18 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
+        ApplyEngineListForSelectedDevice();
+
         if (value.Id == ExecutionProviderResolver.DirectMlDevice && _directMlInstaller is not null)
         {
             _ = EnsureDirectMlThenApplyAsync();
             return;
         }
 
-        if (value.Id == ExecutionProviderResolver.NpuDevice)
+        if (value.Id == ExecutionProviderResolver.NpuDevice && _parakeetNpuSupport is not null)
         {
-            if (!_isLoadingFromConfig && Engine != "parakeet_npu")
-            {
-                _isLoadingFromConfig = true;
-                try
-                {
-                    Engine = "parakeet_npu";
-                }
-                finally
-                {
-                    _isLoadingFromConfig = false;
-                }
-            }
-
-            if (_parakeetNpuSupport is not null)
-            {
-                _ = EnsureNpuThenApplyAsync();
-                return;
-            }
+            _ = EnsureNpuThenApplyAsync();
+            return;
         }
 
         ScheduleApply();
@@ -575,11 +557,15 @@ public partial class SettingsViewModel : ObservableObject
         {
             var config = _coordinator.Config;
             Hotkey = config.Hotkey;
-            Engine = ResolveEngineFromConfig(config.Engine);
             WhisperModelSize = config.WhisperModelSize;
             GigaAmModelSize = config.GigaAmModelSize;
             Language = config.Language;
+            Engine = config.Engine;
+            RebuildComputeDeviceOptions();
             SelectedComputeDevice = ResolveComputeDeviceOption(config.Device);
+            RebuildEngineOptions();
+            OnPropertyChanged(nameof(EngineOptions));
+            Engine = ResolveEngineFromConfig(config.Engine);
             SelectedInputMethod = InputMethodOptions.FirstOrDefault(o => o.Id == config.InputMethod)
                 ?? InputMethodOptions.First();
             SelectedTypeSpeed = TypeSpeedOptions.FirstOrDefault(o => o.DelayMs == config.TypeDelayMs)
@@ -615,17 +601,48 @@ public partial class SettingsViewModel : ObservableObject
 
     private void RebuildEngineOptions()
     {
+        var deviceId = SelectedComputeDevice?.Id ?? ExecutionProviderResolver.CpuDevice;
         var localized = BaseEngineIds
             .Where(id => id != "parakeet_npu" || _npuAvailability.IsLikelyPlatform)
             .Select(id => new EngineOption(id, GetEngineDisplayName(id)))
             .ToList();
-        EngineOptions = localized.Where(o => _registeredEngineIds.Contains(o.Id)).ToList();
+        var registered = localized.Where(o => _registeredEngineIds.Contains(o.Id)).ToList();
+        var filteredIds = SettingsEngineDevicePolicy.FilterEnginesForDevice(
+            registered.Select(o => o.Id),
+            deviceId);
+        EngineOptions = registered.Where(o => filteredIds.Contains(o.Id)).ToList();
         if (EngineOptions.Count == 0)
         {
-            EngineOptions = localized
+            EngineOptions = registered
                 .Where(o => o.Id is "parakeet_npu" or "gigaam")
                 .ToList();
         }
+    }
+
+    private void ApplyEngineListForSelectedDevice()
+    {
+        var deviceId = SelectedComputeDevice?.Id ?? ExecutionProviderResolver.CpuDevice;
+        RebuildEngineOptions();
+        OnPropertyChanged(nameof(EngineOptions));
+
+        var resolvedEngine = SettingsEngineDevicePolicy.ResolveEngineForDevice(
+            Engine,
+            deviceId,
+            EngineOptions.Select(o => o.Id).ToList());
+        if (!string.Equals(resolvedEngine, Engine, StringComparison.Ordinal))
+        {
+            _isLoadingFromConfig = true;
+            try
+            {
+                Engine = resolvedEngine;
+            }
+            finally
+            {
+                _isLoadingFromConfig = false;
+            }
+        }
+
+        SyncSelectedEngine();
     }
 
     private string GetEngineDisplayName(string id) => id switch
@@ -805,6 +822,9 @@ public partial class SettingsViewModel : ObservableObject
                 ?? PostReleaseOptions.FirstOrDefault();
             SelectedComputeDevice = ResolveComputeDeviceOption(
                 computeDeviceId ?? ExecutionProviderResolver.CpuDevice);
+            RebuildEngineOptions();
+            OnPropertyChanged(nameof(EngineOptions));
+            Engine = ResolveEngineFromConfig(Engine);
             SelectedUiLanguage = UiLanguageChoices.FirstOrDefault(c =>
                 string.Equals(c.Code, uiLanguageCode, StringComparison.OrdinalIgnoreCase))
                 ?? UiLanguageChoices.FirstOrDefault();
