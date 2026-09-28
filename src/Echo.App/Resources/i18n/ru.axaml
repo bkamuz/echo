@@ -105,6 +105,7 @@
   <sys:String x:Key="Loc.Status.ApplyError">Ошибка применения настроек</sys:String>
   <sys:String x:Key="Loc.Status.DirectMlFailed">Не удалось скачать DirectML — оставлен CPU</sys:String>
   <sys:String x:Key="Loc.Status.NpuFailed">Не удалось подготовить QNN runtime — оставлен CPU</sys:String>
+  <sys:String x:Key="Loc.Status.ParakeetNpuCpuFallback">Parakeet NPU недоступен — для этой сессии используется CPU</sys:String>
   <sys:String x:Key="Loc.Status.HotkeyCapture">Удерживайте комбинацию и отпустите все клавиши…</sys:String>
   <sys:String x:Key="Loc.Status.Copied">Скопировано</sys:String>
   <sys:String x:Key="Loc.Status.Restarting">Перезапуск…</sys:String>

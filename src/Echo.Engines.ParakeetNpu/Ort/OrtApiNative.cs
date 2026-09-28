@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 
 namespace echo.Engines.ParakeetNpu.Ort;
 
@@ -11,16 +12,20 @@ internal static unsafe class OrtApiNative
 
     private static OrtApiTable? _api;
     private static nint _library;
+    private static string? _loadedVersionString;
 
     public static OrtApiTable Api => _api ?? throw new InvalidOperationException("ONNX Runtime is not loaded. Call Load first.");
+
+    public static string? LoadedVersionString => _loadedVersionString;
 
     internal static void Reset()
     {
         _api = null;
         _library = 0;
+        _loadedVersionString = null;
     }
 
-    public static void Load(string onnxRuntimeDllPath)
+    public static void Load(string onnxRuntimeDllPath, ILogger? logger = null)
     {
         if (_api is not null)
         {
@@ -51,14 +56,30 @@ internal static unsafe class OrtApiNative
             throw new InvalidOperationException("OrtApiBase.GetApi is null.");
         }
 
+        if (apiBase.GetVersionString != 0)
+        {
+            var getVersionString =
+                Marshal.GetDelegateForFunctionPointer<OrtGetVersionStringDelegate>(apiBase.GetVersionString);
+            var versionPtr = getVersionString();
+            _loadedVersionString = versionPtr == 0
+                ? null
+                : Marshal.PtrToStringUTF8(versionPtr);
+        }
+
         var getApi = Marshal.GetDelegateForFunctionPointer<OrtGetApiDelegate>(apiBase.GetApi);
         var apiPtr = getApi(OrtApiVersion);
         if (apiPtr == 0)
         {
-            throw new InvalidOperationException($"GetApi({OrtApiVersion}) returned null.");
+            throw new InvalidOperationException(
+                $"GetApi({OrtApiVersion}) returned null for ONNX Runtime {_loadedVersionString ?? "unknown"}.");
         }
 
         _api = new OrtApiTable(apiPtr);
+        logger?.LogInformation(
+            "Loaded ONNX Runtime {Version} (requested OrtApi version {ApiVersion}) from {Path}",
+            _loadedVersionString ?? "(unknown)",
+            OrtApiVersion,
+            onnxRuntimeDllPath);
     }
 
     public static void Check(nint status, string context)
@@ -69,12 +90,44 @@ internal static unsafe class OrtApiNative
         }
 
         var api = Api;
-        var messagePtr = api.GetErrorMessage(status);
-        var message = messagePtr == 0
-            ? "(no message)"
-            : Marshal.PtrToStringUTF8(messagePtr) ?? "(no message)";
-        api.ReleaseStatus(status);
-        throw new InvalidOperationException($"{context}: {message}");
+        var codeText = "unknown";
+        var message = "(no message)";
+        try
+        {
+            var code = api.GetErrorCode(status);
+            codeText = code.ToString();
+            var messagePtr = api.GetErrorMessage(status);
+            if (messagePtr == 0)
+            {
+                message = "(empty error message)";
+            }
+            else
+            {
+                message = Marshal.PtrToStringUTF8(messagePtr) ?? "(empty error message)";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"invalid OrtStatus* 0x{status:X}: {ex.Message}";
+        }
+        finally
+        {
+            TryReleaseStatus(api, status);
+        }
+
+        throw new InvalidOperationException($"{context}: [{codeText}] {message}");
+    }
+
+    private static void TryReleaseStatus(OrtApiTable api, nint status)
+    {
+        try
+        {
+            api.ReleaseStatus(status);
+        }
+        catch
+        {
+            // Best-effort — status pointer may be corrupt if vtable indices were wrong.
+        }
     }
 
     internal static char[] ToOrtPath(string path)
@@ -90,6 +143,9 @@ internal static unsafe class OrtApiNative
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     private delegate nint OrtGetApiDelegate(uint version);
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    private delegate nint OrtGetVersionStringDelegate();
 
     [StructLayout(LayoutKind.Sequential)]
     private struct OrtApiBase
@@ -152,6 +208,9 @@ internal static unsafe class OrtNativeDelegates
 {
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     internal delegate nint StatusCreateDelegate(int code, nint msg);
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    internal delegate int GetErrorCodeDelegate(nint status);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     internal delegate nint GetErrorMessageDelegate(nint status);
@@ -290,53 +349,14 @@ internal static unsafe class OrtNativeDelegates
     internal delegate nint EpDeviceDeviceDelegate(nint epDevice);
 }
 
-internal static class OrtApiIndices
-{
-    public const int CreateEnv = 3;
-    public const int ReleaseEnv = 114;
-    public const int CreateSession = 8;
-    public const int ReleaseSession = 117;
-    public const int Run = 12;
-    public const int CreateSessionOptions = 14;
-    public const int ReleaseSessionOptions = 122;
-    public const int SetSessionGraphOptimizationLevel = 29;
-    public const int SessionGetInputCount = 36;
-    public const int SessionGetOutputCount = 37;
-    public const int SessionGetInputTypeInfo = 39;
-    public const int SessionGetOutputTypeInfo = 40;
-    public const int SessionGetInputName = 42;
-    public const int SessionGetOutputName = 43;
-    public const int CreateTensorWithDataAsOrtValue = 58;
-    public const int GetTensorMutableData = 61;
-    public const int CastTypeInfoToTensorInfo = 65;
-    public const int GetOnnxTypeFromTypeInfo = 67;
-    public const int GetTensorElementType = 71;
-    public const int GetDimensionsCount = 73;
-    public const int GetDimensions = 74;
-    public const int GetTensorTypeAndShape = 77;
-    public const int CreateCpuMemoryInfo = 82;
-    public const int AllocatorFree = 90;
-    public const int GetAllocatorWithDefaultOptions = 92;
-    public const int GetErrorMessage = 2;
-    public const int ReleaseStatus = 115;
-    public const int ReleaseMemoryInfo = 116;
-    public const int ReleaseValue = 118;
-    public const int ReleaseTypeInfo = 120;
-    public const int ReleaseTensorTypeAndShapeInfo = 121;
-    public const int RegisterExecutionProviderLibrary = 384;
-    public const int UnregisterExecutionProviderLibrary = 386;
-    public const int GetEpDevices = 387;
-    public const int SessionOptionsAppendExecutionProviderV2 = 389;
-    public const int HardwareDeviceType = 393;
-    public const int EpDeviceEpName = 398;
-    public const int EpDeviceDevice = 402;
-}
-
 internal sealed unsafe class OrtApiTable
 {
     private readonly nint _api;
 
     public OrtApiTable(nint api) => _api = api;
+
+    public OrtNativeDelegates.GetErrorCodeDelegate GetErrorCode =>
+        GetFn<OrtNativeDelegates.GetErrorCodeDelegate>(OrtApiIndices.GetErrorCode);
 
     public OrtNativeDelegates.GetErrorMessageDelegate GetErrorMessage =>
         GetFn<OrtNativeDelegates.GetErrorMessageDelegate>(OrtApiIndices.GetErrorMessage);

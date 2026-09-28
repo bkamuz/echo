@@ -72,28 +72,46 @@ public static class ParakeetQnnWorkerBridge
 
                     case SherpaWorkerCommand.EnsureLoaded:
                     {
-                        EnsureEngineReady(engine);
-                        ParakeetQnnWorkerDiagnostics.WriteMilestone(
-                            $"EnsureLoaded begin device={currentOptions.Device} env={SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
-                        logger.LogInformation(
-                            "EnsureLoaded begin device={Device} env={Env}",
-                            currentOptions.Device,
-                            SherpaNativeEnvironmentScrubber.DescribeSnapshot());
-                        engine!.EnsureLoadedAsync().GetAwaiter().GetResult();
-                        ParakeetQnnWorkerDiagnostics.WriteMilestone("EnsureLoaded done");
-                        WriteOk(pipe, SherpaWorkerProtocol.SerializeText(engine.DisplayName));
+                        try
+                        {
+                            EnsureEngineReady(engine);
+                            ParakeetQnnWorkerDiagnostics.WriteMilestone(
+                                $"EnsureLoaded begin device={currentOptions.Device} env={SherpaNativeEnvironmentScrubber.DescribeSnapshot()}");
+                            logger.LogInformation(
+                                "EnsureLoaded begin device={Device} env={Env}",
+                                currentOptions.Device,
+                                SherpaNativeEnvironmentScrubber.DescribeSnapshot());
+                            engine!.EnsureLoadedAsync().GetAwaiter().GetResult();
+                            ParakeetQnnWorkerDiagnostics.WriteMilestone("EnsureLoaded done");
+                            WriteOk(pipe, SherpaWorkerProtocol.SerializeText(engine.DisplayName));
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Parakeet QNN worker EnsureLoaded failed");
+                            WriteError(pipe, ex.Message);
+                        }
+
                         break;
                     }
 
                     case SherpaWorkerCommand.Transcribe:
                     {
-                        EnsureEngineReady(engine);
-                        var (sampleRate, samples) = SherpaWorkerProtocol.DeserializeTranscribe(request.Payload);
-                        ParakeetQnnWorkerDiagnostics.WriteMilestone(
-                            $"Transcribe begin samples={samples.Length} rate={sampleRate}");
-                        var text = engine!.TranscribeAsync(samples, sampleRate).GetAwaiter().GetResult();
-                        ParakeetQnnWorkerDiagnostics.WriteMilestone($"Transcribe done chars={text.Length}");
-                        WriteOk(pipe, SherpaWorkerProtocol.SerializeText(text));
+                        try
+                        {
+                            EnsureEngineReady(engine);
+                            var (sampleRate, samples) = SherpaWorkerProtocol.DeserializeTranscribe(request.Payload);
+                            ParakeetQnnWorkerDiagnostics.WriteMilestone(
+                                $"Transcribe begin samples={samples.Length} rate={sampleRate}");
+                            var text = engine!.TranscribeAsync(samples, sampleRate).GetAwaiter().GetResult();
+                            ParakeetQnnWorkerDiagnostics.WriteMilestone($"Transcribe done chars={text.Length}");
+                            WriteOk(pipe, SherpaWorkerProtocol.SerializeText(text));
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Parakeet QNN worker Transcribe failed");
+                            WriteError(pipe, ex.Message);
+                        }
+
                         break;
                     }
 

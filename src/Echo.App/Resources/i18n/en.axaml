@@ -99,6 +99,7 @@
   <sys:String x:Key="Loc.Status.ApplyError">Failed to apply settings</sys:String>
   <sys:String x:Key="Loc.Status.DirectMlFailed">Could not download DirectML — kept CPU</sys:String>
   <sys:String x:Key="Loc.Status.NpuFailed">Could not prepare QNN runtime — kept CPU</sys:String>
+  <sys:String x:Key="Loc.Status.ParakeetNpuCpuFallback">Parakeet NPU unavailable — using CPU for this session</sys:String>
   <sys:String x:Key="Loc.Status.HotkeyCapture">Hold the combination and release all keys…</sys:String>
   <sys:String x:Key="Loc.Status.Copied">Copied</sys:String>
   <sys:String x:Key="Loc.Status.Restarting">Restarting…</sys:String>
