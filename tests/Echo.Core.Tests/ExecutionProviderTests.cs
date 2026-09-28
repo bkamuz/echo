@@ -56,9 +56,13 @@ public class ExecutionProviderTests
     }
 
     [Fact]
-    public void AppConfig_Normalize_KeepsNpu()
+    public void AppConfig_Normalize_KeepsNpuForParakeet()
     {
-        var config = new AppConfig { Device = ExecutionProviderResolver.NpuDevice };
+        var config = new AppConfig
+        {
+            Engine = "parakeet_npu",
+            Device = ExecutionProviderResolver.NpuDevice,
+        };
         config.Normalize();
         Assert.Equal(ExecutionProviderResolver.NpuDevice, config.Device);
     }

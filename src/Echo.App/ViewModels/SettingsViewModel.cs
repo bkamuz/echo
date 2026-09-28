@@ -200,6 +200,24 @@ public partial class SettingsViewModel : ObservableObject
         {
             SelectedComputeDevice = ResolveComputeDeviceOption(ExecutionProviderResolver.NpuDevice);
         }
+        else if (!_isLoadingFromConfig)
+        {
+            var deviceId = SelectedComputeDevice?.Id ?? ExecutionProviderResolver.CpuDevice;
+            var normalizedDevice = SettingsEngineDevicePolicy.NormalizeDeviceForEngine(value, deviceId);
+            if (!string.Equals(normalizedDevice, deviceId, StringComparison.Ordinal))
+            {
+                _isLoadingFromConfig = true;
+                try
+                {
+                    SelectedComputeDevice = ResolveComputeDeviceOption(normalizedDevice);
+                }
+                finally
+                {
+                    _isLoadingFromConfig = false;
+                }
+            }
+        }
+
         SyncSelectedEngine();
         RebuildComputeDeviceOptions();
         OnPropertyChanged(nameof(ComputeDeviceOptions));
@@ -812,7 +830,7 @@ public partial class SettingsViewModel : ObservableObject
             return configuredEngine;
         }
 
-        return EngineOptions.FirstOrDefault(e => e.Id == "parakeet_npu")?.Id
+        return EngineOptions.FirstOrDefault(e => e.Id == "gigaam")?.Id
             ?? EngineOptions.FirstOrDefault()?.Id
             ?? configuredEngine;
     }
