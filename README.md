@@ -2,6 +2,8 @@
 
 **Local voice dictation for your desktop.** Hold a hotkey, speak, and Echo turns your speech into text — right where your cursor is.
 
+[![Echo launch video](docs/media/echo-launch.jpg)](https://github.com/bkamuz/echo/releases/download/v1.9.25/Echo-launch.mp4)
+
 Echo runs entirely on your machine. Speech is captured from your microphone, recognized locally, and pasted into the active window. No cloud upload, no subscription, no account required.
 
 Echo is **open source** under the [MIT License](LICENSE).
