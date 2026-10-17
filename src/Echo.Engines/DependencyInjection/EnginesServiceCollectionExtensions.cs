@@ -28,6 +28,12 @@ public static class EnginesServiceCollectionExtensions
             Factory = sp => new Omnilingual.OmnilingualEngine(
                 sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Omnilingual.OmnilingualEngine>>()),
         });
+        services.AddSingleton(new EngineRegistration
+        {
+            EngineId = "nemotron",
+            Factory = sp => new Nemotron.NemotronEngine(
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Nemotron.NemotronEngine>>()),
+        });
         return services;
     }
 }

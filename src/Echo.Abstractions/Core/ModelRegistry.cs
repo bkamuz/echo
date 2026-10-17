@@ -96,6 +96,33 @@ public static class ModelRegistry
         LocalDir: AppPaths.OmnilingualDir,
         AllowPatterns: OmnilingualAllowPatterns);
 
+    public const string NemotronRepo = "csukuangfj2/sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-560ms-int8-2026-06-11";
+
+    public static IReadOnlyList<string> NemotronRequiredFiles { get; } =
+    [
+        "encoder.int8.onnx",
+        "decoder.int8.onnx",
+        "joiner.int8.onnx",
+        "tokens.txt",
+    ];
+
+    public static ModelSpec NemotronSpec() => new(
+        Id: "nemotron-3.5-streaming-0.6b",
+        Title: "Nemotron 3.5 ASR Streaming 0.6B",
+        Engine: "nemotron",
+        RepoId: NemotronRepo,
+        LocalDir: AppPaths.NemotronDir,
+        AllowPatterns: NemotronRequiredFiles);
+
+    public static bool IsNemotronDownloaded(string dir) =>
+        NemotronRequiredFiles.All(f => File.Exists(Path.Combine(dir, f)));
+
+    /// <summary>Maps the STT language setting to a Nemotron per-stream language prompt.</summary>
+    public static string NemotronLanguageFor(string? language) =>
+        string.IsNullOrWhiteSpace(language) || language is "auto" or "system"
+            ? "auto"
+            : language.Trim().ToLowerInvariant();
+
     public static IReadOnlyList<string> GigaAmSizes { get; } =
         ["e2e", "e2e-ctc", "rnnt", "multilingual", "multilingual-large"];
 
@@ -273,6 +300,7 @@ public static class ModelRegistry
             "gigaam" => GigaAmSpecFor(gigaAmModelSize),
             "whisper" => WhisperSpec(whisperModelSize),
             "omnilingual" => OmnilingualSpec(),
+            "nemotron" => NemotronSpec(),
             "parakeet_npu" => ParakeetNpuSpec(),
             _ => null,
         };
