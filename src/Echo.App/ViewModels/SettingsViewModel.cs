@@ -47,6 +47,13 @@ public partial class SettingsViewModel : ObservableObject
     private readonly HashSet<string> _registeredEngineIds;
     private bool _isLoadingFromConfig;
 
+    /// <summary>
+    /// Device id the engine list was last filtered for. Avalonia re-selects the device ComboBox
+    /// (null → same device) whenever <see cref="ComputeDeviceOptions"/> is replaced; that must not
+    /// re-filter <see cref="EngineOptions"/> or it resets the engine ComboBox mid-selection.
+    /// </summary>
+    private string? _engineListDeviceId;
+
     [ObservableProperty] private string _hotkey = string.Empty;
     [ObservableProperty] private string _engine = string.Empty;
     [ObservableProperty] private EngineOption? _selectedEngine;
@@ -215,9 +222,22 @@ public partial class SettingsViewModel : ObservableObject
         }
 
         SyncSelectedEngine();
-        RebuildComputeDeviceOptions();
-        OnPropertyChanged(nameof(ComputeDeviceOptions));
-        EnsureValidComputeDevice();
+        // Refreshing the device list makes the device ComboBox re-select (null → same device)
+        // while the engine ComboBox is still committing the user's pick. Treat that as internal
+        // so it cannot re-filter EngineOptions and revert the engine; ScheduleApply below saves.
+        var wasLoading = _isLoadingFromConfig;
+        _isLoadingFromConfig = true;
+        try
+        {
+            RebuildComputeDeviceOptions();
+            OnPropertyChanged(nameof(ComputeDeviceOptions));
+            EnsureValidComputeDevice();
+        }
+        finally
+        {
+            _isLoadingFromConfig = wasLoading;
+        }
+
         if (value == "whisper" && Language == "ru")
         {
             _isLoadingFromConfig = true;
@@ -250,8 +270,14 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnSelectedComputeDeviceChanged(ComputeDeviceOption? value)
     {
-        if (_isLoadingFromConfig || value is null)
+        if (value is null)
         {
+            return;
+        }
+
+        if (_isLoadingFromConfig)
+        {
+            _engineListDeviceId = value.Id;
             return;
         }
 
@@ -261,6 +287,13 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
+        if (string.Equals(value.Id, _engineListDeviceId, StringComparison.Ordinal))
+        {
+            // Same device re-selected after an ItemsSource refresh — nothing changed.
+            return;
+        }
+
+        _engineListDeviceId = value.Id;
         ApplyEngineListForSelectedDevice();
 
         if (value.Id == ExecutionProviderResolver.DirectMlDevice && _directMlInstaller is not null)
@@ -610,12 +643,18 @@ public partial class SettingsViewModel : ObservableObject
         var filteredIds = SettingsEngineDevicePolicy.FilterEnginesForDevice(
             registered.Select(o => o.Id),
             deviceId);
-        EngineOptions = registered.Where(o => filteredIds.Contains(o.Id)).ToList();
-        if (EngineOptions.Count == 0)
+        var options = registered.Where(o => filteredIds.Contains(o.Id)).ToList();
+        if (options.Count == 0)
         {
-            EngineOptions = registered
+            options = registered
                 .Where(o => o.Id is "parakeet_npu" or "gigaam")
                 .ToList();
+        }
+
+        // Keep the same list instance when nothing changed so the ComboBox does not reset selection.
+        if (!EngineOptions.SequenceEqual(options))
+        {
+            EngineOptions = options;
         }
     }
 
@@ -726,6 +765,17 @@ public partial class SettingsViewModel : ObservableObject
 
     private void RebuildComputeDeviceOptions()
     {
+        var options = BuildComputeDeviceOptions();
+
+        // Keep the same list instance when nothing changed so the ComboBox does not reset selection.
+        if (!ComputeDeviceOptions.SequenceEqual(options))
+        {
+            ComputeDeviceOptions = options;
+        }
+    }
+
+    private List<ComputeDeviceOption> BuildComputeDeviceOptions()
+    {
         var cpu = new ComputeDeviceOption(
             ExecutionProviderResolver.CpuDevice,
             _loc.Get("Loc.Device.Cpu"),
@@ -733,8 +783,7 @@ public partial class SettingsViewModel : ObservableObject
 
         if (IsWhisper)
         {
-            ComputeDeviceOptions = [cpu];
-            return;
+            return [cpu];
         }
 
         var options = new List<ComputeDeviceOption> { cpu };
@@ -757,8 +806,7 @@ public partial class SettingsViewModel : ObservableObject
                     enabled));
             }
 
-            ComputeDeviceOptions = options;
-            return;
+            return options;
         }
 
         if (_directMlAvailability.IsAvailable)
@@ -785,7 +833,7 @@ public partial class SettingsViewModel : ObservableObject
                 enabled));
         }
 
-        ComputeDeviceOptions = options;
+        return options;
     }
 
     private void RefreshLocalizedOptions()

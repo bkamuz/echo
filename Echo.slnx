@@ -10,6 +10,7 @@
     <Project Path="src/Echo.Platform.Windows/Echo.Platform.Windows.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Echo.App.Tests/Echo.App.Tests.csproj" />
     <Project Path="tests/Echo.Core.Tests/Echo.Core.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
