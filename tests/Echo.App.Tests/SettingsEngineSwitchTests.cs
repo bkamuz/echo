@@ -20,7 +20,7 @@ namespace echo.App.Tests;
 /// </summary>
 public sealed class SettingsEngineSwitchTests : IDisposable
 {
-    private static readonly string[] AllEngines = ["gigaam", "whisper", "omnilingual", "parakeet_npu"];
+    private static readonly string[] AllEngines = ["gigaam", "whisper", "omnilingual", "nemotron", "parakeet_npu"];
     private readonly string _configRoot;
     private readonly string? _previousXdg;
 
@@ -48,6 +48,7 @@ public sealed class SettingsEngineSwitchTests : IDisposable
     [InlineData("gigaam")]
     [InlineData("whisper")]
     [InlineData("omnilingual")]
+    [InlineData("nemotron")]
     public void Cpu_SwitchFromParakeet_KeepsSelectedEngine(string target)
     {
         var (vm, window) = CreateSettings(engine: "parakeet_npu", device: ExecutionProviderResolver.CpuDevice);
@@ -76,7 +77,7 @@ public sealed class SettingsEngineSwitchTests : IDisposable
         try
         {
             var engineCombo = FindEngineCombo(window);
-            foreach (var target in new[] { "omnilingual", "parakeet_npu", "gigaam" })
+            foreach (var target in new[] { "omnilingual", "nemotron", "parakeet_npu", "gigaam" })
             {
                 SelectEngine(engineCombo, target);
                 Assert.Equal(target, vm.Engine);

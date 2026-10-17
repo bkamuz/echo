@@ -23,6 +23,7 @@ public sealed record ModelSpec(
                 ModelRegistry.GigaAmVariantFromSpecId(Id)),
             "whisper" => ModelRegistry.IsWhisperDownloaded(ModelRegistry.WhisperSizeFromSpecId(Id)),
             "parakeet_npu" => IsParakeetNpuDownloaded(),
+            "nemotron" => ModelRegistry.IsNemotronDownloaded(LocalDir),
             _ => Directory.EnumerateFiles(LocalDir).Any(),
         };
     }

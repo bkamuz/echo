@@ -29,7 +29,7 @@ public sealed record UiLanguageChoice(string Code, string Label)
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private static readonly string[] BaseEngineIds = ["gigaam", "whisper", "omnilingual", "parakeet_npu"];
+    private static readonly string[] BaseEngineIds = ["gigaam", "whisper", "omnilingual", "nemotron", "parakeet_npu"];
 
     private readonly DictationCoordinator _coordinator;
     private readonly IAudioCapture _audio;
@@ -177,6 +177,7 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsGigaAm => Engine == "gigaam";
     public bool IsWhisper => Engine == "whisper";
     public bool IsOmnilingual => Engine == "omnilingual";
+    public bool IsNemotron => Engine == "nemotron";
     public bool IsParakeetNpu => Engine == "parakeet_npu";
     public bool IsDeviceVisible =>
         Engine is not "whisper"
@@ -201,6 +202,7 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsGigaAm));
         OnPropertyChanged(nameof(IsWhisper));
         OnPropertyChanged(nameof(IsOmnilingual));
+        OnPropertyChanged(nameof(IsNemotron));
         OnPropertyChanged(nameof(IsParakeetNpu));
         OnPropertyChanged(nameof(IsDeviceVisible));
         if (!_isLoadingFromConfig)
@@ -689,6 +691,7 @@ public partial class SettingsViewModel : ObservableObject
         "gigaam" => _loc.Get("Loc.Engine.GigaAm"),
         "whisper" => _loc.Get("Loc.Engine.Whisper"),
         "omnilingual" => _loc.Get("Loc.Engine.Omnilingual"),
+        "nemotron" => _loc.Get("Loc.Engine.Nemotron"),
         "parakeet_npu" => _loc.Get("Loc.Engine.ParakeetNpu"),
         _ => id,
     };

@@ -17,6 +17,7 @@ internal static class SherpaEnginesAssemblyLoader
     {
         RegisterEngine(services, "gigaam", "echo.Engines.GigaAm.GigaAmEngine");
         RegisterEngine(services, "omnilingual", "echo.Engines.Omnilingual.OmnilingualEngine");
+        RegisterEngine(services, "nemotron", "echo.Engines.Nemotron.NemotronEngine");
         TryRegisterEngine(services, "whisper", "echo.Engines.Whisper.WhisperEngine");
     }
 

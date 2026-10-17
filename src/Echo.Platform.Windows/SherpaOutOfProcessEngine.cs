@@ -77,6 +77,7 @@ public sealed class SherpaOutOfProcessEngine : ITranscriptionEngine, IDisposable
             },
             "whisper" => $"Whisper {options.WhisperModelSize} ({device})",
             "omnilingual" => $"Omnilingual ASR 300M ({device})",
+            "nemotron" => $"Nemotron 3.5 Streaming 0.6B ({device})",
             _ => engineId,
         };
     }
