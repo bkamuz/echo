@@ -35,6 +35,10 @@ public static class SettingsEngineDevicePolicy
         {
             ExecutionProviderResolver.CpuDevice,
         },
+        ["qwen3_asr"] = new(StringComparer.Ordinal)
+        {
+            ExecutionProviderResolver.CpuDevice,
+        },
         ["parakeet_npu"] = new(StringComparer.Ordinal)
         {
             ExecutionProviderResolver.CpuDevice,

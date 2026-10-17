@@ -18,6 +18,7 @@ public static class SherpaWorkerBridge
         ["gigaam"] = "echo.Engines.GigaAm.GigaAmEngine",
         ["omnilingual"] = "echo.Engines.Omnilingual.OmnilingualEngine",
         ["nemotron"] = "echo.Engines.Nemotron.NemotronEngine",
+        ["qwen3_asr"] = "echo.Engines.Qwen3Asr.Qwen3AsrEngine",
         ["whisper"] = "echo.Engines.Whisper.WhisperEngine",
     };
 

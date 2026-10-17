@@ -6,7 +6,7 @@ namespace echo.Core.Tests;
 public sealed class SettingsEngineDevicePolicyTests
 {
     private static readonly string[] UiEngineOrder =
-        ["gigaam", "whisper", "omnilingual", "nemotron", "parakeet_npu"];
+        ["gigaam", "whisper", "omnilingual", "nemotron", "qwen3_asr", "parakeet_npu"];
 
     [Theory]
     [InlineData("gigaam", ExecutionProviderResolver.NpuDevice, false)]
@@ -20,6 +20,9 @@ public sealed class SettingsEngineDevicePolicyTests
     [InlineData("nemotron", ExecutionProviderResolver.CpuDevice, true)]
     [InlineData("nemotron", ExecutionProviderResolver.DirectMlDevice, false)]
     [InlineData("nemotron", ExecutionProviderResolver.NpuDevice, false)]
+    [InlineData("qwen3_asr", ExecutionProviderResolver.CpuDevice, true)]
+    [InlineData("qwen3_asr", ExecutionProviderResolver.DirectMlDevice, false)]
+    [InlineData("qwen3_asr", ExecutionProviderResolver.NpuDevice, false)]
     public void SupportsDevice_MatchesCapabilityTable(string engine, string device, bool expected)
     {
         Assert.Equal(expected, SettingsEngineDevicePolicy.SupportsDevice(engine, device));

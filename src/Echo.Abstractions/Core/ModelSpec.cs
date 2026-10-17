@@ -24,6 +24,7 @@ public sealed record ModelSpec(
             "whisper" => ModelRegistry.IsWhisperDownloaded(ModelRegistry.WhisperSizeFromSpecId(Id)),
             "parakeet_npu" => IsParakeetNpuDownloaded(),
             "nemotron" => ModelRegistry.IsNemotronDownloaded(LocalDir),
+            "qwen3_asr" => ModelRegistry.IsQwen3AsrDownloaded(LocalDir),
             _ => Directory.EnumerateFiles(LocalDir).Any(),
         };
     }

@@ -16,5 +16,5 @@ public static class SherpaWorkerPolicy
     public static bool ShouldIsolate() => false;
 
     public static bool IsSherpaEngineId(string engineId) =>
-        engineId is "gigaam" or "whisper" or "omnilingual" or "nemotron";
+        engineId is "gigaam" or "whisper" or "omnilingual" or "nemotron" or "qwen3_asr";
 }

@@ -171,6 +171,17 @@
                              Foreground="{DynamicResource TextPrimaryBrush}"/>
                 </StackPanel>
 
+                <StackPanel Grid.Column="2"
+                            Classes="settings-field"
+                            IsVisible="{Binding IsQwen3Asr}">
+                  <TextBlock Classes="field-label" Text="{DynamicResource Loc.Settings.Model}"/>
+                  <TextBlock Text="Qwen3-ASR 0.6B"
+                             FontSize="13"
+                             MinHeight="32"
+                             VerticalAlignment="Center"
+                             Foreground="{DynamicResource TextPrimaryBrush}"/>
+                </StackPanel>
+
                 <StackPanel Grid.Column="3" Classes="settings-field" Width="32">
                   <TextBlock Classes="field-label" Text=" "/>
                   <Button Classes="icon-action"
