@@ -34,6 +34,12 @@ public static class EnginesServiceCollectionExtensions
             Factory = sp => new Nemotron.NemotronEngine(
                 sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Nemotron.NemotronEngine>>()),
         });
+        services.AddSingleton(new EngineRegistration
+        {
+            EngineId = "qwen3_asr",
+            Factory = sp => new Qwen3Asr.Qwen3AsrEngine(
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Qwen3Asr.Qwen3AsrEngine>>()),
+        });
         return services;
     }
 }
