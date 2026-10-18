@@ -460,6 +460,7 @@ public sealed class DictationCoordinator : IDisposable
         {
             if (samples.Length == 0)
             {
+                _logger.LogWarning("No audio samples captured — skipping transcription");
                 FinishDictation("Тишина — речь не распознана", warning: true);
                 return;
             }
@@ -478,8 +479,15 @@ public sealed class DictationCoordinator : IDisposable
                 await _transcription.TranscribeAsync(_config, samples).ConfigureAwait(false));
             var transcribeMs = sw.ElapsedMilliseconds;
 
+            _logger.LogInformation(
+                "Transcribed: engine={Engine} samples={Samples} transcribe={Ms}ms chars={Chars}",
+                _config.Engine,
+                samples.Length,
+                transcribeMs,
+                text?.Length ?? 0);
             if (string.IsNullOrWhiteSpace(text))
             {
+                _logger.LogWarning("Empty transcription from {Engine} — nothing to paste", _config.Engine);
                 FinishDictation("Речь не распознана", warning: true);
                 return;
             }

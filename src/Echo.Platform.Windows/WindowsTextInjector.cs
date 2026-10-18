@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using echo.Abstractions.Platform;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace echo.Platform.Windows;
 
@@ -13,6 +15,18 @@ public sealed class WindowsTextInjector : ITextInjector
     private const uint GmemMoveable = 0x0002;
     private const int ClipboardRestoreDelayMs = 400;
 
+    private readonly ILogger _logger;
+
+    public WindowsTextInjector()
+        : this(NullLogger<WindowsTextInjector>.Instance)
+    {
+    }
+
+    public WindowsTextInjector(ILogger<WindowsTextInjector> logger)
+    {
+        _logger = logger;
+    }
+
     public Task<TextInjectionResult> InjectAsync(
         string text,
         string method,
@@ -24,9 +38,34 @@ public sealed class WindowsTextInjector : ITextInjector
             return Task.FromResult(TextInjectionResult.AutoPasted);
         }
 
+        var foreground = GetForegroundWindow();
+        var target = WindowsIntegrity.DescribeWindow(foreground);
+        _logger.LogInformation(
+            "Inject start: method={Method} chars={Chars} echoIL={Own} foreground={Fg}",
+            method,
+            text.Length,
+            WindowsIntegrity.Describe(WindowsIntegrity.Own),
+            WindowsIntegrity.FormatWindow(foreground));
+
+        if (target.Pid != (uint)Environment.ProcessId
+            && WindowsIntegrity.IsBlockedByUipi(WindowsIntegrity.Own, target.Level))
+        {
+            // UIPI silently drops SendInput into a higher-integrity window.
+            _logger.LogWarning(
+                "Inject blocked by UIPI: target {Name} (pid {Pid}) runs elevated, Echo IL={Own}. Run Echo as administrator to paste into elevated apps.",
+                target.Name,
+                target.Pid,
+                WindowsIntegrity.Describe(WindowsIntegrity.Own));
+            return Task.FromResult(TextInjectionResult.Failed("Loc.Inject.Elevated"));
+        }
+
         if (method is "clipboard" or "auto")
         {
             var outcome = TryInjectViaClipboard(text);
+            _logger.LogInformation(
+                "Clipboard inject outcome={Outcome} foregroundAfter={Fg}",
+                outcome,
+                WindowsIntegrity.FormatWindow(GetForegroundWindow()));
             var resolved = WindowsClipboardInjectPolicy.Resolve(method, outcome);
             if (resolved is not null)
             {
@@ -34,12 +73,14 @@ public sealed class WindowsTextInjector : ITextInjector
             }
         }
 
-        TypeText(text, typeDelayMs);
+        var sent = TypeText(text, typeDelayMs);
+        _logger.LogInformation("Typed via SendInput: {Sent}/{Total} code units", sent, text.Length);
         return Task.FromResult(TextInjectionResult.AutoPasted);
     }
 
-    private static void TypeText(string text, int typeDelayMs)
+    private static int TypeText(string text, int typeDelayMs)
     {
+        var sent = 0;
         for (var i = 0; i < text.Length; i++)
         {
             var ch = text[i];
@@ -54,13 +95,13 @@ public sealed class WindowsTextInjector : ITextInjector
             }
             else if (char.IsHighSurrogate(ch) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
             {
-                SendUnicodeCodeUnit((ushort)ch);
-                SendUnicodeCodeUnit((ushort)text[i + 1]);
+                sent += SendUnicodeCodeUnit((ushort)ch) ? 1 : 0;
+                sent += SendUnicodeCodeUnit((ushort)text[i + 1]) ? 1 : 0;
                 i++;
             }
             else
             {
-                SendUnicodeCodeUnit((ushort)ch);
+                sent += SendUnicodeCodeUnit((ushort)ch) ? 1 : 0;
             }
 
             if (typeDelayMs > 0 && HasMoreChars(text, i))
@@ -68,6 +109,8 @@ public sealed class WindowsTextInjector : ITextInjector
                 Thread.Sleep(typeDelayMs);
             }
         }
+
+        return sent;
     }
 
     private static bool HasMoreChars(string text, int index)
@@ -83,7 +126,7 @@ public sealed class WindowsTextInjector : ITextInjector
         return false;
     }
 
-    private static void SendUnicodeCodeUnit(ushort code)
+    private static bool SendUnicodeCodeUnit(ushort code)
     {
         Input[] inputs =
         [
@@ -101,7 +144,7 @@ public sealed class WindowsTextInjector : ITextInjector
                 },
             },
         ];
-        _ = SendInput(2, inputs, InputSize);
+        return SendInput(2, inputs, InputSize) == 2;
     }
 
     private static void SendEnter()
@@ -124,13 +167,17 @@ public sealed class WindowsTextInjector : ITextInjector
     /// Images and other formats are not preserved.
     /// Success is paste itself; restore/clear is best-effort and must not trigger type fallback.
     /// </summary>
-    private static ClipboardPasteOutcome TryInjectViaClipboard(string text)
+    private ClipboardPasteOutcome TryInjectViaClipboard(string text)
     {
         string? savedText = null;
         var hadText = false;
 
-        if (!OpenClipboard(IntPtr.Zero))
+        if (!OpenClipboardWithRetry())
         {
+            _logger.LogWarning(
+                "OpenClipboard failed, Win32 error {Error}, held by {Owner}",
+                Marshal.GetLastWin32Error(),
+                WindowsIntegrity.FormatWindow(GetOpenClipboardWindow()));
             return ClipboardPasteOutcome.FailedBeforePaste;
         }
 
@@ -147,15 +194,21 @@ public sealed class WindowsTextInjector : ITextInjector
             CloseClipboard();
         }
 
-        if (!TrySetClipboardText(text))
+        if (!TrySetClipboardText(text) && !TrySetClipboardText(text))
         {
+            _logger.LogWarning("SetClipboardData failed, Win32 error {Error}", Marshal.GetLastWin32Error());
             return ClipboardPasteOutcome.FailedBeforePaste;
         }
 
         // Give clipboard viewers / OLE a beat before synthesizing Ctrl+V.
         Thread.Sleep(50);
-        if (!SendCtrlV())
+        var ctrlV = SendCtrlV();
+        if (ctrlV != 4)
         {
+            _logger.LogWarning(
+                "SendInput(Ctrl+V) injected {Count}/4, Win32 error {Error} (UIPI or secure desktop?)",
+                ctrlV,
+                Marshal.GetLastWin32Error());
             return ClipboardPasteOutcome.FailedBeforePaste;
         }
 
@@ -167,10 +220,26 @@ public sealed class WindowsTextInjector : ITextInjector
         // Soft heuristic: if Echo owns foreground after Ctrl+V, paste likely missed the target.
         if (IsOwnProcessForeground())
         {
+            _logger.LogWarning("After Ctrl+V the foreground window belongs to Echo — paste target was Echo itself or focus was stolen");
             return ClipboardPasteOutcome.FocusStolen;
         }
 
         return ClipboardPasteOutcome.Pasted;
+    }
+
+    private static bool OpenClipboardWithRetry()
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            if (OpenClipboard(IntPtr.Zero))
+            {
+                return true;
+            }
+
+            Thread.Sleep(15);
+        }
+
+        return false;
     }
 
     private static bool IsOwnProcessForeground()
@@ -328,7 +397,7 @@ public sealed class WindowsTextInjector : ITextInjector
         }
     }
 
-    private static bool SendCtrlV()
+    private static uint SendCtrlV()
     {
         const ushort vkControl = 0x11;
         const ushort vkV = 0x56;
@@ -347,11 +416,14 @@ public sealed class WindowsTextInjector : ITextInjector
                 U = new InputUnion { Ki = new KeyboardInput { WVk = vkControl, DwFlags = KeyeventfKeyup } },
             },
         ];
-        return SendInput(4, inputs, InputSize) == 4;
+        return SendInput(4, inputs, InputSize);
     }
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetOpenClipboardWindow();
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
