@@ -225,6 +225,7 @@
   <sys:String x:Key="Loc.Linux.Inject.NeedWlClipboard">Установите wl-clipboard для вставки текста.</sys:String>
   <sys:String x:Key="Loc.Linux.Inject.NeedXclip">Установите xclip или xsel для вставки текста.</sys:String>
   <sys:String x:Key="Loc.Linux.Inject.ClipboardOnly">Текст скопирован — нажмите Ctrl+V.</sys:String>
+  <sys:String x:Key="Loc.Inject.Elevated">Окно запущено от администратора — Windows не даёт Echo вставить текст. Запустите Echo от администратора. Результат в истории</sys:String>
   <sys:String x:Key="Loc.Inject.Failed">Не удалось вставить текст — результат в истории</sys:String>
   <sys:String x:Key="Loc.Status.RecognitionError">Ошибка распознавания</sys:String>
   <sys:String x:Key="Loc.Linux.Dialog.AdminInstall">Запрошены права администратора. Подтвердите установку в системном окне…</sys:String>

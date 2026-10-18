@@ -211,6 +211,7 @@
   <sys:String x:Key="Loc.Linux.Inject.NeedWlClipboard">Install wl-clipboard for text paste.</sys:String>
   <sys:String x:Key="Loc.Linux.Inject.NeedXclip">Install xclip or xsel for text paste.</sys:String>
   <sys:String x:Key="Loc.Linux.Inject.ClipboardOnly">Text copied — press Ctrl+V.</sys:String>
+  <sys:String x:Key="Loc.Inject.Elevated">The target app runs as administrator — Windows blocks Echo from pasting. Run Echo as administrator. Result saved to history</sys:String>
   <sys:String x:Key="Loc.Inject.Failed">Could not paste text — result saved to history</sys:String>
   <sys:String x:Key="Loc.Status.RecognitionError">Recognition error</sys:String>
   <sys:String x:Key="Loc.Linux.Dialog.AdminInstall">Administrator privileges requested. Confirm installation in the system dialog…</sys:String>

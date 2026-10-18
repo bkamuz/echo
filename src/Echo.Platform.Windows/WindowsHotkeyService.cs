@@ -40,6 +40,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
     private int _reinstallCount;
     private Timer? _watchdog;
     private string _hotkey = string.Empty;
+    private uint _lastForegroundPid;
 
     public WindowsHotkeyService()
         : this(NullLogger<WindowsHotkeyService>.Instance)
@@ -86,11 +87,12 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
         _enabled = true;
         _logger.LogInformation(
-            "Hotkey listening: {Hotkey} (hook=0x{Hook:X}, thread={Thread}, callbacks={Count})",
+            "Hotkey listening: {Hotkey} (hook=0x{Hook:X}, thread={Thread}, callbacks={Count}, echoIL={IL})",
             _hotkey,
             _hook.ToInt64(),
             _threadId,
-            Interlocked.Read(ref _callbackCount));
+            Interlocked.Read(ref _callbackCount),
+            WindowsIntegrity.Describe(WindowsIntegrity.Own));
     }
 
     public void Stop()
@@ -216,6 +218,7 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
                 return;
             }
 
+            LogForegroundIntegrityChange();
             var now = Environment.TickCount64;
             // GetLastInputInfo is a 32-bit tick; map it onto TickCount64.
             var lastInput = now - unchecked((uint)Environment.TickCount - info.dwTime);
@@ -258,6 +261,31 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Hotkey watchdog tick failed");
+        }
+    }
+
+    private void LogForegroundIntegrityChange()
+    {
+        var fg = GetForegroundWindow();
+        _ = GetWindowThreadProcessId(fg, out var pid);
+        if (pid == 0 || pid == _lastForegroundPid)
+        {
+            return;
+        }
+
+        _lastForegroundPid = pid;
+        if (pid == (uint)Environment.ProcessId)
+        {
+            return;
+        }
+
+        var level = WindowsIntegrity.GetProcessIntegrity(pid);
+        if (WindowsIntegrity.IsBlockedByUipi(WindowsIntegrity.Own, level))
+        {
+            _logger.LogWarning(
+                "Foreground app is elevated ({Window}); Echo runs at {Own}. Windows UIPI hides keys and blocks paste for this app — run Echo as administrator.",
+                WindowsIntegrity.FormatWindow(fg),
+                WindowsIntegrity.Describe(WindowsIntegrity.Own));
         }
     }
 
@@ -383,6 +411,12 @@ public sealed class WindowsHotkeyService : IHotkeyService, IDisposable
 
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
