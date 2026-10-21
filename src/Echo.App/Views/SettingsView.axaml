@@ -62,6 +62,10 @@
               <StackPanel Orientation="Horizontal" Spacing="16">
                 <CheckBox Content="{DynamicResource Loc.Settings.TrailingSpace}"
                           IsChecked="{Binding AddTrailingSpace}"/>
+                <CheckBox Content="{DynamicResource Loc.Settings.VoiceCleanup}"
+                          IsChecked="{Binding VoiceCleanup}"
+                          IsVisible="{Binding IsVoiceCleanupSupported}"
+                          ToolTip.Tip="{DynamicResource Loc.Settings.VoiceCleanup.Tooltip}"/>
                 <CheckBox Content="{DynamicResource Loc.Settings.ShowToast}"
                           IsChecked="{Binding ShowDictationToast}"
                           ToolTip.Tip="{DynamicResource Loc.Settings.ShowToast.Tooltip}"/>

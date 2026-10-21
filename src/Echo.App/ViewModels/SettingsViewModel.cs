@@ -68,6 +68,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private UiLanguageChoice? _selectedUiLanguage;
     [ObservableProperty] private bool _addTrailingSpace;
     [ObservableProperty] private bool _showDictationToast;
+    [ObservableProperty] private bool _voiceCleanup;
     [ObservableProperty] private bool _startWithSystem;
     [ObservableProperty] private bool _isCapturingHotkey;
     [ObservableProperty] private string _hotkeyPreview = string.Empty;
@@ -345,6 +346,10 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnShowDictationToastChanged(bool value) => ScheduleApply();
 
+    partial void OnVoiceCleanupChanged(bool value) => ScheduleApply();
+
+    public bool IsVoiceCleanupSupported => FastEnhancerNative.IsAvailable;
+
     partial void OnStartWithSystemChanged(bool value)
     {
         if (_isLoadingFromConfig)
@@ -566,6 +571,7 @@ public partial class SettingsViewModel : ObservableObject
         config.PostReleaseMs = SelectedPostRelease?.DelayMs ?? 500;
         config.AddTrailingSpace = AddTrailingSpace;
         config.ShowDictationToast = ShowDictationToast;
+        config.VoiceCleanup = VoiceCleanup;
         config.StartWithSystem = StartWithSystem;
         config.UiLanguage = SelectedUiLanguage?.Code ?? "system";
         return config;
@@ -599,6 +605,7 @@ public partial class SettingsViewModel : ObservableObject
                 ?? UiLanguageChoices.FirstOrDefault();
             AddTrailingSpace = config.AddTrailingSpace;
             ShowDictationToast = config.ShowDictationToast;
+            VoiceCleanup = config.VoiceCleanup;
             StartWithSystem = config.StartWithSystem;
             InputDevice = _audio.FindListedDevice(config.InputDevice);
             UpdateModelStatus();

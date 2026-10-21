@@ -40,6 +40,8 @@
   <sys:String x:Key="Loc.Settings.TrailingSpace">Пробел в конце фразы</sys:String>
   <sys:String x:Key="Loc.Settings.PostRelease">Хвост после отпускания</sys:String>
   <sys:String x:Key="Loc.Settings.PostRelease.Tooltip">Коротко продолжать запись после отпускания хоткея, чтобы не обрезать последний слог</sys:String>
+  <sys:String x:Key="Loc.Settings.VoiceCleanup">Очистка голоса</sys:String>
+  <sys:String x:Key="Loc.Settings.VoiceCleanup.Tooltip">Убирает фоновый шум (FastEnhancer) перед распознаванием, для всех движков. Добавляет десятки мс на фразу.</sys:String>
   <sys:String x:Key="Loc.Settings.ShowToast">Показывать текст, если вставка не удалась</sys:String>
   <sys:String x:Key="Loc.Settings.ShowToast.Tooltip">Вспышка с распознанным текстом только при сбое вставки. Нажмите, чтобы скопировать.</sys:String>
   <sys:String x:Key="Loc.Settings.StartWithSystem">Запускать при старте системы</sys:String>

@@ -68,6 +68,23 @@
     <Message Importance="high" Text="Echo: copied DirectML runtime to $(_DirectMlOutDir)directml\" />
   </Target>
 
+  <!-- FastEnhancer voice cleanup (faster-enhancer.c, MIT): ~0.15-0.27 MB native + 0.57 MB weights. -->
+  <PropertyGroup>
+    <FeRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</FeRid>
+    <FeRid Condition="'$(FeRid)' == '' and $([MSBuild]::IsOSPlatform('Windows')) and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">win-arm64</FeRid>
+    <FeRid Condition="'$(FeRid)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">win-x64</FeRid>
+    <FeRid Condition="'$(FeRid)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">linux-x64</FeRid>
+    <FeNativeDir>$(MSBuildThisFileDirectory)..\..\native\fe\</FeNativeDir>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('$(FeNativeDir)$(FeRid)')">
+    <None Include="$(FeNativeDir)$(FeRid)\*;$(FeNativeDir)fe.q8;$(FeNativeDir)LICENSE.faster-enhancer.txt">
+      <Link>fe\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </None>
+  </ItemGroup>
+
   <Target Name="PrepareWinPublish" BeforeTargets="_ComputeFilesToBundle"
           DependsOnTargets="ComputeResolvedFilesToPublishList"
           Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win')) and '$(PublishSingleFile)' == 'true'">
