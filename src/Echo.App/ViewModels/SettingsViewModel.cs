@@ -350,6 +350,8 @@ public partial class SettingsViewModel : ObservableObject
 
     public bool IsVoiceCleanupSupported => FastEnhancerNative.IsAvailable;
 
+    public string VoiceCleanupUnavailableHint => _loc.Get("Loc.Settings.VoiceCleanup.Unavailable");
+
     partial void OnStartWithSystemChanged(bool value)
     {
         if (_isLoadingFromConfig)

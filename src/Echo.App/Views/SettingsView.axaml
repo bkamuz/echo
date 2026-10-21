@@ -62,10 +62,6 @@
               <StackPanel Orientation="Horizontal" Spacing="16">
                 <CheckBox Content="{DynamicResource Loc.Settings.TrailingSpace}"
                           IsChecked="{Binding AddTrailingSpace}"/>
-                <CheckBox Content="{DynamicResource Loc.Settings.VoiceCleanup}"
-                          IsChecked="{Binding VoiceCleanup}"
-                          IsVisible="{Binding IsVoiceCleanupSupported}"
-                          ToolTip.Tip="{DynamicResource Loc.Settings.VoiceCleanup.Tooltip}"/>
                 <CheckBox Content="{DynamicResource Loc.Settings.ShowToast}"
                           IsChecked="{Binding ShowDictationToast}"
                           ToolTip.Tip="{DynamicResource Loc.Settings.ShowToast.Tooltip}"/>
@@ -232,6 +228,15 @@
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
               </ComboBox>
+              <CheckBox Margin="0,8,0,0"
+                        Content="{DynamicResource Loc.Settings.VoiceCleanup}"
+                        IsChecked="{Binding VoiceCleanup}"
+                        IsEnabled="{Binding IsVoiceCleanupSupported}"
+                        ToolTip.Tip="{DynamicResource Loc.Settings.VoiceCleanup.Tooltip}"/>
+              <TextBlock FontSize="12" Opacity="0.7"
+                         Text="{Binding VoiceCleanupUnavailableHint}"
+                         IsVisible="{Binding !IsVoiceCleanupSupported}"
+                         TextWrapping="Wrap"/>
             </StackPanel>
           </DockPanel>
         </Border>

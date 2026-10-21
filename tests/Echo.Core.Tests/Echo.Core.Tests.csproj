@@ -20,6 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\..\native\fe\linux-x64\libecho_fe.so" LogicalName="echo.fe.native" />
+    <EmbeddedResource Include="..\..\native\fe\fe.q8" LogicalName="echo.fe.q8" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Echo.Abstractions\Echo.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Echo.Core\Echo.Core.csproj" />
     <ProjectReference Include="..\..\src\Echo.Engines\Echo.Engines.csproj" />

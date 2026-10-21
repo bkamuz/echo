@@ -17,6 +17,7 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        echo.Core.FastEnhancerNative.EmbeddedAssembly = typeof(Program).Assembly;
         if (SherpaWorkerDiagnostics.IsWorkerProcess() || ParakeetQnnWorkerDiagnostics.IsWorkerProcess())
         {
             SherpaWorkerDiagnostics.RegisterUnhandledExceptionHandlersIfWorker();
