@@ -64,11 +64,19 @@ public sealed class WindowsUpdateApplier : IUpdateApplier
             var updaterScript = BuildUpdaterScript(
                 Environment.ProcessId,
                 installDir,
-                stagingDir);
+                stagingDir,
+                AppPaths.UpdateLogPath);
             await File.WriteAllTextAsync(scriptPath, updaterScript, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
 
             progress?.Report(ProgressMessages.InstallingUpdate());
+            _logger.LogInformation(
+                "Update {Version}: staged in {Staging}, installing to {InstallDir}; updater log {Log}",
+                update.Version,
+                stagingDir,
+                installDir,
+                AppPaths.UpdateLogPath);
             LaunchUpdater(scriptPath);
+            _logger.LogInformation("Update {Version}: updater started; Echo will exit and relaunch", update.Version);
         }
         catch
         {
@@ -98,6 +106,12 @@ public sealed class WindowsUpdateApplier : IUpdateApplier
             CreateNoWindow = true,
         };
 
+        // The relaunched Echo inherits this environment. This process may have prepended
+        // %APPDATA%\Echo\qnn / directml (their own onnxruntime.dll) to PATH and set
+        // ORT_DYLIB_PATH / ADSP_LIBRARY_PATH; the new Echo's Sherpa would then bind the wrong ORT
+        // and native-crash on start. A manual start never sees these, so scrub them here.
+        SanitizeChildEnvironment(startInfo.Environment);
+
         var process = Process.Start(startInfo);
         if (process is null)
         {
@@ -105,43 +119,104 @@ public sealed class WindowsUpdateApplier : IUpdateApplier
         }
     }
 
-    internal static string BuildUpdaterScript(int processId, string installDir, string stagingDir)
+    /// <summary>Removes Echo-owned native runtime folders and ORT/QNN variables from a child environment.</summary>
+    internal static void SanitizeChildEnvironment(IDictionary<string, string?> environment)
+    {
+        environment.Remove("ORT_DYLIB_PATH");
+        environment.Remove("ADSP_LIBRARY_PATH");
+        if (environment.TryGetValue("PATH", out var path) && !string.IsNullOrEmpty(path))
+        {
+            environment["PATH"] = SherpaNativeEnvironmentScrubber.RemoveEchoRuntimeDirectories(path);
+        }
+    }
+
+    internal static string BuildUpdaterScript(int processId, string installDir, string stagingDir, string logPath)
     {
         var exeName = "Echo.App.exe";
-        var minimizedArgument = ApplicationLauncher.MinimizedArgument;
+        var echoDataDir = AppPaths.BaseDir;
 
         return $$"""
             $ErrorActionPreference = 'Stop'
             $targetPid = {{processId}}
             $installDir = '{{EscapePowerShellSingleQuoted(installDir)}}'
             $stagingDir = '{{EscapePowerShellSingleQuoted(stagingDir)}}'
+            $logPath = '{{EscapePowerShellSingleQuoted(logPath)}}'
+            $echoDataDir = '{{EscapePowerShellSingleQuoted(echoDataDir)}}'
             $exeName = '{{exeName}}'
-            $minimizedArgument = '{{minimizedArgument}}'
+            $exePath = Join-Path $installDir $exeName
+
+            function Log([string]$m) {
+                try { Add-Content -LiteralPath $logPath -Value ("{0:yyyy-MM-dd HH:mm:ss.fff} [updater] {1}" -f (Get-Date), $m) -Encoding UTF8 } catch {}
+            }
+
+            function Copy-WithRetry([string]$src, [string]$dst, [switch]$Recurse) {
+                for ($i = 1; $i -le 20; $i++) {
+                    try {
+                        if ($Recurse) { Copy-Item -LiteralPath $src -Destination $dst -Recurse -Force }
+                        else { Copy-Item -LiteralPath $src -Destination $dst -Force }
+                        return
+                    } catch {
+                        Log "copy attempt $i failed for ${src}: $($_.Exception.Message)"
+                        if ($i -eq 20) { throw }
+                        Start-Sleep -Milliseconds 500
+                    }
+                }
+            }
+
+            Log "start pid=$PID target=$targetPid install=$installDir staging=$stagingDir"
+            try {
+                if (Get-Process -Id $targetPid -ErrorAction SilentlyContinue) {
+                    Wait-Process -Id $targetPid -Timeout 60 -ErrorAction SilentlyContinue
+                }
+                if (Get-Process -Id $targetPid -ErrorAction SilentlyContinue) {
+                    Log "Echo pid $targetPid still running after 60s; stopping it"
+                    Stop-Process -Id $targetPid -Force -ErrorAction SilentlyContinue
+                }
+
+                # Sherpa / QNN workers run from the same exe and keep it locked.
+                Get-Process -Name 'Echo.App' -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Path -and ($_.Path -ieq $exePath) } |
+                    ForEach-Object {
+                        Log "stopping leftover Echo process pid=$($_.Id)"
+                        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+                        $_.WaitForExit(10000) | Out-Null
+                    }
+
+                Copy-WithRetry (Join-Path $stagingDir $exeName) $exePath
+                Log "copied $exeName"
+
+                # Copy every other file/subfolder shipped in the zip (e.g. fe\), not just the exe.
+                Get-ChildItem -LiteralPath $stagingDir -Force | Where-Object { $_.Name -ne $exeName -and $_.Name -ne 'directml' } | ForEach-Object {
+                    Copy-WithRetry $_.FullName $installDir -Recurse
+                    Log "copied $($_.Name)"
+                }
+
+                $directMlSrc = Join-Path $stagingDir 'directml'
+                $directMlDst = Join-Path $installDir 'directml'
+                if (Test-Path $directMlSrc) {
+                    if (Test-Path $directMlDst) {
+                        Remove-Item $directMlDst -Recurse -Force
+                    }
+                    Copy-WithRetry $directMlSrc $directMlDst -Recurse
+                    Log "copied directml"
+                }
+                Log "files installed"
+            } catch {
+                Log "install failed: $($_.Exception.Message)"
+            }
+
+            # Clean native search environment so the new Echo cannot bind Echo's QNN/DirectML onnxruntime.dll.
+            Remove-Item Env:ORT_DYLIB_PATH -ErrorAction SilentlyContinue
+            Remove-Item Env:ADSP_LIBRARY_PATH -ErrorAction SilentlyContinue
+            $env:PATH = (($env:PATH -split ';') | Where-Object { $_ -and -not $_.StartsWith($echoDataDir, [System.StringComparison]::OrdinalIgnoreCase) }) -join ';'
 
             try {
-                $proc = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
-                if ($proc) {
-                    Wait-Process -Id $targetPid -Timeout 120
-                }
-            } catch {}
-
-            Copy-Item -Path (Join-Path $stagingDir $exeName) -Destination (Join-Path $installDir $exeName) -Force
-
-            # Copy every other file/subfolder shipped in the zip (e.g. fe\), not just the exe.
-            Get-ChildItem -LiteralPath $stagingDir -Force | Where-Object { $_.Name -ne $exeName -and $_.Name -ne 'directml' } | ForEach-Object {
-                Copy-Item -LiteralPath $_.FullName -Destination $installDir -Recurse -Force
+                # Relaunch visible (no minimized flag): the user just clicked "Update".
+                $p = Start-Process -FilePath $exePath -WorkingDirectory $installDir -WindowStyle Normal -PassThru
+                Log "relaunched $exePath pid=$($p.Id)"
+            } catch {
+                Log "relaunch failed: $($_.Exception.Message)"
             }
-
-            $directMlSrc = Join-Path $stagingDir 'directml'
-            $directMlDst = Join-Path $installDir 'directml'
-            if (Test-Path $directMlSrc) {
-                if (Test-Path $directMlDst) {
-                    Remove-Item $directMlDst -Recurse -Force
-                }
-                Copy-Item -Path $directMlSrc -Destination $directMlDst -Recurse -Force
-            }
-
-            Start-Process -FilePath (Join-Path $installDir $exeName) -ArgumentList $minimizedArgument
             """;
     }
 

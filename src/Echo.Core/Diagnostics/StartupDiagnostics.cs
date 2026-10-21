@@ -79,6 +79,32 @@ public static class StartupDiagnostics
             : $"{source}{Environment.NewLine}{exception}";
         AppendLine(
             $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} [Fatal] Startup: {message}{Environment.NewLine}");
+        WriteCrashFile(source, exception);
+    }
+
+    /// <summary>Separate crash report (survives log rotation; easy to attach). Returns the path or null.</summary>
+    public static string? WriteCrashFile(string source, Exception? exception)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.CrashDir);
+            var path = Path.Combine(AppPaths.CrashDir, $"crash-{DateTime.Now:yyyyMMdd-HHmmss-fff}.txt");
+            var entry = Assembly.GetEntryAssembly();
+            var version = entry?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
+            File.WriteAllText(
+                path,
+                $"time={DateTimeOffset.Now:O}{Environment.NewLine}"
+                + $"version={version}{Environment.NewLine}"
+                + $"process={Environment.ProcessPath} pid={Environment.ProcessId}{Environment.NewLine}"
+                + $"args={string.Join(' ', Environment.GetCommandLineArgs().Skip(1))}{Environment.NewLine}"
+                + $"os={Environment.OSVersion} arch={System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}{Environment.NewLine}"
+                + $"source={source}{Environment.NewLine}{Environment.NewLine}{exception}{Environment.NewLine}");
+            return path;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static void AppendLine(string line)

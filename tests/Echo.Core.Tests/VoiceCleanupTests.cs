@@ -145,7 +145,7 @@ public sealed class VoiceCleanupDeliveryTests
         var m = typeof(echo.Platform.Windows.WindowsUpdateApplier).GetMethod(
             "BuildUpdaterScript",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-        var script = (string)m.Invoke(null, [1, @"C:\Echo", @"C:\stage"])!;
+        var script = (string)m.Invoke(null, [1, @"C:\Echo", @"C:\stage", @"C:\log.txt"])!;
         Assert.Contains("Get-ChildItem -LiteralPath $stagingDir", script);
         Assert.Contains("-Recurse -Force", script);
     }
