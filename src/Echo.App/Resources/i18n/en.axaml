@@ -254,5 +254,15 @@
   <sys:String x:Key="Loc.Dict.NeverUsed">not used yet</sys:String>
   <sys:String x:Key="Loc.Dict.Usage">×{0} · {1}</sys:String>
   <sys:String x:Key="Loc.History.AddToDictionary">Add to dictionary</sys:String>
+  <sys:String x:Key="Loc.Dict.Suggestions">Suggestions</sys:String>
+  <sys:String x:Key="Loc.Dict.Suggestions.Hint">Echo noticed you corrected inserted text. Accept to add the replacement to the dictionary, or reject so it is not suggested again.</sys:String>
+  <sys:String x:Key="Loc.Dict.Accept">Accept</sys:String>
+  <sys:String x:Key="Loc.Dict.Reject">Reject</sys:String>
+  <sys:String x:Key="Loc.Dict.Seen">×{0}</sys:String>
+  <sys:String x:Key="Loc.Dict.Learn">Learn from my corrections</sys:String>
+  <sys:String x:Key="Loc.Dict.Learn.Tooltip">After pasting, Echo briefly watches only the inserted fragment and suggests replacements when you edit it. Other text is never stored.</sys:String>
+  <sys:String x:Key="Loc.Dict.LearnSeconds">Watch, sec:</sys:String>
+  <sys:String x:Key="Loc.Dict.ExcludedApps">Exclude apps (comma-separated)</sys:String>
+  <sys:String x:Key="Loc.Dict.ExcludedApps.Tooltip">Process names, e.g. telegram, keepass</sys:String>
 
 </ResourceDictionary>

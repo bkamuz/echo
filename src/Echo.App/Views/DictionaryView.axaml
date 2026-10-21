@@ -4,7 +4,7 @@
              x:Class="echo.App.Views.DictionaryView"
              x:DataType="vm:DictionaryViewModel"
              VerticalAlignment="Stretch">
-  <Grid RowDefinitions="Auto,*" RowSpacing="10">
+  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
     <Border Grid.Row="0" Classes="tile">
       <StackPanel Classes="tile-body" Spacing="8">
         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
@@ -17,6 +17,17 @@
           <Button Grid.Column="2" x:Name="ExportButton" Classes="ghost"
                   Content="{DynamicResource Loc.Dict.Export}" Click="OnExportClick"/>
         </Grid>
+
+        <WrapPanel IsVisible="{Binding IsLearningSupported}" x:Name="LearningPanel">
+          <CheckBox Content="{DynamicResource Loc.Dict.Learn}" IsChecked="{Binding LearnEnabled}"
+                    ToolTip.Tip="{DynamicResource Loc.Dict.Learn.Tooltip}" Margin="0,0,12,0"/>
+          <TextBlock Text="{DynamicResource Loc.Dict.LearnSeconds}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+          <NumericUpDown Value="{Binding LearnSeconds}" Minimum="{Binding LearnMinSeconds}" Maximum="{Binding LearnMaxSeconds}"
+                         Increment="5" FormatString="0" Width="110" IsEnabled="{Binding LearnEnabled}" Margin="0,0,12,0"/>
+          <TextBox Text="{Binding ExcludedAppsText}" Watermark="{DynamicResource Loc.Dict.ExcludedApps}"
+                   ToolTip.Tip="{DynamicResource Loc.Dict.ExcludedApps.Tooltip}" MinWidth="240"
+                   IsEnabled="{Binding LearnEnabled}"/>
+        </WrapPanel>
 
         <StackPanel IsVisible="{Binding HasHistorySource}" Spacing="4">
           <TextBlock Classes="field-label" Text="{DynamicResource Loc.Dict.FromHistory}"/>
@@ -44,7 +55,36 @@
       </StackPanel>
     </Border>
 
-    <Border Grid.Row="1" Classes="tile" ClipToBounds="True">
+    <Border Grid.Row="1" Classes="tile" x:Name="SuggestionsTile"
+            IsVisible="{Binding HasSuggestions}">
+      <StackPanel Classes="tile-body" Spacing="6">
+        <TextBlock Classes="section-title" Text="{DynamicResource Loc.Dict.Suggestions}"/>
+        <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap" Text="{DynamicResource Loc.Dict.Suggestions.Hint}"/>
+        <ItemsControl x:Name="SuggestionsList" ItemsSource="{Binding Suggestions}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:DictionarySuggestionView">
+              <Grid ColumnDefinitions="*,Auto,*,Auto,Auto,Auto" ColumnSpacing="10" Margin="0,2">
+                <TextBlock Text="{Binding From}" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextMutedBrush}"/>
+                <TextBlock Grid.Column="1" Text="→" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="{Binding To}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="{Binding SeenLabel}" Classes="mono" FontSize="11" VerticalAlignment="Center"/>
+                <Button Grid.Column="4" Classes="primary" Padding="8,2" Name="AcceptSuggestionButton"
+                        Content="{DynamicResource Loc.Dict.Accept}"
+                        Command="{Binding $parent[UserControl].((vm:DictionaryViewModel)DataContext).AcceptSuggestionCommand}"
+                        CommandParameter="{Binding}"/>
+                <Button Grid.Column="5" Classes="ghost" Padding="8,2" Name="RejectSuggestionButton"
+                        Content="{DynamicResource Loc.Dict.Reject}"
+                        Command="{Binding $parent[UserControl].((vm:DictionaryViewModel)DataContext).RejectSuggestionCommand}"
+                        CommandParameter="{Binding}"/>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2" Classes="tile" ClipToBounds="True">
       <Grid>
         <TextBlock IsVisible="{Binding IsEmpty}" Text="{DynamicResource Loc.Dict.Empty}"
                    Classes="page-subtitle" TextWrapping="Wrap" TextAlignment="Center"
