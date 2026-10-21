@@ -18,7 +18,13 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
     private const int UIA_IsPasswordPropertyId = 30019;
     private const int UIA_ValueValuePropertyId = 30045;
     private const int MaxTextLength = 20000;
+    private const int UIA_NamePropertyId = 30005;
+    private const int UIA_ControlTypePropertyId = 30003;
+    private const int UIA_ClassNamePropertyId = 30012;
+    private const int UIA_ValuePatternId = 10002;
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(1000);
+    private static readonly TimeSpan WarmupWindow = TimeSpan.FromMilliseconds(2500);
+    private static readonly TimeSpan WarmupStep = TimeSpan.FromMilliseconds(250);
 
     private readonly DictionaryStore _store;
     private readonly ILogger<UiaCorrectionObserver> _logger;
@@ -67,45 +73,66 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
                 return;
             }
 
-            var element = automation.GetFocusedElement();
-            if (element is null)
+            // Chromium/Electron (Cursor, VS Code, browsers) build their accessibility tree lazily: the first
+            // UIA query only switches it on and returns the bare render-widget pane, and the tree can lag
+            // the paste. Re-query focus until the inserted text shows up or the warm-up window ends.
+            IUIAutomationElement? element = null;
+            InjectedSpanTracker? tracker = null;
+            string? app = null;
+            FieldInfo info = default;
+            var warmupDeadline = DateTime.UtcNow + WarmupWindow;
+            var attempts = 0;
+            while (true)
             {
-                return;
-            }
-
-            var app = ProcessName(element);
-            if (app is null || app.Equals(Process.GetCurrentProcess().ProcessName, StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
-            if (settings.IsExcluded(app))
-            {
-                _logger.LogDebug("Correction learning: {App} excluded", app);
-                return;
-            }
-
-            if (IsPassword(element))
-            {
-                return;
-            }
-
-            var baseline = ReadText(element);
-            var tracker = baseline is null ? null : InjectedSpanTracker.Create(baseline, injected);
-            if (tracker is null)
-            {
-                lock (_unreadableLogged)
+                attempts++;
+                element = automation.GetFocusedElement();
+                if (element is not null)
                 {
-                    if (_unreadableLogged.Add(app))
+                    app = ProcessName(element);
+                    if (app is null || app.Equals(Process.GetCurrentProcess().ProcessName, StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogInformation(
-                            "Correction learning unavailable in {App}: UI Automation cannot read the inserted text",
-                            app);
+                        return;
                     }
+
+                    if (settings.IsExcluded(app))
+                    {
+                        _logger.LogDebug("Correction learning: {App} excluded", app);
+                        return;
+                    }
+
+                    if (IsPassword(element))
+                    {
+                        return;
+                    }
+
+                    info = Describe(element);
+                    var baseline = info.IsPlaceholder ? null : ReadText(element);
+                    tracker = baseline is null ? null : InjectedSpanTracker.Create(baseline, injected);
+                    if (tracker is not null)
+                    {
+                        break;
+                    }
+                }
+
+                if (DateTime.UtcNow >= warmupDeadline || ct.WaitHandle.WaitOne(WarmupStep))
+                {
+                    break;
+                }
+            }
+
+            if (element is null || app is null || tracker is null)
+            {
+                if (app is not null)
+                {
+                    LogUnreadable(app, info, attempts);
                 }
 
                 return;
             }
+
+            _logger.LogDebug(
+                "Correction learning: watching {App} ({Type}/{Class}) after {Attempts} attempt(s)",
+                app, info.ControlType, info.ClassName, attempts);
 
             string? lastSpan = null;
             while (!ct.WaitHandle.WaitOne(PollInterval))
@@ -113,6 +140,7 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
                 var focused = automation.GetFocusedElement();
                 if (focused is null || automation.CompareElements(focused, element) == 0)
                 {
+                    _logger.LogDebug("Correction learning: focus left the field in {App}", app);
                     break; // user moved on; evaluate what we saw last
                 }
 
@@ -120,6 +148,9 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
                 var span = text is null ? null : tracker.CurrentSpan(text);
                 if (span is null)
                 {
+                    _logger.LogDebug(
+                        "Correction learning: inserted span lost in {App} (text {Len} chars, readable={Readable})",
+                        app, text?.Length ?? -1, text is not null);
                     break; // field sent/cleared or edited outside the span
                 }
 
@@ -128,6 +159,7 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
 
             if (lastSpan is null || lastSpan.Trim() == injected)
             {
+                _logger.LogDebug("Correction learning: no edit seen in {App}", app);
                 return;
             }
 
@@ -146,6 +178,83 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
         {
             _logger.LogWarning(ex, "Correction learning failed");
         }
+    }
+
+    private readonly record struct FieldInfo(
+        string ControlType, string ClassName, bool HasText, bool HasValue, int ValueLength, bool IsPlaceholder, bool IsMonaco);
+
+    private static FieldInfo Describe(IUIAutomationElement element)
+    {
+        string Str(int id)
+        {
+            try
+            {
+                return element.GetCurrentPropertyValue(id)?.ToString() ?? "";
+            }
+            catch (COMException)
+            {
+                return "";
+            }
+        }
+
+        var type = Str(UIA_ControlTypePropertyId);
+        var cls = Str(UIA_ClassNamePropertyId);
+        var name = Str(UIA_NamePropertyId);
+        var value = Str(UIA_ValueValuePropertyId);
+        bool hasText = false, hasValue = false;
+        string? docText = null;
+        try
+        {
+            docText = DocumentText(element);
+            hasText = docText is not null || element.GetCurrentPattern(UIA_TextPatternId) is not null;
+            hasValue = element.GetCurrentPattern(UIA_ValuePatternId) is not null;
+        }
+        catch (Exception ex) when (ex is COMException or InvalidCastException)
+        {
+        }
+
+        var monaco = cls.Contains("inputarea", StringComparison.OrdinalIgnoreCase);
+        // Monaco without screen-reader mode keeps the real buffer out of the DOM: Value is empty and the
+        // TextPattern only returns its accessible name ("The editor is not accessible at this time...").
+        var placeholder = value.Length == 0 && !string.IsNullOrEmpty(docText) && docText.Trim() == name.Trim();
+        return new FieldInfo(ControlTypeName(type), cls, hasText, hasValue, value.Length, placeholder, monaco);
+    }
+
+    private static string ControlTypeName(string id) => id switch
+    {
+        "50004" => "Edit",
+        "50030" => "Document",
+        "50033" => "Pane",
+        "50020" => "Text",
+        "50032" => "Window",
+        "" => "?",
+        _ => id,
+    };
+
+    private void LogUnreadable(string app, FieldInfo info, int attempts)
+    {
+        lock (_unreadableLogged)
+        {
+            if (!_unreadableLogged.Add($"{app}|{info.ClassName}|{info.IsPlaceholder}"))
+            {
+                return;
+            }
+        }
+
+        if (info.IsMonaco && info.IsPlaceholder)
+        {
+            _logger.LogInformation(
+                "Correction learning unavailable in {App} code editor: Monaco hides the text from UI Automation " +
+                "unless screen-reader mode is on. Set \"editor.accessibilitySupport\": \"on\" in its settings " +
+                "(chat/composer inputs are read without it)",
+                app);
+            return;
+        }
+
+        _logger.LogInformation(
+            "Correction learning unavailable in {App}: UI Automation cannot read the inserted text " +
+            "(type={Type}, class={Class}, textPattern={Text}, valuePattern={Value}, valueLen={Len}, placeholder={Placeholder}, attempts={Attempts})",
+            app, info.ControlType, info.ClassName, info.HasText, info.HasValue, info.ValueLength, info.IsPlaceholder, attempts);
     }
 
     private static string? ProcessName(IUIAutomationElement element)
@@ -178,16 +287,13 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
     {
         try
         {
-            if (element.GetCurrentPattern(UIA_TextPatternId) is IUIAutomationTextPattern tp)
+            var text = DocumentText(element);
+            if (!string.IsNullOrEmpty(text))
             {
-                var text = tp.DocumentRange?.GetText(MaxTextLength);
-                if (!string.IsNullOrEmpty(text))
-                {
-                    return Normalize(text);
-                }
+                return Normalize(text);
             }
         }
-        catch (COMException)
+        catch (Exception ex) when (ex is COMException or InvalidCastException)
         {
         }
 
@@ -202,6 +308,64 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
             return null;
         }
     }
+
+    // The typed RCW path for TextPattern.DocumentRange threw InvalidCastException on every call
+    // (seen on Windows 11 with Cursor/Chromium), so TextPattern is read through raw vtable calls.
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int GetDocumentRangeFn(IntPtr self, out IntPtr range);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int GetTextFn(IntPtr self, int maxLength, out IntPtr bstr);
+
+    private static readonly Guid IID_TextPattern = new("32eba289-3583-42c9-9c59-3b6d9a1e9b6a");
+
+    private static string? DocumentText(IUIAutomationElement element)
+    {
+        if (element.GetCurrentPatternAs(UIA_TextPatternId, IID_TextPattern, out var pattern) < 0 || pattern == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        var range = IntPtr.Zero;
+        try
+        {
+            // IUIAutomationTextPattern: IUnknown(3) + RangeFromPoint, RangeFromChild, GetSelection, GetVisibleRanges, get_DocumentRange
+            var getRange = Marshal.GetDelegateForFunctionPointer<GetDocumentRangeFn>(VtableSlot(pattern, 7));
+            if (getRange(pattern, out range) < 0 || range == IntPtr.Zero)
+            {
+                return null;
+            }
+
+            // IUIAutomationTextRange: IUnknown(3) + Clone, Compare, CompareEndpoints, ExpandToEnclosingUnit, FindAttribute,
+            // FindText, GetAttributeValue, GetBoundingRectangles, GetEnclosingElement, GetText
+            var getText = Marshal.GetDelegateForFunctionPointer<GetTextFn>(VtableSlot(range, 12));
+            if (getText(range, MaxTextLength, out var bstr) < 0 || bstr == IntPtr.Zero)
+            {
+                return null;
+            }
+
+            try
+            {
+                return Marshal.PtrToStringBSTR(bstr);
+            }
+            finally
+            {
+                Marshal.FreeBSTR(bstr);
+            }
+        }
+        finally
+        {
+            if (range != IntPtr.Zero)
+            {
+                Marshal.Release(range);
+            }
+
+            Marshal.Release(pattern);
+        }
+    }
+
+    private static IntPtr VtableSlot(IntPtr comObject, int slot) =>
+        Marshal.ReadIntPtr(Marshal.ReadIntPtr(comObject), slot * IntPtr.Size);
 
     private static string Normalize(string s) => s.Replace("\r\n", "\n").Replace('\r', '\n');
 
@@ -236,35 +400,10 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
         void GetCurrentPropertyValueEx();
         void GetCachedPropertyValue();
         void GetCachedPropertyValueEx();
-        void GetCurrentPatternAs();
+        [PreserveSig]
+        int GetCurrentPatternAs(int patternId, in Guid riid, out IntPtr patternObject);
         void GetCachedPatternAs();
         [return: MarshalAs(UnmanagedType.IUnknown)]
         object? GetCurrentPattern(int patternId);
-    }
-
-    [ComImport, Guid("32eba289-3583-42c9-9c59-3b6d9a1e9b6a"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IUIAutomationTextPattern
-    {
-        void RangeFromPoint();
-        void RangeFromChild();
-        void GetSelection();
-        void GetVisibleRanges();
-        IUIAutomationTextRange? DocumentRange { get; }
-    }
-
-    [ComImport, Guid("a543cc6a-f4ae-494b-8239-c814481187fa"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IUIAutomationTextRange
-    {
-        void Clone();
-        void Compare();
-        void CompareEndpoints();
-        void ExpandToEnclosingUnit();
-        void FindAttribute();
-        void FindText();
-        void GetAttributeValue();
-        void GetBoundingRectangles();
-        void GetEnclosingElement();
-        [return: MarshalAs(UnmanagedType.BStr)]
-        string GetText(int maxLength);
     }
 }
