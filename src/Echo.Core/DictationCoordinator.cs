@@ -474,6 +474,23 @@ public sealed class DictationCoordinator : IDisposable
                 return;
             }
 
+            if (_config.VoiceCleanup)
+            {
+                var clean = VoiceCleanup.Process(samples, _config.SampleRate);
+                if (clean.Applied)
+                {
+                    _logger.LogInformation(
+                        "Voice cleanup (FastEnhancer) took {Ms:F0} ms for {AudioMs} ms of audio",
+                        clean.ElapsedMs,
+                        samples.Length * 1000L / Math.Max(1, _config.SampleRate));
+                    samples = clean.Samples;
+                }
+                else
+                {
+                    _logger.LogWarning("Voice cleanup skipped: {Error}", clean.Error ?? "no audio");
+                }
+            }
+
             var tail = SpeechTailTrimmer.TrimTrailing(samples, _config.SampleRate);
             if (tail.TrimmedMs > 0)
             {

@@ -60,6 +60,10 @@ public sealed class AppConfig
     [JsonPropertyName("add_trailing_space")]
     public bool AddTrailingSpace { get; set; } = true;
 
+    /// <summary>Run FastEnhancer speech denoise on captured audio before transcription.</summary>
+    [JsonPropertyName("voice_cleanup")]
+    public bool VoiceCleanup { get; set; }
+
     [JsonPropertyName("show_dictation_toast")]
     public bool ShowDictationToast { get; set; } = true;
 
@@ -100,6 +104,7 @@ public sealed class AppConfig
             SampleRate = SampleRate,
             AddTrailingSpace = AddTrailingSpace,
             ShowDictationToast = ShowDictationToast,
+            VoiceCleanup = VoiceCleanup,
             StartWithSystem = StartWithSystem,
             LastUpdateCheckUtc = LastUpdateCheckUtc,
             PendingUpdateVersion = PendingUpdateVersion,
