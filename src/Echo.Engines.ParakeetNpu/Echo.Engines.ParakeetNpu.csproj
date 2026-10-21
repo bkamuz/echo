@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\qnn-runtime-manifest.json" />
+    <EmbeddedResource Include="Assets\qnn-runtime-whisper-manifest.json" />
     <EmbeddedResource Include="Assets\parakeet-npu-model-manifest.json" />
   </ItemGroup>
 </Project>

@@ -29,7 +29,8 @@ public static class CoreServiceCollectionExtensions
                 sp.GetRequiredService<ILogger<ModelDownloader>>(),
                 httpFactory.CreateClient("echo-models"),
                 sp.GetService<IWhisperModelSupport>(),
-                sp.GetService<IParakeetNpuModelSupport>());
+                sp.GetService<IParakeetNpuModelSupport>(),
+                sp.GetService<IWhisperNpuModelSupport>());
         });
         services.AddHttpClient<IUpdateChecker, GitHubUpdateChecker>((_, client) =>
         {

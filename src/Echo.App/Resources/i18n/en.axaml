@@ -59,6 +59,7 @@
   <sys:String x:Key="Loc.Engine.Whisper">Whisper (multilingual)</sys:String>
   <sys:String x:Key="Loc.Engine.Omnilingual">Omnilingual (1600 languages)</sys:String>
   <sys:String x:Key="Loc.Engine.ParakeetNpu">Parakeet NPU (experimental)</sys:String>
+  <sys:String x:Key="Loc.Engine.WhisperNpu">Whisper Turbo (NPU)</sys:String>
   <sys:String x:Key="Loc.Settings.SherpaArm64Unavailable">GigaAM, Whisper, and Omnilingual (Sherpa) are not available on Windows ARM64 yet. Use Parakeet NPU for on-device recognition on Snapdragon PCs.</sys:String>
   <sys:String x:Key="Loc.Device.Cpu">CPU</sys:String>
   <sys:String x:Key="Loc.Device.Cpu.Tooltip">Universal mode. Works on any PC.</sys:String>
@@ -103,6 +104,7 @@
   <sys:String x:Key="Loc.Status.DirectMlFailed">Could not download DirectML — kept CPU</sys:String>
   <sys:String x:Key="Loc.Status.NpuFailed">Could not prepare QNN runtime — kept CPU</sys:String>
   <sys:String x:Key="Loc.Status.ParakeetNpuCpuFallback">Parakeet NPU unavailable — using CPU for this session</sys:String>
+  <sys:String x:Key="Loc.Status.WhisperNpuCpuFallback">Whisper NPU unavailable — using Whisper Turbo on CPU for this session</sys:String>
   <sys:String x:Key="Loc.Status.HotkeyCapture">Hold the combination and release all keys…</sys:String>
   <sys:String x:Key="Loc.Status.Copied">Copied</sys:String>
   <sys:String x:Key="Loc.Status.Restarting">Restarting…</sys:String>

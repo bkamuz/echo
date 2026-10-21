@@ -45,6 +45,9 @@ public static class AppPaths
     public static string DirectMlDir => Path.Combine(BaseDir, "directml");
     public static string NpuDir => Path.Combine(BaseDir, "qnn");
     public static string ParakeetNpuDir => Path.Combine(ModelsDir, "parakeet-npu");
+    /// <summary>Separate ORT 1.30 + QAIRT 2.50 runtime for Whisper NPU (Parakeet keeps qnn\ on ORT 1.24).</summary>
+    public static string NpuWhisperRuntimeDir => Path.Combine(BaseDir, "qnn-whisper");
+    public static string WhisperNpuDir => Path.Combine(ModelsDir, "whisper-turbo-npu");
 
     public static void EnsureDirectories()
     {

@@ -10,13 +10,16 @@ public sealed class ModelDownloader
     private readonly HttpClient _http;
     private readonly IWhisperModelSupport? _whisper;
     private readonly IParakeetNpuModelSupport? _parakeetNpu;
+    private readonly IWhisperNpuModelSupport? _whisperNpu;
 
     public ModelDownloader(
         ILogger<ModelDownloader> logger,
         HttpClient http,
         IWhisperModelSupport? whisper = null,
-        IParakeetNpuModelSupport? parakeetNpu = null)
+        IParakeetNpuModelSupport? parakeetNpu = null,
+        IWhisperNpuModelSupport? whisperNpu = null)
     {
+        _whisperNpu = whisperNpu;
         _logger = logger;
         _http = http;
         _whisper = whisper;
@@ -38,6 +41,25 @@ public sealed class ModelDownloader
                 ensureModel: !spec.IsDownloaded(),
                 progress,
                 cancellationToken).ConfigureAwait(false);
+            progress?.Report(ProgressMessages.Done(spec.Title));
+            return;
+        }
+
+        if (spec.Engine == "whisper_npu")
+        {
+            if (_whisperNpu is null)
+            {
+                throw new InvalidOperationException(
+                    "Whisper Turbo NPU is not available in this Echo build (Windows ARM64 required).");
+            }
+
+            _logger.LogInformation("Preparing Whisper Turbo NPU runtime and model");
+            await _whisperNpu.EnsureRuntimeAsync(progress, cancellationToken).ConfigureAwait(false);
+            if (!_whisperNpu.IsModelInstalled)
+            {
+                await _whisperNpu.DownloadModelAsync(progress, cancellationToken).ConfigureAwait(false);
+            }
+
             progress?.Report(ProgressMessages.Done(spec.Title));
             return;
         }

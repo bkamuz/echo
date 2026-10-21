@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "architecture": "arm64",
+  "packages": [
+    {
+      "name": "onnxruntime",
+      "version": "1.30.0",
+      "wheel": "onnxruntime-1.30.0-cp311-cp311-win_arm64.whl",
+      "url": "https://files.pythonhosted.org/packages/96/f1/fbda6fb08ac4db6c5c6f7c3e128e4d8fb398b52fe2fc3282c45cadedd18b/onnxruntime-1.30.0-cp311-cp311-win_arm64.whl",
+      "sha256": "16506cfa5d218850f2b46e0edce1b952121f2f84f8e0074dafe15f4787f0c8fb",
+      "files": [
+        {
+          "source": "onnxruntime/capi/onnxruntime.dll",
+          "target": "onnxruntime.dll"
+        },
+        {
+          "source": "onnxruntime/LICENSE",
+          "target": "LICENSE.onnxruntime.txt"
+        },
+        {
+          "source": "onnxruntime/ThirdPartyNotices.txt",
+          "target": "ThirdPartyNotices.onnxruntime.txt"
+        }
+      ]
+    },
+    {
+      "name": "onnxruntime-qnn",
+      "version": "2.6.0",
+      "wheel": "onnxruntime_qnn-2.6.0-cp311-cp311-win_arm64.whl",
+      "url": "https://files.pythonhosted.org/packages/83/d9/3541a76e1ffa8c4316e48d83d2bd3026acc2898790dec5f3ab7c27d14c44/onnxruntime_qnn-2.6.0-cp311-cp311-win_arm64.whl",
+      "sha256": "1008a2571f39ce1b447a20bbe9f6065634e4ed5633c7c70ed30b7c8995a74cc6",
+      "files": [
+        {
+          "source": "onnxruntime_qnn/onnxruntime_providers_qnn.dll",
+          "target": "onnxruntime_providers_qnn.dll"
+        },
+        {
+          "source": "onnxruntime_qnn/QnnHtp.dll",
+          "target": "QnnHtp.dll"
+        },
+        {
+          "source": "onnxruntime_qnn/QnnHtpPrepare.dll",
+          "target": "QnnHtpPrepare.dll"
+        },
+        {
+          "source": "onnxruntime_qnn/QnnHtpNetRunExtensions.dll",
+          "target": "QnnHtpNetRunExtensions.dll"
+        },
+        {
+          "source": "onnxruntime_qnn/QnnHtpV73Stub.dll",
+          "target": "QnnHtpV73Stub.dll"
+        },
+        {
+          "source": "onnxruntime_qnn/libQnnHtpV73Skel.so",
+          "target": "libQnnHtpV73Skel.so"
+        },
+        {
+          "source": "onnxruntime_qnn/libqnnhtpv73.cat",
+          "target": "libqnnhtpv73.cat"
+        },
+        {
+          "source": "onnxruntime_qnn/QnnHtpV81Stub.dll",
+          "target": "QnnHtpV81Stub.dll"
+        },
+        {
+          "source": "onnxruntime_qnn/libQnnHtpV81Skel.so",
+          "target": "libQnnHtpV81Skel.so"
+        },
+        {
+          "source": "onnxruntime_qnn/libqnnhtpv81.cat",
+          "target": "libqnnhtpv81.cat"
+        },
+        {
+          "source": "onnxruntime_qnn/QnnSystem.dll",
+          "target": "QnnSystem.dll"
+        },
+        {
+          "source": "onnxruntime_qnn/Qualcomm_LICENSE.pdf",
+          "target": "Qualcomm_LICENSE.pdf"
+        },
+        {
+          "source": "onnxruntime_qnn/ThirdPartyNotices.txt",
+          "target": "ThirdPartyNotices.onnxruntime-qnn.txt"
+        },
+        {
+          "source": "onnxruntime_qnn/LICENSE",
+          "target": "LICENSE.onnxruntime-qnn.txt"
+        }
+      ]
+    }
+  ],
+  "required_files": [
+    "onnxruntime.dll",
+    "onnxruntime_providers_qnn.dll",
+    "QnnHtp.dll",
+    "QnnHtpPrepare.dll",
+    "QnnHtpNetRunExtensions.dll",
+    "QnnHtpV73Stub.dll",
+    "libQnnHtpV73Skel.so",
+    "libqnnhtpv73.cat",
+    "QnnHtpV81Stub.dll",
+    "libQnnHtpV81Skel.so",
+    "libqnnhtpv81.cat",
+    "QnnSystem.dll",
+    "Qualcomm_LICENSE.pdf"
+  ]
+}

@@ -29,7 +29,7 @@ public sealed record UiLanguageChoice(string Code, string Label)
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private static readonly string[] BaseEngineIds = ["gigaam", "whisper", "omnilingual", "parakeet_npu"];
+    private static readonly string[] BaseEngineIds = ["gigaam", "whisper", "omnilingual", "parakeet_npu", "whisper_npu"];
 
     private readonly DictationCoordinator _coordinator;
     private readonly IAudioCapture _audio;
@@ -181,7 +181,7 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsParakeetNpu => Engine == "parakeet_npu";
     public bool IsDeviceVisible =>
         Engine is not "whisper"
-        && (Engine is not "parakeet_npu" || _npuAvailability.IsLikelyPlatform);
+        && (Engine is not ("parakeet_npu" or "whisper_npu") || _npuAvailability.IsLikelyPlatform);
     partial void OnIsApplyingChanged(bool value) => OnPropertyChanged(nameof(IsSettingsEnabled));
 
     partial void OnSelectedEngineChanged(EngineOption? value)
@@ -633,7 +633,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         var deviceId = SelectedComputeDevice?.Id ?? ExecutionProviderResolver.CpuDevice;
         var localized = BaseEngineIds
-            .Where(id => id != "parakeet_npu" || _npuAvailability.IsLikelyPlatform)
+            .Where(id => id is not ("parakeet_npu" or "whisper_npu") || _npuAvailability.IsLikelyPlatform)
             .Select(id => new EngineOption(id, GetEngineDisplayName(id)))
             .ToList();
         var registered = localized.Where(o => _registeredEngineIds.Contains(o.Id)).ToList();
@@ -687,6 +687,7 @@ public partial class SettingsViewModel : ObservableObject
         "whisper" => _loc.Get("Loc.Engine.Whisper"),
         "omnilingual" => _loc.Get("Loc.Engine.Omnilingual"),
         "parakeet_npu" => _loc.Get("Loc.Engine.ParakeetNpu"),
+        "whisper_npu" => _loc.Get("Loc.Engine.WhisperNpu"),
         _ => id,
     };
 

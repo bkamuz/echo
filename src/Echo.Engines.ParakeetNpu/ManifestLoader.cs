@@ -5,9 +5,11 @@ namespace echo.Engines.ParakeetNpu;
 
 internal static class ManifestLoader
 {
-    public static QnnRuntimeManifest LoadRuntimeManifest()
+    public static QnnRuntimeManifest LoadRuntimeManifest() => LoadRuntimeManifest(QnnRuntimeProfile.Parakeet);
+
+    public static QnnRuntimeManifest LoadRuntimeManifest(QnnRuntimeProfile profile)
     {
-        using var stream = OpenEmbedded("Assets.qnn-runtime-manifest.json");
+        using var stream = OpenEmbedded(profile.ManifestResource);
         return JsonSerializer.Deserialize<QnnRuntimeManifest>(stream, JsonOptions)
             ?? throw new InvalidOperationException("Failed to parse QNN runtime manifest.");
     }

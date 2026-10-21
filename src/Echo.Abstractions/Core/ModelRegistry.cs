@@ -293,6 +293,32 @@ public static class ModelRegistry
         RepoId: "trsdn/parakeet-tdt-0.6b-v3-htp-int8-8s",
         LocalDir: AppPaths.ParakeetNpuDir);
 
+    /// <summary>Files the Whisper Turbo NPU engine needs (Qualcomm AI Hub precompiled QNN ONNX + OpenAI vocab).</summary>
+    public static IReadOnlyList<string> WhisperNpuRequiredFiles { get; } =
+    [
+        "encoder.onnx",
+        "encoder.bin",
+        "decoder.onnx",
+        "decoder.bin",
+        "metadata.json",
+        "vocab.json",
+        "added_tokens.json",
+    ];
+
+    public static ModelSpec WhisperNpuSpec() => new(
+        Id: "whisper-large-v3-turbo-npu",
+        Title: "Whisper Large-V3-Turbo (NPU)",
+        Engine: "whisper_npu",
+        RepoId: "qualcomm/Whisper-Large-V3-Turbo",
+        LocalDir: AppPaths.WhisperNpuDir);
+
+    public static bool IsWhisperNpuDownloaded(string dir) =>
+        WhisperNpuRequiredFiles.All(f =>
+        {
+            var p = Path.Combine(dir, f);
+            return File.Exists(p) && new FileInfo(p).Length > 0;
+        });
+
     public static ModelSpec? SpecForEngine(string engine, string whisperModelSize, string gigaAmModelSize) =>
         engine switch
         {
@@ -300,6 +326,7 @@ public static class ModelRegistry
             "whisper" => WhisperSpec(whisperModelSize),
             "omnilingual" => OmnilingualSpec(),
             "parakeet_npu" => ParakeetNpuSpec(),
+            "whisper_npu" => WhisperNpuSpec(),
             _ => null,
         };
 

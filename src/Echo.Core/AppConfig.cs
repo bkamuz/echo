@@ -11,7 +11,7 @@ public sealed class AppConfig
     public static IReadOnlyList<string> GigaAmSizes => ModelRegistry.GigaAmSizes;
 
     public static IReadOnlyList<string> Engines { get; } =
-        ["gigaam", "whisper", "omnilingual", "parakeet_npu"];
+        ["gigaam", "whisper", "omnilingual", "parakeet_npu", "whisper_npu"];
     public static IReadOnlyList<string> Devices => ExecutionProviderResolver.AllDeviceIds;
 
     [JsonPropertyName("hotkey")]
@@ -133,6 +133,14 @@ public sealed class AppConfig
         if (!Engines.Contains(Engine))
         {
             Engine = "gigaam";
+        }
+
+        if (Engine == "whisper_npu" && !ParakeetAvailable)
+        {
+            // NPU Whisper exists only in Windows ARM64 builds; keep Whisper on CPU elsewhere.
+            Engine = "whisper";
+            WhisperModelSize = "large-v3-turbo";
+            Device = ExecutionProviderResolver.CpuDevice;
         }
 
         if (!WhisperSizes.Contains(WhisperModelSize))

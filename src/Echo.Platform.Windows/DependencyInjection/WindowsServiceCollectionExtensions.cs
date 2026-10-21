@@ -22,6 +22,7 @@ public static class WindowsServiceCollectionExtensions
         {
             ParakeetAssemblyLoader.RegisterEngine(services);
             services.AddSingleton<IParakeetNpuModelSupport, WindowsParakeetNpuProbe>();
+            services.AddSingleton<IWhisperNpuModelSupport, WindowsWhisperNpuProbe>();
         }
         services.AddHttpClient<DirectMlRuntimeInstaller>();
         services.AddSingleton<IAutoStartService, WindowsAutoStartService>();

@@ -14,6 +14,8 @@ internal static class ParakeetAssemblyLoader
 {
     public const string QnnHttpClientName = "echo-parakeet-qnn";
     public const string ModelHttpClientName = "echo-parakeet-model";
+    public const string WhisperNpuHttpClientName = "echo-whisper-npu";
+    public const string WhisperNpuEngineId = "whisper_npu";
     private const string AssemblyName = "Echo.Engines.ParakeetNpu";
 
     public static bool IsSupported =>
@@ -36,6 +38,72 @@ internal static class ParakeetAssemblyLoader
             EngineId = "parakeet_npu",
             Factory = CreateRoutedEngine,
         });
+
+        services.AddHttpClient(WhisperNpuHttpClientName, client =>
+        {
+            ConfigureParakeetHttpClient(client);
+            // ~2 GB AI Hub archive; the downloader resumes with Range requests on failure.
+            client.Timeout = Timeout.InfiniteTimeSpan;
+        });
+        services.AddSingleton(new EngineRegistration
+        {
+            EngineId = WhisperNpuEngineId,
+            Factory = sp => new WhisperNpuWindowsEngine(
+                sp,
+                (ILogger)CreateTypedLogger(sp.GetRequiredService<ILoggerFactory>(), typeof(WhisperNpuWindowsEngine))),
+        });
+    }
+
+    private static object WhisperRuntimeProfile(Assembly assembly) =>
+        assembly.GetType("echo.Engines.ParakeetNpu.QnnRuntimeProfile", throwOnError: true)!
+            .GetProperty("Whisper", BindingFlags.Public | BindingFlags.Static)!
+            .GetValue(null)!;
+
+    private static (object Runtime, object Model) CreateWhisperDownloaders(
+        Assembly assembly,
+        ILoggerFactory loggerFactory,
+        Func<HttpClient> httpFactory)
+    {
+        var runtimeType = assembly.GetType("echo.Engines.ParakeetNpu.QnnRuntimeDownloader", throwOnError: true)!;
+        var modelType = assembly.GetType("echo.Engines.ParakeetNpu.Whisper.WhisperNpuModelDownloader", throwOnError: true)!;
+        var runtime = Activator.CreateInstance(
+            runtimeType,
+            httpFactory(),
+            CreateTypedLogger(loggerFactory, runtimeType),
+            WhisperRuntimeProfile(assembly))!;
+        var model = Activator.CreateInstance(modelType, httpFactory(), CreateTypedLogger(loggerFactory, modelType))!;
+        return (runtime, model);
+    }
+
+    /// <summary>Whisper Turbo NPU engine inside the isolated worker (ORT 1.30 / QAIRT 2.50 from qnn-whisper\).</summary>
+    internal static ITranscriptionEngine CreateWhisperNpuEngineForWorker(ILoggerFactory loggerFactory)
+    {
+        var assembly = LoadAssembly();
+        var engineType = assembly.GetType("echo.Engines.ParakeetNpu.Whisper.WhisperNpuEngine", throwOnError: true)!;
+        var (runtime, model) = CreateWhisperDownloaders(assembly, loggerFactory, () =>
+        {
+            var http = new HttpClient();
+            ConfigureParakeetHttpClient(http);
+            http.Timeout = Timeout.InfiniteTimeSpan;
+            return http;
+        });
+        return (ITranscriptionEngine)Activator.CreateInstance(
+            engineType,
+            runtime,
+            model,
+            CreateTypedLogger(loggerFactory, engineType))!;
+    }
+
+    public static IWhisperNpuModelSupport CreateWhisperModelSupport(IServiceProvider services)
+    {
+        var assembly = LoadAssembly();
+        var supportType = assembly.GetType("echo.Engines.ParakeetNpu.Whisper.WhisperNpuModelSupport", throwOnError: true)!;
+        var factory = services.GetRequiredService<IHttpClientFactory>();
+        var (runtime, model) = CreateWhisperDownloaders(
+            assembly,
+            services.GetRequiredService<ILoggerFactory>(),
+            () => factory.CreateClient(WhisperNpuHttpClientName));
+        return (IWhisperNpuModelSupport)Activator.CreateInstance(supportType, runtime, model)!;
     }
 
     internal static ITranscriptionEngine CreateInProcessEngine(IServiceProvider services) =>

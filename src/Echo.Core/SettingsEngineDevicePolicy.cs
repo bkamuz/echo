@@ -29,9 +29,15 @@ public static class SettingsEngineDevicePolicy
         {
             ExecutionProviderResolver.CpuDevice,
             ExecutionProviderResolver.DirectMlDevice,
-        },        ["parakeet_npu"] = new(StringComparer.Ordinal)
+        },
+        ["parakeet_npu"] = new(StringComparer.Ordinal)
         {
             ExecutionProviderResolver.CpuDevice,
+            ExecutionProviderResolver.NpuDevice,
+        },
+        // AI Hub precompiled QNN context; CPU users pick sherpa "whisper" (turbo) instead.
+        ["whisper_npu"] = new(StringComparer.Ordinal)
+        {
             ExecutionProviderResolver.NpuDevice,
         },
     };

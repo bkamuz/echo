@@ -64,6 +64,13 @@ internal static unsafe class OrtQnnBootstrap
             try
             {
                 _runtimeDir = Path.GetFullPath(runtimeDir);
+                QnnRuntimeProfile.Active = string.Equals(
+                    _runtimeDir.TrimEnd('\\', '/'),
+                    Path.GetFullPath(QnnRuntimeProfile.Whisper.Dir).TrimEnd('\\', '/'),
+                    StringComparison.OrdinalIgnoreCase)
+                    ? QnnRuntimeProfile.Whisper
+                    : QnnRuntimeProfile.Parakeet;
+                logger?.LogInformation("QNN runtime profile: {Profile} ({Dir})", QnnRuntimeProfile.Active.Name, _runtimeDir);
                 _htpProfile = HtpHardwareProfile.Resolve();
                 logger?.LogInformation(
                     "Parakeet QNN HTP profile: generation={Generation}, htp_arch={HtpArch}, soc_model={SocModel}, contextTarget={ContextTarget}",
@@ -313,7 +320,7 @@ internal static unsafe class OrtQnnBootstrap
 
     private static void VerifyRequiredFiles(string runtimeDir, HtpHardwareProfile profile, ILogger? logger)
     {
-        var manifest = ManifestLoader.LoadRuntimeManifest();
+        var manifest = ManifestLoader.LoadRuntimeManifest(QnnRuntimeProfile.Active);
         var required = profile.RequiredRuntimeFiles();
         var missing = required
             .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(runtimeDir, file)))
