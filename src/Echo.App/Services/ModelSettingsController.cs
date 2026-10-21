@@ -16,6 +16,7 @@ public sealed class ModelSettingsController
     private readonly HomeViewModel _home;
     private readonly LocalizationService _loc;
     private readonly IParakeetNpuModelSupport? _parakeetNpu;
+    private readonly IWhisperNpuModelSupport? _whisperNpu;
 
     public ModelSettingsController(
         ModelDownloader downloader,
@@ -24,8 +25,10 @@ public sealed class ModelSettingsController
         AppStatusViewModel status,
         HomeViewModel home,
         LocalizationService loc,
-        IParakeetNpuModelSupport? parakeetNpu = null)
+        IParakeetNpuModelSupport? parakeetNpu = null,
+        IWhisperNpuModelSupport? whisperNpu = null)
     {
+        _whisperNpu = whisperNpu;
         _downloader = downloader;
         _coordinator = coordinator;
         _applyService = applyService;
@@ -53,9 +56,9 @@ public sealed class ModelSettingsController
         var downloaded = IsParakeetAssetsReady(spec);
         var statusText = downloaded
             ? _loc.Format("Loc.Model.Loaded", spec.Title)
-            : spec.Engine == "parakeet_npu"
+            : IsNpuRuntimeEngine(spec)
                 && spec.IsDownloaded()
-                && _parakeetNpu?.IsRuntimeInstalled == false
+                && NpuRuntimeInstalled(spec) == false
                 ? _loc.Get("Loc.Status.PreparingNpu")
                 : _loc.Format("Loc.Model.NotLoaded", spec.Title);
         return new ModelStatusSnapshot(
@@ -143,7 +146,7 @@ public sealed class ModelSettingsController
 
     private bool NeedsDownload(ModelSpec spec)
     {
-        if (spec.Engine != "parakeet_npu")
+        if (!IsNpuRuntimeEngine(spec))
         {
             return !spec.IsDownloaded();
         }
@@ -153,14 +156,20 @@ public sealed class ModelSettingsController
 
     private bool IsParakeetAssetsReady(ModelSpec spec)
     {
-        if (spec.Engine != "parakeet_npu")
+        if (!IsNpuRuntimeEngine(spec))
         {
             return spec.IsDownloaded();
         }
 
-        var runtimeReady = _parakeetNpu?.IsRuntimeInstalled != false;
+        var runtimeReady = NpuRuntimeInstalled(spec) != false;
         return spec.IsDownloaded() && runtimeReady;
     }
+
+    private static bool IsNpuRuntimeEngine(ModelSpec spec) =>
+        spec.Engine is "parakeet_npu" or "whisper_npu";
+
+    private bool? NpuRuntimeInstalled(ModelSpec spec) =>
+        spec.Engine == "whisper_npu" ? _whisperNpu?.IsRuntimeInstalled : _parakeetNpu?.IsRuntimeInstalled;
 
     public bool Delete(string engine, string whisperSize, string gigaAmSize, Action<string> setModelStatus)
     {

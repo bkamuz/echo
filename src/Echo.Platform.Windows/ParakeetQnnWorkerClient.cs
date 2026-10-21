@@ -17,9 +17,12 @@ internal sealed class ParakeetQnnWorkerClient : IDisposable
     private StringBuilder? _workerStderr;
     private string _loadedDisplayName = string.Empty;
 
-    public ParakeetQnnWorkerClient(ILogger logger)
+    private readonly string _engineId;
+
+    public ParakeetQnnWorkerClient(ILogger logger, string engineId = "parakeet_npu")
     {
         _logger = logger;
+        _engineId = engineId;
     }
 
     public async Task EnsureReadyAsync(EngineOptions options, CancellationToken cancellationToken)
@@ -145,7 +148,8 @@ internal sealed class ParakeetQnnWorkerClient : IDisposable
         }
 
         _logger.LogInformation(
-            "Parakeet QNN worker started (pid={Pid}, log={WorkerLog})",
+            "QNN worker for {EngineId} started (pid={Pid}, log={WorkerLog})",
+            _engineId,
             _process.Id,
             AppPaths.ParakeetQnnWorkerLogPath);
     }
@@ -154,7 +158,7 @@ internal sealed class ParakeetQnnWorkerClient : IDisposable
     {
         await WriteRequestAsync(
             SherpaWorkerCommand.Configure,
-            SherpaWorkerProtocol.SerializeConfigure("parakeet_npu", options),
+            SherpaWorkerProtocol.SerializeConfigure(_engineId, options),
             cancellationToken).ConfigureAwait(false);
         await ReadResponseAsync(cancellationToken).ConfigureAwait(false);
     }

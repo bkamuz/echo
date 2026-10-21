@@ -43,7 +43,7 @@ try
     Console.WriteLine("Loading Parakeet NPU pipeline (ORT QNN / HTP)...");
     using var pipeline = ParakeetPipeline.LoadNpu(
         ParakeetModelDownloader.ModelDir,
-        QnnRuntimeDownloader.RuntimeDir,
+        QnnRuntimeProfile.Parakeet.Dir,
         NullLogger<ParakeetPipeline>.Instance);
 
     var (samples, sampleRate) = ReadMonoWav(wavPath);

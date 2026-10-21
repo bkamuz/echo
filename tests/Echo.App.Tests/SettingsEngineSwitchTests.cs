@@ -132,7 +132,56 @@ public sealed class SettingsEngineSwitchTests : IDisposable
         window.GetVisualDescendants().OfType<ComboBox>()
             .First(c => c.ItemsSource is IReadOnlyList<EngineOption>);
 
-    private static (SettingsViewModel Vm, Window Window) CreateSettings(string engine, string device)
+    [AvaloniaFact]
+    public void WhisperNpu_ListedOnlyForNpuDevice()
+    {
+        AppConfig.ParakeetAvailableOverride = true;
+        string[] engines = [.. AllEngines, "whisper_npu"];
+        var (vm, window) = CreateSettings("whisper_npu", ExecutionProviderResolver.NpuDevice, engines);
+        try
+        {
+            Assert.Equal("whisper_npu", vm.Engine);
+            Assert.Equal(["parakeet_npu", "whisper_npu"], vm.EngineOptions.Select(o => o.Id));
+            Assert.Equal("Whisper Turbo (NPU)", vm.EngineOptions.Single(o => o.Id == "whisper_npu").DisplayName);
+
+            var deviceCombo = window.GetVisualDescendants().OfType<ComboBox>()
+                .First(c => c.ItemsSource is IReadOnlyList<ComputeDeviceOption>);
+            deviceCombo.SelectedIndex = vm.ComputeDeviceOptions
+                .Select((o, i) => (o, i))
+                .First(x => x.o.Id == ExecutionProviderResolver.CpuDevice).i;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.DoesNotContain("whisper_npu", vm.EngineOptions.Select(o => o.Id));
+            Assert.NotEqual("whisper_npu", vm.Engine);
+        }
+        finally
+        {
+            window.Close();
+            AppConfig.ParakeetAvailableOverride = null;
+        }
+    }
+
+    [AvaloniaFact]
+    public void WhisperNpu_HiddenOnNonSnapdragon()
+    {
+        AppConfig.ParakeetAvailableOverride = true;
+        var (vm, window) = CreateSettings("parakeet_npu", ExecutionProviderResolver.NpuDevice, [.. AllEngines, "whisper_npu"], likely: false);
+        try
+        {
+            Assert.DoesNotContain("whisper_npu", vm.EngineOptions.Select(o => o.Id));
+        }
+        finally
+        {
+            window.Close();
+            AppConfig.ParakeetAvailableOverride = null;
+        }
+    }
+
+    private static (SettingsViewModel Vm, Window Window) CreateSettings(
+        string engine,
+        string device,
+        string[]? engines = null,
+        bool likely = true)
     {
         var configStore = new ConfigStore(NullLogger<ConfigStore>.Instance);
         var seed = new AppConfig { Engine = engine, Device = device };
@@ -140,14 +189,14 @@ public sealed class SettingsEngineSwitchTests : IDisposable
 
         var npu = Fake<INpuAvailability>.Create(new()
         {
-            ["IsLikelyPlatform"] = true,
+            ["IsLikelyPlatform"] = likely,
             ["IsHardwareDetected"] = true,
             ["IsAvailable"] = true,
             ["StatusDetail"] = "test",
         });
         var registry = Fake<ITranscriptionEngineRegistry>.Create(new()
         {
-            ["RegisteredEngineIds"] = (IReadOnlyCollection<string>)AllEngines,
+            ["RegisteredEngineIds"] = (IReadOnlyCollection<string>)(engines ?? AllEngines),
         });
         var audio = Fake<IAudioCapture>.Create();
         var hotkey = Fake<IHotkeyService>.Create();

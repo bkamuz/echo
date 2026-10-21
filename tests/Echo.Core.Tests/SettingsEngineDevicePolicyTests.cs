@@ -17,6 +17,9 @@ public sealed class SettingsEngineDevicePolicyTests
     [InlineData("gigaam", ExecutionProviderResolver.DirectMlDevice, true)]
     [InlineData("parakeet_npu", ExecutionProviderResolver.CpuDevice, true)]
     [InlineData("whisper", ExecutionProviderResolver.DirectMlDevice, false)]
+    [InlineData("whisper_npu", ExecutionProviderResolver.NpuDevice, true)]
+    [InlineData("whisper_npu", ExecutionProviderResolver.CpuDevice, false)]
+    [InlineData("whisper_npu", ExecutionProviderResolver.DirectMlDevice, false)]
     public void SupportsDevice_MatchesCapabilityTable(string engine, string device, bool expected)
     {
         Assert.Equal(expected, SettingsEngineDevicePolicy.SupportsDevice(engine, device));
@@ -89,5 +92,23 @@ public sealed class SettingsEngineDevicePolicyTests
         config.Normalize();
         Assert.Equal(ExecutionProviderResolver.CpuDevice, config.Device);
         Assert.Equal("gigaam", config.Engine);
+    }
+
+    [Fact]
+    public void WhisperNpu_ListedOnlyForNpu_AndForcesNpuDevice()
+    {
+        string[] withWhisperNpu = [.. UiEngineOrder, "whisper_npu"];
+        Assert.Equal(
+            ["parakeet_npu", "whisper_npu"],
+            SettingsEngineDevicePolicy.FilterEnginesForDevice(withWhisperNpu, ExecutionProviderResolver.NpuDevice));
+        Assert.DoesNotContain(
+            "whisper_npu",
+            SettingsEngineDevicePolicy.FilterEnginesForDevice(withWhisperNpu, ExecutionProviderResolver.CpuDevice));
+        Assert.Equal(
+            ExecutionProviderResolver.NpuDevice,
+            SettingsEngineDevicePolicy.NormalizeDeviceForEngine("whisper_npu", ExecutionProviderResolver.CpuDevice));
+        Assert.Equal(
+            "gigaam",
+            SettingsEngineDevicePolicy.ResolveEngineForDevice("whisper_npu", ExecutionProviderResolver.CpuDevice, withWhisperNpu));
     }
 }

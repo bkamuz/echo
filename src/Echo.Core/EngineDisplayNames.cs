@@ -39,6 +39,7 @@ public static class EngineDisplayNames
             "whisper" => $"Whisper {whisperModelSize} ({device})",
             "omnilingual" => $"Omnilingual ASR 300M ({device})",
             "parakeet_npu" => "Parakeet NPU (experimental)",
+            "whisper_npu" => "Whisper Turbo (NPU)",
             _ => engineId,
         };
 

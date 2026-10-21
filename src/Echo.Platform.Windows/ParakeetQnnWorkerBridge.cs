@@ -52,16 +52,30 @@ public static class ParakeetQnnWorkerBridge
                     case SherpaWorkerCommand.Configure:
                     {
                         var configure = SherpaWorkerProtocol.DeserializeConfigure(request.Payload);
-                        if (!string.Equals(configure.EngineId, "parakeet_npu", StringComparison.Ordinal))
+                        var isWhisper = string.Equals(
+                            configure.EngineId,
+                            ParakeetAssemblyLoader.WhisperNpuEngineId,
+                            StringComparison.Ordinal);
+                        if (!isWhisper && !string.Equals(configure.EngineId, "parakeet_npu", StringComparison.Ordinal))
                         {
-                            WriteError(pipe, $"Parakeet QNN worker only supports parakeet_npu, got '{configure.EngineId}'.");
+                            WriteError(pipe, $"QNN worker supports parakeet_npu and whisper_npu, got '{configure.EngineId}'.");
+                            break;
+                        }
+
+                        if (engine is not null && !string.Equals(engine.EngineId, configure.EngineId, StringComparison.Ordinal))
+                        {
+                            // One process can host only one onnxruntime.dll; the client spawns one worker per engine.
+                            WriteError(pipe, $"QNN worker already hosts '{engine.EngineId}'.");
                             break;
                         }
 
                         if (engine is null || !OptionsEqual(currentOptions, configure.Options))
                         {
                             engine?.Unload();
-                            engine = ParakeetAssemblyLoader.CreateInProcessEngineForWorker(loggerFactory);
+                            logger.LogInformation("QNN worker creating engine {EngineId}", configure.EngineId);
+                            engine = isWhisper
+                                ? ParakeetAssemblyLoader.CreateWhisperNpuEngineForWorker(loggerFactory)
+                                : ParakeetAssemblyLoader.CreateInProcessEngineForWorker(loggerFactory);
                             currentOptions = CloneOptions(configure.Options);
                         }
 

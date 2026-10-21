@@ -17,17 +17,27 @@ public sealed class QnnRuntimeDownloader
     private readonly ILogger<QnnRuntimeDownloader> _logger;
     private readonly SemaphoreSlim _installLock = new(1, 1);
 
+    private readonly QnnRuntimeProfile _profile;
+
     public QnnRuntimeDownloader(HttpClient http, ILogger<QnnRuntimeDownloader> logger)
+        : this(http, logger, QnnRuntimeProfile.Parakeet)
+    {
+    }
+
+    public QnnRuntimeDownloader(HttpClient http, ILogger<QnnRuntimeDownloader> logger, QnnRuntimeProfile profile)
     {
         _http = http;
         _logger = logger;
+        _profile = profile;
     }
 
-    public static string RuntimeDir => AppPaths.NpuDir;
+    public QnnRuntimeProfile Profile => _profile;
 
-    public bool IsInstalled => QnnRuntimePaths.IsInstalled;
+    public string RuntimeDir => _profile.Dir;
 
-    public IReadOnlyList<string> GetMissingFiles() => QnnRuntimePaths.GetMissingFiles();
+    public bool IsInstalled => QnnRuntimePaths.GetMissingFiles(_profile).Count == 0;
+
+    public IReadOnlyList<string> GetMissingFiles() => QnnRuntimePaths.GetMissingFiles(_profile);
 
     public async Task EnsureInstalledAsync(
         IProgress<string>? progress = null,
@@ -48,7 +58,7 @@ public sealed class QnnRuntimeDownloader
         IProgress<string>? progress,
         CancellationToken cancellationToken)
     {
-        var manifest = ManifestLoader.LoadRuntimeManifest();
+        var manifest = ManifestLoader.LoadRuntimeManifest(_profile);
         if (manifest.RequiredFiles.Count == 0)
         {
             throw new InvalidOperationException(
@@ -57,11 +67,11 @@ public sealed class QnnRuntimeDownloader
 
         Directory.CreateDirectory(RuntimeDir);
 
-        var missingFiles = QnnRuntimePaths.GetMissingFiles();
+        var missingFiles = QnnRuntimePaths.GetMissingFiles(_profile);
         if (missingFiles.Count == 0)
         {
             _logger.LogDebug("QNN runtime already present in {Dir}", RuntimeDir);
-            QnnRuntimePaths.PrepareSearchPathOnly();
+            QnnRuntimePaths.PrepareSearchPathOnly(_profile);
             return;
         }
 
@@ -74,7 +84,7 @@ public sealed class QnnRuntimeDownloader
         foreach (var package in manifest.Packages)
         {
             var neededMappings = package.Files
-                .Where(mapping => missingFiles.Contains(mapping.Target))
+                .Where(mapping => !QnnRuntimePaths.IsFilePresent(Path.Combine(RuntimeDir, mapping.Target)))
                 .ToList();
             if (neededMappings.Count == 0)
             {
@@ -119,7 +129,7 @@ public sealed class QnnRuntimeDownloader
         }
 
         WriteRuntimeReceipt(manifest);
-        QnnRuntimePaths.PrepareSearchPathOnly();
+        QnnRuntimePaths.PrepareSearchPathOnly(_profile);
 
         var stillMissing = manifest.RequiredFiles
             .Where(file => !QnnRuntimePaths.IsFilePresent(Path.Combine(RuntimeDir, file)))
@@ -173,7 +183,7 @@ public sealed class QnnRuntimeDownloader
         throw new InvalidOperationException($"Failed to download QNN wheel from {url}.", lastError);
     }
 
-    private static void WriteRuntimeReceipt(QnnRuntimeManifest manifest)
+    private void WriteRuntimeReceipt(QnnRuntimeManifest manifest)
     {
         var receipt = new
         {
@@ -199,11 +209,13 @@ internal static class QnnRuntimePaths
 
     public static bool IsInstalled => GetMissingFiles().Count == 0;
 
-    public static IReadOnlyList<string> GetMissingFiles()
+    public static IReadOnlyList<string> GetMissingFiles() => GetMissingFiles(QnnRuntimeProfile.Parakeet);
+
+    public static IReadOnlyList<string> GetMissingFiles(QnnRuntimeProfile profile)
     {
-        var manifest = ManifestLoader.LoadRuntimeManifest();
+        var manifest = ManifestLoader.LoadRuntimeManifest(profile);
         return manifest.RequiredFiles
-            .Where(file => !IsFilePresent(Path.Combine(UserDir, file)))
+            .Where(file => !IsFilePresent(Path.Combine(profile.Dir, file)))
             .ToList();
     }
 
@@ -213,14 +225,17 @@ internal static class QnnRuntimePaths
     /// <summary>
     /// PATH/ADSP setup only — does not load QnnHtp or other HTP DLLs (CPU mode must stay off NPU).
     /// </summary>
-    public static void PrepareSearchPathOnly(ILogger? logger = null)
+    public static void PrepareSearchPathOnly(ILogger? logger = null) =>
+        PrepareSearchPathOnly(QnnRuntimeProfile.Parakeet, logger);
+
+    public static void PrepareSearchPathOnly(QnnRuntimeProfile profile, ILogger? logger = null)
     {
-        if (!Directory.Exists(UserDir))
+        if (!Directory.Exists(profile.Dir))
         {
             return;
         }
 
-        QnnNativeLoader.PrepareSearchPath(UserDir, logger);
+        QnnNativeLoader.PrepareSearchPath(profile.Dir, logger);
     }
 
     [Obsolete("Use PrepareSearchPathOnly in the UI process; QNN libraries load only in the Parakeet QNN worker.")]

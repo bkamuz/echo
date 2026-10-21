@@ -14,5 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Echo.Core.Tests" />
+    <InternalsVisibleTo Include="Echo.App.Tests" />
   </ItemGroup>
 </Project>

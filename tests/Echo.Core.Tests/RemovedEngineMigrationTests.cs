@@ -42,4 +42,28 @@ public sealed class RemovedEngineMigrationTests
         c.Normalize();
         Assert.Contains(c.Engine, AppConfig.Engines);
     }
+
+    [Fact]
+    public void Normalize_WhisperNpu_KeptOnWindows_MigratedToCpuTurboElsewhere()
+    {
+        try
+        {
+            AppConfig.ParakeetAvailableOverride = true;
+            var win = new AppConfig { Engine = "whisper_npu", Device = ExecutionProviderResolver.NpuDevice };
+            win.Normalize();
+            Assert.Equal("whisper_npu", win.Engine);
+            Assert.Equal(ExecutionProviderResolver.NpuDevice, win.Device);
+
+            AppConfig.ParakeetAvailableOverride = false;
+            var linux = new AppConfig { Engine = "whisper_npu", Device = ExecutionProviderResolver.NpuDevice };
+            linux.Normalize();
+            Assert.Equal("whisper", linux.Engine);
+            Assert.Equal("large-v3-turbo", linux.WhisperModelSize);
+            Assert.Equal(ExecutionProviderResolver.CpuDevice, linux.Device);
+        }
+        finally
+        {
+            AppConfig.ParakeetAvailableOverride = null;
+        }
+    }
 }

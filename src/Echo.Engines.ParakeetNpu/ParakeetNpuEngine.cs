@@ -72,7 +72,7 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
                 _logger.LogInformation(
                     "Parakeet NPU requires QNN runtime ({MissingCount} file(s) missing); installing to {Dir}",
                     missingRuntime.Count,
-                    QnnRuntimeDownloader.RuntimeDir);
+                    _runtimeDownloader.RuntimeDir);
             }
 
             await _runtimeDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
@@ -81,7 +81,7 @@ public sealed class ParakeetNpuEngine : ITranscriptionEngine, IDisposable
             await _modelDownloader.EnsureInstalledAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
-            var runtimeDir = QnnRuntimeDownloader.RuntimeDir;
+            var runtimeDir = _runtimeDownloader.RuntimeDir;
             var htpProfile = HtpHardwareProfile.Resolve();
             LogX2ContextBinaryGuidanceIfNeeded(htpProfile);
 

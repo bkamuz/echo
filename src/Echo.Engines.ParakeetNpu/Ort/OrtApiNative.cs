@@ -161,7 +161,7 @@ internal enum OrtTensorElementType
     Float = 1,
     Int32 = 6,
     Int64 = 7,
-    Float16 = 11,
+    Float16 = 10,
     Uint8 = 2,
 }
 

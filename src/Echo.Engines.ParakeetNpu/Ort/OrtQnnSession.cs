@@ -7,6 +7,7 @@ internal enum OrtTensorDataKind
 {
     Float32,
     Int32,
+    Float16,
 }
 
 internal sealed class OrtTensorSpec
@@ -76,6 +77,18 @@ internal readonly struct OrtTensorInput
         IntData = data;
     }
 
+    public OrtTensorInput(string name, long[] dimensions, Half[] data)
+    {
+        Name = name;
+        Dimensions = dimensions;
+        Kind = OrtTensorDataKind.Float16;
+        FloatData = null;
+        IntData = null;
+        HalfData = data;
+    }
+
+    public Half[]? HalfData { get; }
+
     public string Name { get; }
     public long[] Dimensions { get; }
     public OrtTensorDataKind Kind { get; }
@@ -90,6 +103,17 @@ internal sealed class OrtTensorOutput
     public required OrtTensorDataKind ElementType { get; init; }
     public required float[] FloatData { get; init; }
     public required int[] IntData { get; init; }
+    public Half[] HalfData { get; init; } = [];
+
+    public Half[] IntoHalf()
+    {
+        if (ElementType != OrtTensorDataKind.Float16)
+        {
+            throw new InvalidOperationException($"Output {Name} is not float16.");
+        }
+
+        return HalfData;
+    }
 
     public (long[] Dimensions, float[] Values) IntoFloat()
     {
@@ -329,6 +353,11 @@ internal sealed unsafe class OrtQnnSession : IDisposable
         ValidateInputs(_contract.Inputs, inputs);
         ReleasePinnedInputs();
 
+        // Input names are bound in contract order; values must follow the same order.
+        inputs = _contract.Inputs
+            .Select(spec => inputs.First(i => string.Equals(i.Name, spec.Name, StringComparison.Ordinal)))
+            .ToList();
+
         var inputValues = new nint[inputs.Count];
         try
         {
@@ -443,6 +472,19 @@ internal sealed unsafe class OrtQnnSession : IDisposable
                 byteSize = (nuint)(elementCount * sizeof(int));
                 elementType = OrtTensorElementType.Int32;
                 break;
+            case OrtTensorDataKind.Float16:
+                if (input.HalfData is null || input.HalfData.Length != elementCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Input {input.Name} expects {elementCount} float16 elements.");
+                }
+
+                var halfHandle = GCHandle.Alloc(input.HalfData, GCHandleType.Pinned);
+                _pinnedInputs.Add(halfHandle);
+                dataPtr = halfHandle.AddrOfPinnedObject();
+                byteSize = (nuint)(elementCount * sizeof(ushort));
+                elementType = OrtTensorElementType.Float16;
+                break;
             default:
                 throw new InvalidOperationException($"Unsupported input type for {input.Name}.");
         }
@@ -529,6 +571,17 @@ internal sealed unsafe class OrtQnnSession : IDisposable
                     IntData = elements == 0
                         ? []
                         : new ReadOnlySpan<int>((void*)dataPtr, elements).ToArray(),
+                },
+                OrtTensorElementType.Float16 => new OrtTensorOutput
+                {
+                    Name = spec.Name,
+                    Dimensions = dimensions,
+                    ElementType = OrtTensorDataKind.Float16,
+                    FloatData = [],
+                    IntData = [],
+                    HalfData = elements == 0
+                        ? []
+                        : new ReadOnlySpan<Half>((void*)dataPtr, elements).ToArray(),
                 },
                 _ => throw new InvalidOperationException($"Unsupported output element type {elementType}."),
             };
@@ -790,6 +843,7 @@ internal sealed unsafe class OrtQnnSession : IDisposable
         {
             OrtTensorElementType.Float => OrtTensorDataKind.Float32,
             OrtTensorElementType.Int32 => OrtTensorDataKind.Int32,
+            OrtTensorElementType.Float16 => OrtTensorDataKind.Float16,
             _ => throw new InvalidOperationException($"Unsupported tensor element type {elementType}."),
         };
 
@@ -798,6 +852,7 @@ internal sealed unsafe class OrtQnnSession : IDisposable
         {
             OrtTensorDataKind.Float32 => actual == OrtTensorElementType.Float,
             OrtTensorDataKind.Int32 => actual == OrtTensorElementType.Int32,
+            OrtTensorDataKind.Float16 => actual == OrtTensorElementType.Float16,
             _ => false,
         };
 }
