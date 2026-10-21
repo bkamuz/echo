@@ -69,8 +69,8 @@ public partial class DictionaryViewModel : ObservableObject
 
     public bool HasSuggestions => Suggestions.Count > 0;
 
-    /// <summary>Correction learning reads other apps via UI Automation — Windows only.</summary>
-    public bool IsLearningSupported { get; init; } = OperatingSystem.IsWindows();
+    /// <summary>Correction learning: UI Automation (Windows), AT-SPI2 (Linux), Accessibility API (macOS).</summary>
+    public bool IsLearningSupported { get; init; } = OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS();
 
     [ObservableProperty]
     private bool _learnEnabled;

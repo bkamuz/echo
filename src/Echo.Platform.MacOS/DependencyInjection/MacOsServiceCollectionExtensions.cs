@@ -16,6 +16,7 @@ public static class MacOsServiceCollectionExtensions
         services.AddSingleton<INpuAvailability, UnsupportedNpuAvailability>();
         services.AddSingleton<IAutoStartService, MacOsAutoStartService>();
         services.AddSingleton<IUpdateApplier, UnsupportedUpdateApplier>();
+        services.AddSingleton<ICorrectionObserver, MacOsAxCorrectionObserver>();
         return services;
     }
 }

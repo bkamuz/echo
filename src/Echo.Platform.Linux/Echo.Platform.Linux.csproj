@@ -9,8 +9,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Echo.Abstractions\Echo.Abstractions.csproj" />
+    <ProjectReference Include="..\Echo.Core\Echo.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Scripts\atspi-insert.py" CopyToOutputDirectory="PreserveNewest" Link="Scripts\atspi-insert.py" />
+    <Content Include="Scripts\atspi-read.py" CopyToOutputDirectory="PreserveNewest" Link="Scripts\atspi-read.py" />
   </ItemGroup>
 </Project>

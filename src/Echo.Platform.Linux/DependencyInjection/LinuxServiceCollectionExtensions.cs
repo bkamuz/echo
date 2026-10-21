@@ -16,6 +16,7 @@ public static class LinuxServiceCollectionExtensions
         services.AddSingleton<INpuAvailability, UnsupportedNpuAvailability>();
         services.AddSingleton<IAutoStartService, LinuxAutoStartService>();
         services.AddSingleton<IUpdateApplier, UnsupportedUpdateApplier>();
+        services.AddSingleton<ICorrectionObserver, LinuxAtSpiCorrectionObserver>();
         return services;
     }
 }

@@ -2,7 +2,7 @@ namespace echo.Abstractions.Platform;
 
 /// <summary>
 /// Watches the focused control after a successful paste and reports user edits of the
-/// inserted span. Implemented on Windows via UI Automation; absent elsewhere.
+/// inserted span. Windows: UI Automation; Linux: AT-SPI2; macOS: AXUIElement.
 /// </summary>
 public interface ICorrectionObserver
 {
