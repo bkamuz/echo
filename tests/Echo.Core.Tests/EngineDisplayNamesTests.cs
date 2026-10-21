@@ -24,8 +24,6 @@ public class EngineDisplayNamesTests
     [InlineData("gigaam", "rnnt", "directml", "GigaAM v3 rnnt (DIRECTML)")]
     [InlineData("whisper", "base", "cpu", "Whisper base (CPU)")]
     [InlineData("omnilingual", "e2e", "cpu", "Omnilingual ASR 300M (CPU)")]
-    [InlineData("nemotron", "e2e", "cpu", "Nemotron 3.5 Streaming 0.6B (CPU)")]
-    [InlineData("qwen3_asr", "e2e", "cpu", "Qwen3-ASR 0.6B (CPU)")]
     [InlineData("parakeet_npu", "e2e", "npu", "Parakeet NPU (experimental)")]
     public void ForConfig_FormatsWithoutEngineResolution(
         string engine,

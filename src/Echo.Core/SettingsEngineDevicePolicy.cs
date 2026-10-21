@@ -29,17 +29,7 @@ public static class SettingsEngineDevicePolicy
         {
             ExecutionProviderResolver.CpuDevice,
             ExecutionProviderResolver.DirectMlDevice,
-        },
-        // Stage 1: CPU only (QNN export exists upstream; NPU wiring is a later stage).
-        ["nemotron"] = new(StringComparer.Ordinal)
-        {
-            ExecutionProviderResolver.CpuDevice,
-        },
-        ["qwen3_asr"] = new(StringComparer.Ordinal)
-        {
-            ExecutionProviderResolver.CpuDevice,
-        },
-        ["parakeet_npu"] = new(StringComparer.Ordinal)
+        },        ["parakeet_npu"] = new(StringComparer.Ordinal)
         {
             ExecutionProviderResolver.CpuDevice,
             ExecutionProviderResolver.NpuDevice,

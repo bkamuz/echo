@@ -60,8 +60,6 @@
   <sys:String x:Key="Loc.Engine.GigaAm">GigaAM (русский)</sys:String>
   <sys:String x:Key="Loc.Engine.Whisper">Whisper (мультиязычный)</sys:String>
   <sys:String x:Key="Loc.Engine.Omnilingual">Omnilingual (1600 языков)</sys:String>
-  <sys:String x:Key="Loc.Engine.Nemotron">Nemotron 3.5 Streaming (40 языков)</sys:String>
-  <sys:String x:Key="Loc.Engine.Qwen3Asr">Qwen3-ASR 0.6B (30 языков)</sys:String>
   <sys:String x:Key="Loc.Engine.ParakeetNpu">Parakeet NPU (эксперимент)</sys:String>
   <sys:String x:Key="Loc.Settings.SherpaArm64Unavailable">GigaAM, Whisper и Omnilingual (Sherpa) пока недоступны на Windows ARM64. Для локального распознавания на Snapdragon используйте Parakeet NPU.</sys:String>
   <sys:String x:Key="Loc.Device.Cpu">Процессор</sys:String>

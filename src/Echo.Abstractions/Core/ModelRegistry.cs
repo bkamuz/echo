@@ -122,66 +122,6 @@ public static class ModelRegistry
         LocalDir: AppPaths.OmnilingualDir,
         AllowPatterns: OmnilingualAllowPatterns);
 
-    public const string NemotronRepo = "csukuangfj2/sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-560ms-int8-2026-06-11";
-
-    public static IReadOnlyList<string> NemotronRequiredFiles { get; } =
-    [
-        "encoder.int8.onnx",
-        "decoder.int8.onnx",
-        "joiner.int8.onnx",
-        "tokens.txt",
-    ];
-
-    public static ModelSpec NemotronSpec() => new(
-        Id: "nemotron-3.5-streaming-0.6b",
-        Title: "Nemotron 3.5 ASR Streaming 0.6B",
-        Engine: "nemotron",
-        RepoId: NemotronRepo,
-        LocalDir: AppPaths.NemotronDir,
-        AllowPatterns: NemotronRequiredFiles);
-
-    public static bool IsNemotronDownloaded(string dir) =>
-        NemotronRequiredFiles.All(f => File.Exists(Path.Combine(dir, f)));
-
-    /// <summary>Maps the STT language setting to a Nemotron per-stream language prompt.</summary>
-    public static string NemotronLanguageFor(string? language) =>
-        string.IsNullOrWhiteSpace(language) || language is "auto" or "system"
-            ? "auto"
-            : language.Trim().ToLowerInvariant();
-
-    public const string Qwen3AsrRepo = "csukuangfj2/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25";
-
-    public static IReadOnlyList<string> Qwen3AsrRequiredFiles { get; } =
-    [
-        "conv_frontend.onnx",
-        "encoder.int8.onnx",
-        "decoder.int8.onnx",
-        "tokenizer/merges.txt",
-        "tokenizer/tokenizer_config.json",
-        "tokenizer/vocab.json",
-    ];
-
-    public static ModelSpec Qwen3AsrSpec() => new(
-        Id: "qwen3-asr-0.6b",
-        Title: "Qwen3-ASR 0.6B",
-        Engine: "qwen3_asr",
-        RepoId: Qwen3AsrRepo,
-        LocalDir: AppPaths.Qwen3AsrDir,
-        AllowPatterns: Qwen3AsrRequiredFiles);
-
-    public static bool IsQwen3AsrDownloaded(string dir) =>
-        Qwen3AsrRequiredFiles.All(f => File.Exists(Path.Combine(dir, f.Replace('/', Path.DirectorySeparatorChar))));
-
-    /// <summary>Qwen3-ASR prompt language name; empty = automatic language identification.</summary>
-    public static string Qwen3AsrLanguageFor(string? language) =>
-        (language ?? string.Empty).Trim().ToLowerInvariant() switch
-        {
-            "ru" => "Russian",
-            "en" => "English",
-            "uk" => "Ukrainian",
-            _ => string.Empty,
-        };
-
     public static IReadOnlyList<string> GigaAmSizes { get; } =
         ["e2e", "e2e-ctc", "rnnt", "multilingual", "multilingual-large"];
 
@@ -359,8 +299,6 @@ public static class ModelRegistry
             "gigaam" => GigaAmSpecFor(gigaAmModelSize),
             "whisper" => WhisperSpec(whisperModelSize),
             "omnilingual" => OmnilingualSpec(),
-            "nemotron" => NemotronSpec(),
-            "qwen3_asr" => Qwen3AsrSpec(),
             "parakeet_npu" => ParakeetNpuSpec(),
             _ => null,
         };
