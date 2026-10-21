@@ -268,5 +268,15 @@
   <sys:String x:Key="Loc.Dict.NeverUsed">не применялась</sys:String>
   <sys:String x:Key="Loc.Dict.Usage">×{0} · {1}</sys:String>
   <sys:String x:Key="Loc.History.AddToDictionary">В словарь</sys:String>
+  <sys:String x:Key="Loc.Dict.Suggestions">Предложения</sys:String>
+  <sys:String x:Key="Loc.Dict.Suggestions.Hint">Echo заметил, что вы исправили вставленный текст. Примите, чтобы добавить замену в словарь, или отклоните — больше не предложит.</sys:String>
+  <sys:String x:Key="Loc.Dict.Accept">Принять</sys:String>
+  <sys:String x:Key="Loc.Dict.Reject">Отклонить</sys:String>
+  <sys:String x:Key="Loc.Dict.Seen">×{0}</sys:String>
+  <sys:String x:Key="Loc.Dict.Learn">Учиться на моих исправлениях</sys:String>
+  <sys:String x:Key="Loc.Dict.Learn.Tooltip">После вставки Echo некоторое время следит только за вставленным фрагментом и предлагает замены, если вы его исправили. Другой текст не сохраняется.</sys:String>
+  <sys:String x:Key="Loc.Dict.LearnSeconds">Следить, сек:</sys:String>
+  <sys:String x:Key="Loc.Dict.ExcludedApps">Исключить программы (через запятую)</sys:String>
+  <sys:String x:Key="Loc.Dict.ExcludedApps.Tooltip">Имена процессов, например: telegram, keepass</sys:String>
 
 </ResourceDictionary>

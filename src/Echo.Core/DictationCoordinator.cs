@@ -10,6 +10,7 @@ public sealed class DictationCoordinator : IDisposable
     private readonly TranscriptionService _transcription;
     private readonly HistoryStore _history;
     private readonly DictionaryStore? _dictionary;
+    private readonly ICorrectionObserver? _correctionObserver;
     private readonly IAudioCapture _audio;
     private readonly IHotkeyService _hotkey;
     private readonly ITextInjector _injector;
@@ -41,8 +42,10 @@ public sealed class DictationCoordinator : IDisposable
         IDictationResultNotifier dictationToast,
         ILogger<DictationCoordinator> logger,
         IUserStatusNotifier? statusNotifier = null,
-        DictionaryStore? dictionary = null)
+        DictionaryStore? dictionary = null,
+        ICorrectionObserver? correctionObserver = null)
     {
+        _correctionObserver = correctionObserver;
         _dictionary = dictionary;
         _configStore = configStore;
         _transcription = transcription;
@@ -593,6 +596,14 @@ public sealed class DictationCoordinator : IDisposable
                         injectMs,
                         text.Length);
                     FinishDictation(status: null);
+                    try
+                    {
+                        _correctionObserver?.Observe(text);
+                    }
+                    catch (Exception observeEx)
+                    {
+                        _logger.LogDebug(observeEx, "Correction observer failed to start");
+                    }
                 }
             }
             catch (Exception injectEx)

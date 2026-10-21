@@ -32,6 +32,8 @@ public partial class DictionaryItemView : ObservableObject
     partial void OnEnabledChanged(bool value) => _owner.SetEntryEnabled(Id, value);
 }
 
+public sealed record DictionarySuggestionView(string Id, string From, string To, string SeenLabel);
+
 public partial class DictionaryViewModel : ObservableObject
 {
     private readonly DictionaryStore _store;
@@ -44,10 +46,107 @@ public partial class DictionaryViewModel : ObservableObject
         _store = store;
         _loc = loc;
         _loc.LanguageChanged += (_, _) => Reload();
+        _store.Changed += (_, _) =>
+        {
+            if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            {
+                if (!_saving)
+                {
+                    Reload();
+                }
+            }
+            else
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(Reload);
+            }
+        };
         Reload();
     }
 
     public ObservableCollection<DictionaryItemView> Entries { get; } = [];
+
+    public ObservableCollection<DictionarySuggestionView> Suggestions { get; } = [];
+
+    public bool HasSuggestions => Suggestions.Count > 0;
+
+    /// <summary>Correction learning reads other apps via UI Automation — Windows only.</summary>
+    public bool IsLearningSupported { get; init; } = OperatingSystem.IsWindows();
+
+    [ObservableProperty]
+    private bool _learnEnabled;
+
+    [ObservableProperty]
+    private decimal? _learnSeconds;
+
+    [ObservableProperty]
+    private string _excludedAppsText = string.Empty;
+
+    public int LearnMinSeconds => LearningSettings.MinSeconds;
+    public int LearnMaxSeconds => LearningSettings.MaxSeconds;
+
+    private bool _saving;
+
+    [RelayCommand]
+    private void AcceptSuggestion(DictionarySuggestionView? s)
+    {
+        if (s is null)
+        {
+            return;
+        }
+
+        WithSave(() => _store.AcceptSuggestion(s.Id));
+        StatusMessage = _loc.Format("Loc.Dict.Saved", s.From, s.To);
+        Reload();
+    }
+
+    [RelayCommand]
+    private void RejectSuggestion(DictionarySuggestionView? s)
+    {
+        if (s is null)
+        {
+            return;
+        }
+
+        WithSave(() => _store.RejectSuggestion(s.Id));
+        Reload();
+    }
+
+    partial void OnLearnEnabledChanged(bool value) => SaveLearning();
+    partial void OnLearnSecondsChanged(decimal? value) => SaveLearning();
+    partial void OnExcludedAppsTextChanged(string value) => SaveLearning();
+
+    private void SaveLearning()
+    {
+        if (_loading)
+        {
+            return;
+        }
+
+        var enabled = LearnEnabled;
+        var seconds = (int)(LearnSeconds ?? 45);
+        var apps = ExcludedAppsText
+            .Split([',', ';', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+        WithSave(() => _store.Update(d =>
+        {
+            d.Learning.Enabled = enabled;
+            d.Learning.WatchSeconds = Math.Clamp(seconds, LearningSettings.MinSeconds, LearningSettings.MaxSeconds);
+            d.Learning.ExcludedApps = apps;
+        }));
+    }
+
+    private void WithSave(Action a)
+    {
+        _saving = true;
+        try
+        {
+            a();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
 
     [ObservableProperty]
     private bool _isEnabled;
@@ -91,7 +190,17 @@ public partial class DictionaryViewModel : ObservableObject
             Entries.Add(new DictionaryItemView(this, e, FormatUsage(e)));
         }
 
+        Suggestions.Clear();
+        foreach (var s in doc.Suggestions.OrderByDescending(s => s.Seen).ThenByDescending(s => s.LastSeen))
+        {
+            Suggestions.Add(new DictionarySuggestionView(s.Id, s.From, s.To, _loc.Format("Loc.Dict.Seen", s.Seen)));
+        }
+
+        LearnEnabled = doc.Learning.Enabled;
+        LearnSeconds = doc.Learning.ClampedSeconds;
+        ExcludedAppsText = string.Join(", ", doc.Learning.ExcludedApps);
         _loading = false;
+        OnPropertyChanged(nameof(HasSuggestions));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(Subtitle));
         OnPropertyChanged(nameof(SaveLabel));
@@ -120,7 +229,7 @@ public partial class DictionaryViewModel : ObservableObject
     {
         if (!_loading)
         {
-            _store.Update(d => d.Enabled = value);
+            WithSave(() => _store.Update(d => d.Enabled = value));
         }
     }
 
@@ -131,14 +240,14 @@ public partial class DictionaryViewModel : ObservableObject
             return;
         }
 
-        _store.Update(d =>
+        WithSave(() => _store.Update(d =>
         {
             var e = d.Entries.FirstOrDefault(x => x.Id == id);
             if (e is not null)
             {
                 e.Enabled = enabled;
             }
-        });
+        }));
     }
 
     private bool CanSave() => !string.IsNullOrWhiteSpace(FromText) && !string.IsNullOrWhiteSpace(ToText);

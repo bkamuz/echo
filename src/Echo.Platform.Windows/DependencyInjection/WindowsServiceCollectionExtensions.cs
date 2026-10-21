@@ -16,6 +16,7 @@ public static class WindowsServiceCollectionExtensions
         services.AddSingleton<ITextInjector, WindowsTextInjector>();
         services.AddSingleton<IFocusTarget, WindowsFocusTarget>();
         services.AddSingleton<ICursorPosition, WindowsCursorPosition>();
+        services.AddSingleton<ICorrectionObserver, UiaCorrectionObserver>();
         services.AddSingleton<IDirectMlAvailability, WindowsDirectMlAvailability>();
         services.AddSingleton<INpuAvailability, WindowsNpuAvailability>();
         if (ParakeetAssemblyLoader.IsSupported)
