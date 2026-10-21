@@ -41,8 +41,6 @@ public static class AppPaths
     public static string GigaAmMultilingualDir => Path.Combine(ModelsDir, "gigaam-multilingual");
     public static string GigaAmMultilingualLargeDir => Path.Combine(ModelsDir, "gigaam-multilingual-large");
     public static string OmnilingualDir => Path.Combine(ModelsDir, "omnilingual-300m");
-    public static string Qwen3AsrDir => Path.Combine(ModelsDir, "qwen3-asr-0.6b");
-    public static string NemotronDir => Path.Combine(ModelsDir, "nemotron-3.5-streaming-0.6b");
     public static string DirectMlDir => Path.Combine(BaseDir, "directml");
     public static string NpuDir => Path.Combine(BaseDir, "qnn");
     public static string ParakeetNpuDir => Path.Combine(ModelsDir, "parakeet-npu");

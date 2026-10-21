@@ -11,7 +11,7 @@ public sealed class AppConfig
     public static IReadOnlyList<string> GigaAmSizes => ModelRegistry.GigaAmSizes;
 
     public static IReadOnlyList<string> Engines { get; } =
-        ["gigaam", "whisper", "omnilingual", "nemotron", "qwen3_asr", "parakeet_npu"];
+        ["gigaam", "whisper", "omnilingual", "parakeet_npu"];
     public static IReadOnlyList<string> Devices => ExecutionProviderResolver.AllDeviceIds;
 
     [JsonPropertyName("hotkey")]
@@ -109,8 +109,22 @@ public sealed class AppConfig
         };
     }
 
+    /// <summary>Engines removed in 1.9.32; saved configs pointing at them are migrated.</summary>
+    public static IReadOnlyList<string> RemovedEngines { get; } = ["nemotron", "qwen3_asr"];
+
+    /// <summary>Parakeet ships only in Windows builds; elsewhere fall back to GigaAM.</summary>
+    internal static bool? ParakeetAvailableOverride { get; set; }
+
+    private static bool ParakeetAvailable => ParakeetAvailableOverride ?? OperatingSystem.IsWindows();
+
     public void Normalize()
     {
+        if (RemovedEngines.Contains(Engine))
+        {
+            Engine = ParakeetAvailable ? "parakeet_npu" : "gigaam";
+            Device = ExecutionProviderResolver.CpuDevice;
+        }
+
         if (!Engines.Contains(Engine))
         {
             Engine = "gigaam";
