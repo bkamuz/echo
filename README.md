@@ -53,7 +53,7 @@ Parakeet and Whisper Turbo NPU are available on Windows ARM64 only.
 
 ![Dictionary](docs/screenshots/dictionary.png)
 
-With **Learn from my corrections** on, Echo watches the field for a while after pasting (45 s by default). Fixes you make become disabled suggestions — enable the ones you want. Apps can be excluded.
+With **Learn from my corrections** on (Windows), Echo watches the field for a while after pasting (45 s by default). Fixes you make become disabled suggestions — enable the ones you want. Apps can be excluded.
 
 **Voice cleanup** (Settings → Audio) removes background noise before recognition:
 
