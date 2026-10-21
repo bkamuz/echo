@@ -226,4 +226,31 @@
   <sys:String x:Key="Loc.Linux.Dialog.Packages.Subtitle.GnomeDetail">On GNOME Wayland Echo uses ydotool for auto-paste. Install ydotool, wl-clipboard, and arecord.</sys:String>
   <sys:String x:Key="Loc.Linux.Dialog.Packages.Subtitle.Detail">Echo will pick the paste method automatically (AT-SPI, xdotool, or wtype). Install any missing components.</sys:String>
 
+  <!-- Dictionary -->
+  <sys:String x:Key="Loc.Nav.Dictionary">Dictionary</sys:String>
+  <sys:String x:Key="Loc.Shell.Dictionary.Title">Dictionary</sys:String>
+  <sys:String x:Key="Loc.Dict.Subtitle">Replacements after recognition · entries: {0}</sys:String>
+  <sys:String x:Key="Loc.Dict.Enabled">Apply dictionary</sys:String>
+  <sys:String x:Key="Loc.Dict.Enabled.Tooltip">Replace phrases in recognized text before insertion (all engines)</sys:String>
+  <sys:String x:Key="Loc.Dict.Import">Import</sys:String>
+  <sys:String x:Key="Loc.Dict.Export">Export</sys:String>
+  <sys:String x:Key="Loc.Dict.FromHistory">Text from history — select the wrong word or phrase</sys:String>
+  <sys:String x:Key="Loc.Dict.UseSelection">Use selection</sys:String>
+  <sys:String x:Key="Loc.Dict.From">As recognized</sys:String>
+  <sys:String x:Key="Loc.Dict.To">Should be</sys:String>
+  <sys:String x:Key="Loc.Dict.Add">Add</sys:String>
+  <sys:String x:Key="Loc.Dict.Save">Save</sys:String>
+  <sys:String x:Key="Loc.Dict.Cancel">Cancel</sys:String>
+  <sys:String x:Key="Loc.Dict.Saved">Saved: “{0}” → “{1}”</sys:String>
+  <sys:String x:Key="Loc.Dict.Empty">Dictionary is empty. Add an “as recognized → should be” pair or press “Add to dictionary” in History.</sys:String>
+  <sys:String x:Key="Loc.Dict.EntryEnabled">Enable or disable this replacement</sys:String>
+  <sys:String x:Key="Loc.Dict.Edit">Edit</sys:String>
+  <sys:String x:Key="Loc.Dict.Delete">Delete</sys:String>
+  <sys:String x:Key="Loc.Dict.Imported">Imported entries: {0}</sys:String>
+  <sys:String x:Key="Loc.Dict.ImportFailed">Could not read the dictionary file</sys:String>
+  <sys:String x:Key="Loc.Dict.Exported">Dictionary saved: {0}</sys:String>
+  <sys:String x:Key="Loc.Dict.NeverUsed">not used yet</sys:String>
+  <sys:String x:Key="Loc.Dict.Usage">×{0} · {1}</sys:String>
+  <sys:String x:Key="Loc.History.AddToDictionary">Add to dictionary</sys:String>
+
 </ResourceDictionary>

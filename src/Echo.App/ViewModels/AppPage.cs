@@ -5,4 +5,5 @@ public enum AppPage
     Home,
     Settings,
     History,
+    Dictionary,
 }

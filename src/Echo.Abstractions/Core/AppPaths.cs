@@ -32,6 +32,7 @@ public static class AppPaths
     public static string ModelsDir => Path.Combine(BaseDir, "models");
     public static string ConfigPath => Path.Combine(BaseDir, "config.json");
     public static string HistoryPath => Path.Combine(BaseDir, "history.jsonl");
+    public static string DictionaryPath => Path.Combine(BaseDir, "dictionary.json");
     public static string LogPath => Path.Combine(BaseDir, "echo.log");
     public static string SherpaWorkerLogPath => Path.Combine(BaseDir, "echo-sherpa-worker.log");
     public static string ParakeetQnnWorkerLogPath => Path.Combine(BaseDir, "echo-parakeet-qnn-worker.log");

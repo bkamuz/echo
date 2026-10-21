@@ -59,6 +59,18 @@ public partial class HistoryViewModel : ObservableObject
 
     public bool HasEntries => TotalCount > 0;
 
+    /// <summary>Raised with the history text the user wants to turn into a dictionary entry.</summary>
+    public event EventHandler<string>? AddToDictionaryRequested;
+
+    [RelayCommand]
+    private void AddToDictionary(string? text)
+    {
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            AddToDictionaryRequested?.Invoke(this, text);
+        }
+    }
+
     [RelayCommand]
     private async Task CopyTextAsync(string? text)
     {
