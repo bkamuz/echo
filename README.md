@@ -2,100 +2,77 @@
 
 **Local voice dictation for your desktop.** Hold a hotkey, speak, and Echo turns your speech into text — right where your cursor is.
 
-Echo runs entirely on your machine. Speech is captured from your microphone, recognized locally, and pasted into the active window. No cloud upload, no subscription, no account required.
+Fully offline: audio is recognized on your machine and pasted into the active window. No cloud, no account, no subscription. [MIT License](LICENSE).
 
-Echo is **open source** under the [MIT License](LICENSE).
+![Echo main window](docs/screenshots/main-window.png)
 
-## What it does
+## Features
 
-Echo is a system-wide dictation assistant. It works in any app where you can type: email, chat, documents, code editors, browsers, and more.
-
-1. **Press and hold** your chosen hotkey (default: Ctrl+Win on Windows).
-2. **Speak** while the key is held. Echo shows a tray indicator while listening.
-3. **Release** the key. Echo transcribes the audio and inserts the text at your cursor.
-
-You can review past dictations in the built-in history, switch recognition engines and models, and tune how text is inserted.
-
-## Why Echo
-
-- **Private by design** — recognition happens on your computer. Audio and transcripts stay local.
-- **Always available** — Echo lives in the system tray and responds to a global hotkey from any app.
-- **Flexible recognition** — choose between engines tuned for different languages and use cases.
-- **Optional GPU acceleration** — on Windows, DirectML can speed up recognition when a compatible GPU is available.
-
-## Recognition engines
-
-Echo supports several offline speech models. On first use, the app downloads the model you select to your user data folder.
-
-| Engine | Best for |
-|--------|----------|
-| **GigaAM** | Russian speech (default) |
-| **Omnilingual ASR** | Broad language coverage in a compact model |
-| **Whisper** | Multilingual recognition via sherpa-onnx (tiny … large-v3-turbo, downloaded on demand) |
-
-Language, model size, microphone, and input method can all be changed in Settings.
-
-## Supported platforms
-
-| Platform | Status |
-|----------|--------|
-| **Windows 10/11 (x64)** | Fully supported — hotkey, recording, and automatic text insertion |
-| **Linux (x64)** | Supported on common desktop setups (X11, Wayland). Ubuntu with GNOME on Wayland is tested end-to-end. Some environments may need extra tools for text insertion; Echo can guide you through setup. |
-| **macOS (Apple Silicon)** | In development — the interface builds, but dictation is not yet functional |
-| **Flatpak (Linux)** | Available; sandbox limits may apply to some system integrations |
-
-If you try Echo on a setup not listed here, [open an issue](https://github.com/bkamuz/echo/issues) with your distro, desktop environment, and what worked or did not.
+- **Works in any app** — global push-to-talk hotkey (default `Ctrl+Win`, configurable, e.g. `Win+Alt`); text is pasted at the cursor.
+- **Several offline engines** — GigaAM (Russian), Whisper (multilingual), Omnilingual (1600 languages), Parakeet.
+- **NPU acceleration on Snapdragon** (Windows on ARM) — Parakeet and Whisper Turbo run on the Qualcomm NPU. [Details](docs/npu-qnn-win-arm64.md)
+- **GPU acceleration** via DirectML on Windows for GigaAM and Omnilingual. [Details](docs/gpu-directml.md)
+- **Voice cleanup** — built-in noise suppression (FastEnhancer) before recognition.
+- **Dictionary** — "as recognized → should be" replacements, plus **learning from your corrections**: edit the pasted text and Echo suggests a dictionary entry. [Details](docs/dictionary.md)
+- **History**, release-tail trimming, in-app updates.
 
 ## Download
 
-Pre-built packages are published on **[GitHub Releases](https://github.com/bkamuz/echo/releases)**.
+Get the latest build from **[Releases](https://github.com/bkamuz/echo/releases/latest)**.
 
-| Platform | Format | How to run |
-|----------|--------|------------|
-| Windows | `.zip` (portable) | Unzip and run `Echo.App.exe` |
-| Windows | `.exe` (installer) | Run the setup wizard |
-| Linux | `.tar.gz` | Extract, then `./Echo.App` |
-| Linux | `.deb` | `sudo apt install ./Echo-*-linux-x64.deb` |
-| Linux | `.AppImage` | `chmod +x Echo-*.AppImage && ./Echo-*.AppImage` |
-| Linux | `.flatpak` | `flatpak install --user ./Echo-*.flatpak` |
-| macOS (Apple Silicon) | `.tar.gz` | Extract, then `./Echo.App` |
+| Platform | File | Run |
+|---|---|---|
+| Windows x64 | `Echo-*-win-x64-portable.zip` | Unzip, run `Echo.App.exe` |
+| Windows ARM64 (Snapdragon) | `Echo-*-win-arm64-portable.zip` | Unzip, run `Echo.App.exe` (NPU runtime is downloaded on first use) |
+| Linux x64 | `.deb` / `.AppImage` / `.tar.gz` | `sudo apt install ./Echo-*.deb` or `chmod +x Echo-*.AppImage && ./Echo-*.AppImage` |
+| macOS (Apple Silicon) | `Echo-*-osx-arm64-portable.tar.gz` | In development — dictation not functional yet |
 
-Echo checks for updates from GitHub Releases and can apply them from within the app.
+Linux: tested on Ubuntu GNOME (Wayland); X11 works too. Some setups need extra tools for text insertion — Echo will tell you which.
 
-## Getting started
+## Quick start
 
-1. Download and run Echo for your platform.
-2. Open **Settings** and confirm your hotkey, microphone, and recognition engine.
-3. Download a speech model when prompted (one-time; stored in your profile folder).
-4. Focus any text field, **hold the hotkey**, speak, and **release** to insert the result.
+1. Run Echo, open **Settings**, pick hotkey, microphone, device and engine. The model downloads once.
+2. Click into any text field, **hold the hotkey**, speak, **release** — the text is pasted.
+3. Echo lives in the system tray; right-click it for settings and history.
 
-Echo starts minimized to the system tray. Right-click the tray icon for quick access to settings and history.
+## Engines and devices
 
-### Where data is stored
+![Engine picker](docs/screenshots/engine-picker.png)
 
-| OS | Location |
-|----|----------|
-| Windows | `%APPDATA%\Echo` |
-| macOS | `~/Library/Application Support/Echo` |
-| Linux | `~/.config/echo` |
+| Engine | Languages | CPU | GPU (DirectML) | NPU (Snapdragon) |
+|---|---|:-:|:-:|:-:|
+| GigaAM v3 | Russian (default) | ✓ | ✓ | |
+| Whisper (tiny … large-v3-turbo) | Multilingual | ✓ | | |
+| Whisper Turbo (NPU) | Multilingual | | | ✓ |
+| Omnilingual ASR | 1600 languages | ✓ | ✓ | |
+| Parakeet TDT | English + European | ✓ | | ✓ |
 
-Models, settings, and dictation history live here. Uninstalling Echo does not remove this folder unless you delete it manually.
+Parakeet and Whisper Turbo NPU are available on Windows ARM64 only.
 
-## Building from source
+## Dictionary and voice cleanup
 
-Echo is a .NET application with an Avalonia UI. To build locally:
+![Dictionary](docs/screenshots/dictionary.png)
+
+With **Learn from my corrections** on, Echo watches the field for a while after pasting (45 s by default). Fixes you make become disabled suggestions — enable the ones you want. Apps can be excluded.
+
+**Voice cleanup** (Settings → Audio) removes background noise before recognition:
+
+![Voice cleanup toggle](docs/screenshots/voice-cleanup.png)
+
+## Troubleshooting
+
+- **Hotkey or paste does nothing in some windows (Windows)** — the target app runs as administrator. Windows blocks non-elevated apps from it (UIPI). Run Echo as administrator too, or don't run the target elevated.
+- **Correction learning doesn't see edits in Cursor / VS Code editor** — add `"editor.accessibilitySupport": "on"` to the editor settings (the chat box works without it).
+- **Logs** (Windows): `%APPDATA%\Echo\echo.log`; update problems: `%APPDATA%\Echo\echo-update.log`. Attach them to [issues](https://github.com/bkamuz/echo/issues).
+- **Data folder** (models, settings, history, `dictionary.json`): Windows `%APPDATA%\Echo`, Linux `~/.config/echo`, macOS `~/Library/Application Support/Echo`. Not removed on uninstall.
+
+## Build from source
+
+Requires [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
 dotnet build Echo.slnx
 dotnet run --project src/Echo.App
 ```
 
-Requires [.NET 10 SDK](https://dotnet.microsoft.com/download) or newer.
-
-## Contributing
-
-Bug reports, platform test results, and pull requests are welcome. Please include your OS, desktop environment (on Linux), and Echo version when reporting issues.
-
-## License
-
-Echo is released under the [MIT License](LICENSE).
+Bug reports and PRs are welcome — include OS, Echo version and logs.
