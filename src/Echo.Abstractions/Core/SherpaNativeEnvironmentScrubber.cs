@@ -32,6 +32,53 @@ public static class SherpaNativeEnvironmentScrubber
         RemoveDirectoryFromPath(environment, AppPaths.DirectMlDir);
     }
 
+    /// <summary>Drops PATH entries under %APPDATA%\Echo (qnn, qnn-whisper, directml runtimes).</summary>
+    public static string RemoveEchoRuntimeDirectories(string path)
+    {
+        var baseDir = Path.GetFullPath(AppPaths.BaseDir).TrimEnd('\\', '/');
+        var kept = path
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Where(entry =>
+            {
+                var trimmed = entry.Trim().Trim('"').TrimEnd('\\', '/');
+                return !(trimmed.Equals(baseDir, StringComparison.OrdinalIgnoreCase)
+                         || trimmed.StartsWith(baseDir + "\\", StringComparison.OrdinalIgnoreCase)
+                         || trimmed.StartsWith(baseDir + "/", StringComparison.OrdinalIgnoreCase));
+            });
+        return string.Join(';', kept);
+    }
+
+    /// <summary>Main-process startup: drop runtime folders/variables inherited from a parent Echo (e.g. updater relaunch).</summary>
+    public static bool ScrubInheritedEnvironmentAtStartup()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        var changed = false;
+        foreach (var name in new[] { "ORT_DYLIB_PATH", "ADSP_LIBRARY_PATH" })
+        {
+            var value = Environment.GetEnvironmentVariable(name);
+            if (!string.IsNullOrEmpty(value) && value.Contains(Path.GetFullPath(AppPaths.BaseDir), StringComparison.OrdinalIgnoreCase))
+            {
+                Environment.SetEnvironmentVariable(name, null);
+                changed = true;
+            }
+        }
+
+        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var filtered = RemoveEchoRuntimeDirectories(path);
+        var normalized = string.Join(';', path.Split(';', StringSplitOptions.RemoveEmptyEntries));
+        if (!string.Equals(filtered, normalized, StringComparison.Ordinal))
+        {
+            Environment.SetEnvironmentVariable("PATH", filtered);
+            changed = true;
+        }
+
+        return changed;
+    }
+
     public static string DescribeSnapshot()
     {
         if (!OperatingSystem.IsWindows())

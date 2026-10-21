@@ -36,6 +36,12 @@ class Program
             StartupDiagnostics.RegisterUnhandledExceptionHandlers();
             StartupDiagnostics.WriteMilestone("Program.Main enter");
             StartupDiagnostics.WriteStartupContext();
+            StartupDiagnostics.WriteMilestone($"Args: [{string.Join(' ', args)}]");
+            if (SherpaNativeEnvironmentScrubber.ScrubInheritedEnvironmentAtStartup())
+            {
+                // Typical after an in-app update: the updater inherited the old Echo's qnn/directml PATH.
+                StartupDiagnostics.WriteMilestone("Removed inherited Echo runtime folders from PATH/ORT env");
+            }
         }
 
         if (OperatingSystem.IsLinux()

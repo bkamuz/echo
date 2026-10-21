@@ -136,6 +136,7 @@ public partial class App : Application
             var startMinimized = (desktop.Args ?? [])
                 .Any(arg => string.Equals(arg, ApplicationLauncher.MinimizedArgument, StringComparison.OrdinalIgnoreCase));
 
+            StartupDiagnostics.WriteMilestone($"Start minimized={startMinimized}");
             StartupDiagnostics.WriteMilestone("Resolving ShellViewModel");
             desktop.MainWindow = new MainWindow
             {
