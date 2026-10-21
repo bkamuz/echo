@@ -31,7 +31,7 @@ Echo supports several offline speech models. On first use, the app downloads the
 |--------|----------|
 | **GigaAM** | Russian speech (default) |
 | **Omnilingual ASR** | Broad language coverage in a compact model |
-| **Whisper** | Multilingual recognition (included in Debug / full builds with `-p:IncludeWhisper=true`) |
+| **Whisper** | Multilingual recognition via sherpa-onnx (tiny … large-v3-turbo, downloaded on demand) |
 
 Language, model size, microphone, and input method can all be changed in Settings.
 

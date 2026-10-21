@@ -7,15 +7,12 @@ public static class EnginesServiceCollectionExtensions
 {
     public static IServiceCollection UseEchoEngines(this IServiceCollection services)
     {
-#if INCLUDE_WHISPER
-        services.AddSingleton<IWhisperModelSupport, Whisper.WhisperModelSupport>();
         services.AddSingleton(new EngineRegistration
         {
             EngineId = "whisper",
             Factory = sp => new Whisper.WhisperEngine(
                 sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Whisper.WhisperEngine>>()),
         });
-#endif
         services.AddSingleton(new EngineRegistration
         {
             EngineId = "gigaam",

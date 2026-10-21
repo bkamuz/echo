@@ -474,6 +474,17 @@ public sealed class DictationCoordinator : IDisposable
                 return;
             }
 
+            var tail = SpeechTailTrimmer.TrimTrailing(samples, _config.SampleRate);
+            if (tail.TrimmedMs > 0)
+            {
+                _logger.LogInformation(
+                    "Trimmed {Ms} ms of trailing non-speech ({Before} -> {After} samples)",
+                    tail.TrimmedMs,
+                    samples.Length,
+                    tail.Samples.Length);
+                samples = tail.Samples;
+            }
+
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var text = await Task.Run(async () =>
                 await _transcription.TranscribeAsync(_config, samples).ConfigureAwait(false));

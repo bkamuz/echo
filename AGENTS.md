@@ -16,7 +16,7 @@
 ## Learned Workspace Facts
 
 - Workspace folder is still named Golos; the product is Echo (rebranded from Golos)—a local, offline Avalonia/.NET dictation app (`Echo.slnx`, `src/Echo.App`).
-- Recognition engines include GigaAM (v3 `e2e` / `e2e-ctc` / `rnnt`, plus Multilingual CTC), Omnilingual ASR, and optional Whisper (`-p:IncludeWhisper=true` in Debug/full builds).
+- Recognition engines include GigaAM (v3 `e2e` / `e2e-ctc` / `rnnt`, plus Multilingual CTC), Omnilingual ASR, Whisper (sherpa-onnx int8, downloaded on demand).
 - Models and runtime log (`echo.log`) live under the user data folder (`%APPDATA%\Echo` on Windows); GigaAM transducer variants need a full bundle (encoder, decoder, joint, tokens), not encoder-only; CTC variants (`e2e-ctc`, `multilingual`) resolve CTC model + tokens. Multilingual CTC assets are published from the Echo repo release tag `gigaam-multilingual-ctc`.
 - Windows GPU acceleration uses DirectML; required native DLLs ship inside the portable zip/installer and are refreshed via GitHub Actions cache workflows.
 - Releases are built by GitHub Actions from version tags; Windows auto-update (published builds) reads GitHub Releases and surfaces a header update control (not a settings “Updates” group)—startup and an explicit header check can offer Apply when an update exists.

@@ -128,7 +128,7 @@ public sealed class ParakeetPipeline : IDisposable
         if (!_useNpu)
         {
             var (encoderOut, validT) = PreprocessAndEncode(pcm16k, pcm16k.Length);
-            return DecodeFeatures(encoderOut, validT);
+            return CollapseRepeatedTail(DecodeFeatures(encoderOut, validT));
         }
 
         var chunkSamples = (int)(MaxNpuSeconds * SampleRate);
@@ -139,7 +139,7 @@ public sealed class ParakeetPipeline : IDisposable
         {
             var padded = PadToLength(pcm16k, chunkSamples);
             var (encoderOut, validT) = PreprocessAndEncode(padded, realSamples);
-            return DecodeFeatures(encoderOut, validT);
+            return CollapseRepeatedTail(DecodeFeatures(encoderOut, validT));
         }
 
         var chunkTranscripts = new List<string>();
@@ -147,6 +147,13 @@ public sealed class ParakeetPipeline : IDisposable
         var chunkCount = 0;
         while (true)
         {
+            // A last window that only re-covers the overlap plus a sliver of new audio makes the
+            // transducer re-emit (and garble) the previous chunk's last words — fold it instead.
+            if (chunkStart > 0 && realSamples - chunkStart < (int)(1.4f * SampleRate))
+            {
+                chunkStart = Math.Max(0, realSamples - chunkSamples);
+            }
+
             var chunkEndReal = Math.Min(chunkStart + chunkSamples, realSamples);
             var chunk = PadToLength(pcm16k.AsSpan(chunkStart, chunkEndReal - chunkStart).ToArray(), chunkSamples);
             var validSamples = chunkEndReal - chunkStart;
@@ -163,7 +170,7 @@ public sealed class ParakeetPipeline : IDisposable
         }
 
         logger?.LogInformation("NPU chunked decode across {ChunkCount} windows", chunkCount + 1);
-        return chunkTranscripts.Aggregate(string.Empty, MergeOverlappingChunks);
+        return CollapseRepeatedTail(chunkTranscripts.Aggregate(string.Empty, MergeOverlappingChunks));
     }
 
     private (float[] EncoderOut, int ValidT) PreprocessAndEncode(float[] pcm, int validSamples)
@@ -341,20 +348,104 @@ public sealed class ParakeetPipeline : IDisposable
 
                 var left = transcriptNormalized.AsSpan(transcriptStart, overlap);
                 var right = nextNormalized.AsSpan(0, overlap);
-                if (left.SequenceEqual(right) && left.ToArray().All(word => word.Length > 0))
+                if (OverlapMatches(left, right))
                 {
-                    var merged = string.Join(' ', transcriptWords.AsSpan(0, transcriptEnd).ToArray());
-                    if (overlap < nextWords.Length)
-                    {
-                        merged += " " + string.Join(' ', nextWords.AsSpan(overlap).ToArray());
-                    }
-
-                    return merged;
+                    // Overlap words come from the next chunk: there they sit mid-window, not cut at an edge.
+                    var head = string.Join(' ', transcriptWords.AsSpan(0, transcriptStart).ToArray());
+                    var tail = string.Join(' ', nextWords);
+                    return head.Length == 0 ? tail : $"{head} {tail}";
                 }
             }
         }
 
         return $"{transcript} {nextChunk}";
+    }
+
+    /// <summary>
+    /// Boundary words are often cut mid-word in one chunk ("распозна" vs "распознавания"),
+    /// so a word matches when equal or when one is a 3+ letter prefix of the other.
+    /// </summary>
+    private static bool OverlapMatches(ReadOnlySpan<string> left, ReadOnlySpan<string> right)
+    {
+        var exact = 0;
+        for (var i = 0; i < left.Length; i++)
+        {
+            var a = left[i];
+            var b = right[i];
+            if (a.Length == 0 || b.Length == 0)
+            {
+                return false;
+            }
+
+            if (a == b)
+            {
+                exact++;
+                continue;
+            }
+
+            var shorter = a.Length <= b.Length ? a : b;
+            var longer = a.Length <= b.Length ? b : a;
+            var isEdge = i == 0 || i == left.Length - 1;
+            if (!isEdge || shorter.Length < 3 || !longer.StartsWith(shorter, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        // A single fuzzy word alone is too weak to drop text.
+        return exact > 0 || left.Length == 1 && left[0] == right[0];
+    }
+
+    /// <summary>
+    /// Guards against the decoder looping on the tail: collapses a final word repeated 3+ times
+    /// or a final 2–4 word phrase repeated back-to-back.
+    /// </summary>
+    internal static string CollapseRepeatedTail(string text)
+    {
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (words.Count < 3)
+        {
+            return text.Trim();
+        }
+
+        var norm = words.Select(NormalizeMergeWord).ToList();
+        var changed = true;
+        while (changed)
+        {
+            changed = false;
+            for (var n = 4; n >= 1; n--)
+            {
+                var minRepeats = n == 1 ? 3 : 2;
+                if (norm.Count < n * minRepeats)
+                {
+                    continue;
+                }
+
+                var tail = norm.GetRange(norm.Count - n, n);
+                if (tail.Any(w => w.Length == 0))
+                {
+                    continue;
+                }
+
+                var repeats = 1;
+                while (norm.Count >= n * (repeats + 1)
+                    && norm.GetRange(norm.Count - (n * (repeats + 1)), n).SequenceEqual(tail))
+                {
+                    repeats++;
+                }
+
+                if (repeats >= minRepeats)
+                {
+                    var remove = n * (repeats - 1);
+                    words.RemoveRange(words.Count - remove, remove);
+                    norm.RemoveRange(norm.Count - remove, remove);
+                    changed = true;
+                    break;
+                }
+            }
+        }
+
+        return string.Join(' ', words);
     }
 
     private static string NormalizeMergeWord(string word) =>

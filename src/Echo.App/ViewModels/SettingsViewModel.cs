@@ -242,18 +242,6 @@ public partial class SettingsViewModel : ObservableObject
             _isLoadingFromConfig = wasLoading;
         }
 
-        if (value == "whisper" && Language == "ru")
-        {
-            _isLoadingFromConfig = true;
-            try
-            {
-                Language = "auto";
-            }
-            finally
-            {
-                _isLoadingFromConfig = false;
-            }
-        }
         UpdateModelStatus();
         ScheduleApply();
     }
