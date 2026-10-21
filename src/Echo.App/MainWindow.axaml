@@ -72,6 +72,16 @@
                         Width="16"
                         Height="16"/>
             </Button>
+
+            <Button Classes="sidebar-nav-item"
+                    Classes.active="{Binding SelectedPage, Converter={x:Static conv:EnumEqualsConverter.Instance}, ConverterParameter={x:Static vm:AppPage.Dictionary}}"
+                    Command="{Binding NavigateCommand}"
+                    CommandParameter="{x:Static vm:AppPage.Dictionary}"
+                    ToolTip.Tip="{DynamicResource Loc.Nav.Dictionary}">
+              <PathIcon Data="{StaticResource IconDictionary}"
+                        Width="16"
+                        Height="16"/>
+            </Button>
           </StackPanel>
         </Border>
       </Grid>
@@ -167,6 +177,9 @@
           </DataTemplate>
           <DataTemplate DataType="vm:HistoryViewModel">
             <views:HistoryView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:DictionaryViewModel">
+            <views:DictionaryView />
           </DataTemplate>
         </ContentControl.DataTemplates>
       </ContentControl>

@@ -91,6 +91,7 @@ public partial class App : Application
                     sp.GetService<DirectMlRuntimeInstaller>(),
                     sp.GetService<IParakeetNpuModelSupport>()));
                 services.AddSingleton<HistoryViewModel>();
+                services.AddSingleton<DictionaryViewModel>();
                 services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<ShellViewModel>();
                 services.AddSingleton<DictationCursorOverlayService>();

@@ -63,7 +63,7 @@
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:HistoryItemView">
                 <Border Classes="history-item">
-                  <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12">
                     <TextBlock Grid.Column="0"
                                Text="{Binding Engine}"
                                Classes="mono"
@@ -89,7 +89,20 @@
                                 Width="16"
                                 Height="16"/>
                     </Button>
-                    <TextBlock Grid.Column="3"
+                    <Button Grid.Column="3"
+                            Classes="ghost"
+                            Command="{Binding $parent[UserControl].((vm:HistoryViewModel)DataContext).AddToDictionaryCommand}"
+                            CommandParameter="{Binding Text}"
+                            ToolTip.Tip="{DynamicResource Loc.History.AddToDictionary}"
+                            Width="32"
+                            Height="32"
+                            Padding="4"
+                            VerticalAlignment="Center">
+                      <PathIcon Data="{StaticResource IconDictionary}"
+                                Width="16"
+                                Height="16"/>
+                    </Button>
+                    <TextBlock Grid.Column="4"
                                Text="{Binding Timestamp}"
                                Classes="mono"
                                VerticalAlignment="Center"/>

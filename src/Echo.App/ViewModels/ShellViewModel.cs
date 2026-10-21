@@ -10,6 +10,7 @@ public partial class ShellViewModel : ObservableObject
     private readonly HomeViewModel _home;
     private readonly SettingsViewModel _settings;
     private readonly HistoryViewModel _history;
+    private readonly DictionaryViewModel _dictionary;
     private readonly LocalizationService _loc;
 
     public AppStatusViewModel StatusBar { get; }
@@ -34,11 +35,25 @@ public partial class ShellViewModel : ObservableObject
         HistoryViewModel history,
         AppStatusViewModel statusBar,
         UpdateViewModel update,
-        LocalizationService loc)
+        LocalizationService loc,
+        DictionaryViewModel dictionary)
     {
         _home = home;
         _settings = settings;
         _history = history;
+        _dictionary = dictionary;
+        _history.AddToDictionaryRequested += (_, text) =>
+        {
+            Navigate(AppPage.Dictionary);
+            _dictionary.BeginAddFromHistory(text);
+        };
+        _dictionary.PropertyChanged += (_, e) =>
+        {
+            if (SelectedPage == AppPage.Dictionary && e.PropertyName == nameof(DictionaryViewModel.Subtitle))
+            {
+                PageSubtitle = _dictionary.Subtitle;
+            }
+        };
         StatusBar = statusBar;
         Update = update;
         _loc = loc;
@@ -58,6 +73,7 @@ public partial class ShellViewModel : ObservableObject
             AppPage.Home => ActivateHome(),
             AppPage.Settings => ActivateSettings(),
             AppPage.History => ActivateHistory(),
+            AppPage.Dictionary => ActivateDictionary(),
             _ => throw new ArgumentOutOfRangeException(nameof(page), page, null),
         };
     }
@@ -69,6 +85,7 @@ public partial class ShellViewModel : ObservableObject
             AppPage.Home => (_loc.Get("Loc.Shell.Home.Title"), _loc.Get("Loc.Shell.Home.Subtitle")),
             AppPage.Settings => (_loc.Get("Loc.Shell.Settings.Title"), _loc.Get("Loc.Shell.Settings.Subtitle")),
             AppPage.History => (_loc.Get("Loc.Shell.History.Title"), _history.EntryCountLabel),
+            AppPage.Dictionary => (_loc.Get("Loc.Shell.Dictionary.Title"), _dictionary.Subtitle),
             _ => throw new ArgumentOutOfRangeException(nameof(page)),
         };
     }
@@ -91,6 +108,12 @@ public partial class ShellViewModel : ObservableObject
     {
         _settings.RefreshDeviceOptions();
         return _settings;
+    }
+
+    private DictionaryViewModel ActivateDictionary()
+    {
+        _dictionary.Reload();
+        return _dictionary;
     }
 
     private HistoryViewModel ActivateHistory()

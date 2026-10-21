@@ -9,6 +9,7 @@ public sealed class DictationCoordinator : IDisposable
     private readonly ConfigStore _configStore;
     private readonly TranscriptionService _transcription;
     private readonly HistoryStore _history;
+    private readonly DictionaryStore? _dictionary;
     private readonly IAudioCapture _audio;
     private readonly IHotkeyService _hotkey;
     private readonly ITextInjector _injector;
@@ -39,8 +40,10 @@ public sealed class DictationCoordinator : IDisposable
         ITrayStateService tray,
         IDictationResultNotifier dictationToast,
         ILogger<DictationCoordinator> logger,
-        IUserStatusNotifier? statusNotifier = null)
+        IUserStatusNotifier? statusNotifier = null,
+        DictionaryStore? dictionary = null)
     {
+        _dictionary = dictionary;
         _configStore = configStore;
         _transcription = transcription;
         _history = history;
@@ -518,6 +521,26 @@ public sealed class DictationCoordinator : IDisposable
                 _logger.LogWarning("Empty transcription from {Engine} — nothing to paste", _config.Engine);
                 FinishDictation("Речь не распознана", warning: true);
                 return;
+            }
+
+            if (_dictionary is not null)
+            {
+                try
+                {
+                    var dict = _dictionary.Apply(text);
+                    if (dict.Replacements > 0)
+                    {
+                        _logger.LogInformation(
+                            "Dictionary: {Count} replacement(s) applied ({Entries} entries)",
+                            dict.Replacements,
+                            dict.UsedIds.Count);
+                        text = dict.Text;
+                    }
+                }
+                catch (Exception dictEx)
+                {
+                    _logger.LogWarning(dictEx, "Dictionary replacement failed — using raw transcription");
+                }
             }
 
             if (_config.AddTrailingSpace && !text.EndsWith(' '))

@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:echo.App.ViewModels"
+             x:Class="echo.App.Views.DictionaryView"
+             x:DataType="vm:DictionaryViewModel"
+             VerticalAlignment="Stretch">
+  <Grid RowDefinitions="Auto,*" RowSpacing="10">
+    <Border Grid.Row="0" Classes="tile">
+      <StackPanel Classes="tile-body" Spacing="8">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <CheckBox x:Name="DictEnabled"
+                    Content="{DynamicResource Loc.Dict.Enabled}"
+                    IsChecked="{Binding IsEnabled}"
+                    ToolTip.Tip="{DynamicResource Loc.Dict.Enabled.Tooltip}"/>
+          <Button Grid.Column="1" x:Name="ImportButton" Classes="ghost"
+                  Content="{DynamicResource Loc.Dict.Import}" Click="OnImportClick"/>
+          <Button Grid.Column="2" x:Name="ExportButton" Classes="ghost"
+                  Content="{DynamicResource Loc.Dict.Export}" Click="OnExportClick"/>
+        </Grid>
+
+        <StackPanel IsVisible="{Binding HasHistorySource}" Spacing="4">
+          <TextBlock Classes="field-label" Text="{DynamicResource Loc.Dict.FromHistory}"/>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox x:Name="HistorySourceBox" Text="{Binding HistorySource}" IsReadOnly="True"
+                     TextWrapping="Wrap"/>
+            <Button Grid.Column="1" x:Name="UseSelectionButton" Classes="ghost" Content="{DynamicResource Loc.Dict.UseSelection}"
+                    Click="OnUseSelectionClick" VerticalAlignment="Top"/>
+          </Grid>
+        </StackPanel>
+
+        <Grid ColumnDefinitions="*,Auto,*,Auto,Auto" ColumnSpacing="8">
+          <TextBox x:Name="FromBox" Grid.Column="0" Text="{Binding FromText}"
+                   Watermark="{DynamicResource Loc.Dict.From}"/>
+          <TextBlock Grid.Column="1" Text="→" VerticalAlignment="Center"/>
+          <TextBox x:Name="ToBox" Grid.Column="2" Text="{Binding ToText}"
+                   Watermark="{DynamicResource Loc.Dict.To}"/>
+          <Button x:Name="SaveButton" Grid.Column="3" Classes="primary"
+                  Content="{Binding SaveLabel}" Command="{Binding SaveEntryCommand}" IsDefault="True"/>
+          <Button Grid.Column="4" Classes="ghost" Content="{DynamicResource Loc.Dict.Cancel}"
+                  Command="{Binding CancelEditCommand}"/>
+        </Grid>
+        <TextBlock Text="{Binding StatusMessage}" FontSize="12" Opacity="0.75" TextWrapping="Wrap"
+                   IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="1" Classes="tile" ClipToBounds="True">
+      <Grid>
+        <TextBlock IsVisible="{Binding IsEmpty}" Text="{DynamicResource Loc.Dict.Empty}"
+                   Classes="page-subtitle" TextWrapping="Wrap" TextAlignment="Center"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24"/>
+        <ListBox x:Name="EntriesList" ItemsSource="{Binding Entries}" Background="Transparent"
+                 BorderThickness="0" IsVisible="{Binding !IsEmpty}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:DictionaryItemView">
+              <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
+                <CheckBox IsChecked="{Binding Enabled}" MinWidth="0"
+                          ToolTip.Tip="{DynamicResource Loc.Dict.EntryEnabled}"/>
+                <TextBlock Grid.Column="1" Text="{Binding From}" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextMutedBrush}"/>
+                <TextBlock Grid.Column="2" Text="→" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="{Binding To}" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <TextBlock Grid.Column="4" Text="{Binding UsageLabel}" Classes="mono" FontSize="11"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="5" Classes="ghost" Content="✎" Padding="6,2"
+                        ToolTip.Tip="{DynamicResource Loc.Dict.Edit}"
+                        Command="{Binding $parent[UserControl].((vm:DictionaryViewModel)DataContext).EditCommand}"
+                        CommandParameter="{Binding}"/>
+                <Button Grid.Column="6" Classes="ghost" Padding="6,2"
+                        ToolTip.Tip="{DynamicResource Loc.Dict.Delete}"
+                        Command="{Binding $parent[UserControl].((vm:DictionaryViewModel)DataContext).DeleteCommand}"
+                        CommandParameter="{Binding}">
+                  <PathIcon Data="{StaticResource IconTrash}" Width="14" Height="14"/>
+                </Button>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>
