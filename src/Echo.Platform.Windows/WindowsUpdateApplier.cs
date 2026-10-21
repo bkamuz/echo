@@ -127,6 +127,11 @@ public sealed class WindowsUpdateApplier : IUpdateApplier
 
             Copy-Item -Path (Join-Path $stagingDir $exeName) -Destination (Join-Path $installDir $exeName) -Force
 
+            # Copy every other file/subfolder shipped in the zip (e.g. fe\), not just the exe.
+            Get-ChildItem -LiteralPath $stagingDir -Force | Where-Object { $_.Name -ne $exeName -and $_.Name -ne 'directml' } | ForEach-Object {
+                Copy-Item -LiteralPath $_.FullName -Destination $installDir -Recurse -Force
+            }
+
             $directMlSrc = Join-Path $stagingDir 'directml'
             $directMlDst = Join-Path $installDir 'directml'
             if (Test-Path $directMlSrc) {

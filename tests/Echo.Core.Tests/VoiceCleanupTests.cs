@@ -105,3 +105,48 @@ public sealed class VoiceCleanupTests
         File.AppendAllText(Path.Combine(Path.GetTempPath(), "echo-fe-timing.txt"), $"first {r.ElapsedMs:F1} warm {warm.ElapsedMs:F1} resample-only {sw.Elapsed.TotalMilliseconds:F1} ms per 2000 ms\n");
     }
 }
+
+public sealed class VoiceCleanupDeliveryTests
+{
+    [Fact]
+    public void EmbeddedPayload_ExtractsOnce_AndIsAvailableWithoutLooseFolder()
+    {
+        var root = Directory.CreateTempSubdirectory("echo-fe-x-").FullName;
+        var oldBase = FastEnhancerNative.BaseDir;
+        var oldRoot = FastEnhancerNative.ExtractRoot;
+        var oldAsm = FastEnhancerNative.EmbeddedAssembly;
+        try
+        {
+            FastEnhancerNative.BaseDir = Path.Combine(root, "missing");
+            FastEnhancerNative.ExtractRoot = Path.Combine(root, "extract");
+            FastEnhancerNative.EmbeddedAssembly = null;
+            Assert.False(FastEnhancerNative.IsAvailable);
+
+            FastEnhancerNative.EmbeddedAssembly = typeof(VoiceCleanupDeliveryTests).Assembly;
+            Assert.True(FastEnhancerNative.IsAvailable);
+            var dir = FastEnhancerNative.ResolveDirectory();
+            Assert.StartsWith(FastEnhancerNative.ExtractRoot, dir);
+            Assert.Equal(565108, new FileInfo(Path.Combine(dir, "fe.q8")).Length);
+            Assert.True(File.Exists(Path.Combine(dir, FastEnhancerNative.NativeFileName)));
+            Assert.Equal(dir, FastEnhancerNative.ResolveDirectory());
+        }
+        finally
+        {
+            FastEnhancerNative.BaseDir = oldBase;
+            FastEnhancerNative.ExtractRoot = oldRoot;
+            FastEnhancerNative.EmbeddedAssembly = oldAsm;
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public void WindowsUpdaterScript_CopiesAllZipContents()
+    {
+        var m = typeof(echo.Platform.Windows.WindowsUpdateApplier).GetMethod(
+            "BuildUpdaterScript",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var script = (string)m.Invoke(null, [1, @"C:\Echo", @"C:\stage"])!;
+        Assert.Contains("Get-ChildItem -LiteralPath $stagingDir", script);
+        Assert.Contains("-Recurse -Force", script);
+    }
+}

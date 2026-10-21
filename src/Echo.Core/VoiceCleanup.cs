@@ -191,8 +191,62 @@ public sealed class FastEnhancerNative : ISpeechEnhancer
     /// <summary>Directory holding echo_fe + fe.q8 (next to the app; overridable for tests).</summary>
     public static string BaseDir { get; set; } = Path.Combine(AppContext.BaseDirectory, "fe");
 
-    public static bool IsAvailable =>
-        File.Exists(Path.Combine(BaseDir, NativeFileName)) && File.Exists(Path.Combine(BaseDir, "fe.q8"));
+    /// <summary>Assembly carrying embedded "echo.fe.native" + "echo.fe.q8" (the app sets this at startup).</summary>
+    public static System.Reflection.Assembly? EmbeddedAssembly { get; set; }
+
+    /// <summary>Where embedded payloads are extracted (default %APPDATA%\Echo\fe).</summary>
+    public static string ExtractRoot { get; set; } = Path.Combine(echo.Abstractions.Core.AppPaths.BaseDir, "fe");
+
+    private static bool HasLoose(string dir) =>
+        File.Exists(Path.Combine(dir, NativeFileName)) && File.Exists(Path.Combine(dir, "fe.q8"));
+
+    private static bool HasEmbedded =>
+        EmbeddedAssembly?.GetManifestResourceInfo("echo.fe.native") is not null
+        && EmbeddedAssembly.GetManifestResourceInfo("echo.fe.q8") is not null;
+
+    public static bool IsAvailable => HasLoose(BaseDir) || HasEmbedded;
+
+    /// <summary>Returns a directory containing the native + weights, extracting embedded copies if needed.</summary>
+    public static string ResolveDirectory()
+    {
+        if (HasLoose(BaseDir))
+        {
+            return BaseDir;
+        }
+
+        if (!HasEmbedded)
+        {
+            throw new FileNotFoundException("FastEnhancer library is not bundled in this build.");
+        }
+
+        var native = ReadResource("echo.fe.native");
+        var weights = ReadResource("echo.fe.q8");
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(native.Concat(weights).ToArray()))[..12];
+        var dir = Path.Combine(ExtractRoot, hash);
+        if (!HasLoose(dir))
+        {
+            Directory.CreateDirectory(dir);
+            WriteAtomic(Path.Combine(dir, "fe.q8"), weights);
+            WriteAtomic(Path.Combine(dir, NativeFileName), native);
+        }
+
+        return dir;
+    }
+
+    private static byte[] ReadResource(string name)
+    {
+        using var s = EmbeddedAssembly!.GetManifestResourceStream(name)!;
+        using var ms = new MemoryStream();
+        s.CopyTo(ms);
+        return ms.ToArray();
+    }
+
+    private static void WriteAtomic(string path, byte[] data)
+    {
+        var tmp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        File.WriteAllBytes(tmp, data);
+        File.Move(tmp, path, overwrite: true);
+    }
 
     public static ISpeechEnhancer? TryGet(out string? error)
     {
@@ -206,7 +260,8 @@ public sealed class FastEnhancerNative : ISpeechEnhancer
 
             try
             {
-                var lib = NativeLibrary.Load(Path.Combine(BaseDir, NativeFileName));
+                var dir = ResolveDirectory();
+                var lib = NativeLibrary.Load(Path.Combine(dir, NativeFileName));
                 T Fn<T>(string name) where T : Delegate =>
                     Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(lib, name));
                 if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
@@ -219,7 +274,7 @@ public sealed class FastEnhancerNative : ISpeechEnhancer
                     }
                 }
 
-                var bytes = File.ReadAllBytes(Path.Combine(BaseDir, "fe.q8"));
+                var bytes = File.ReadAllBytes(Path.Combine(dir, "fe.q8"));
                 var w = Marshal.AllocHGlobal(bytes.Length); // must outlive the engine (zero-copy refs)
                 Marshal.Copy(bytes, 0, w, bytes.Length);
                 var rc = Fn<Init>("echo_fe_init")(w, bytes.Length);

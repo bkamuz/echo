@@ -76,13 +76,14 @@
     <FeRid Condition="'$(FeRid)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">linux-x64</FeRid>
     <FeNativeDir>$(MSBuildThisFileDirectory)..\..\native\fe\</FeNativeDir>
   </PropertyGroup>
+  <!-- Embedded so single-file updates (exe-only) always carry it; extracted to %APPDATA%\Echo\fe on first use. -->
   <ItemGroup Condition="Exists('$(FeNativeDir)$(FeRid)')">
-    <None Include="$(FeNativeDir)$(FeRid)\*;$(FeNativeDir)fe.q8;$(FeNativeDir)LICENSE.faster-enhancer.txt">
-      <Link>fe\%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-    </None>
+    <EmbeddedResource Include="$(FeNativeDir)$(FeRid)\*.dll;$(FeNativeDir)$(FeRid)\*.so;$(FeNativeDir)$(FeRid)\*.dylib">
+      <LogicalName>echo.fe.native</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(FeNativeDir)fe.q8">
+      <LogicalName>echo.fe.q8</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <Target Name="PrepareWinPublish" BeforeTargets="_ComputeFilesToBundle"
