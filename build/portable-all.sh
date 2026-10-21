@@ -27,6 +27,10 @@ publish_win_portable() {
   fi
 
   cp "$source_dir/Echo.App.exe" "$staging/"
+  # FastEnhancer voice cleanup native + weights (~0.7 MB, no ORT).
+  if [[ -d "$source_dir/fe" ]]; then
+    cp -r "$source_dir/fe" "$staging/"
+  fi
   # DirectML is downloaded on first GPU select (x64 only) — not baked into portable zips.
 
   rm -f "$zip_path"
