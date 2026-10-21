@@ -42,14 +42,8 @@ public sealed class ModelDownloader
             return;
         }
 
-        if (spec.Engine == "whisper")
+        if (spec.Engine == "whisper" && _whisper is not null)
         {
-            if (_whisper is null)
-            {
-                throw new InvalidOperationException(
-                    "Whisper не включён в этой сборке Echo.");
-            }
-
             var size = ModelRegistry.WhisperSizeFromSpecId(spec.Id);
             await _whisper.DownloadAsync(size, progress, cancellationToken);
             return;
@@ -115,13 +109,8 @@ public sealed class ModelDownloader
             return;
         }
 
-        if (spec.Engine == "whisper")
+        if (spec.Engine == "whisper" && _whisper is not null)
         {
-            if (_whisper is null)
-            {
-                return;
-            }
-
             var size = ModelRegistry.WhisperSizeFromSpecId(spec.Id);
             _whisper.Delete(size);
             return;

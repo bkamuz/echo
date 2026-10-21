@@ -64,11 +64,36 @@ public static class ModelRegistry
         $"{GigaAmMultilingualLargePrefix}_tokens.txt",
     ];
 
-    public static string WhisperGgmlPath(string size) =>
-        Path.Combine(AppPaths.WhisperDir(size), $"ggml-{size}.bin");
+    /// <summary>sherpa-onnx file prefix inside csukuangfj/sherpa-onnx-whisper-{prefix}.</summary>
+    public static string WhisperRepoPrefix(string size) => size == "large-v3-turbo" ? "turbo" : size;
 
-    public static bool IsWhisperDownloaded(string size) =>
-        File.Exists(WhisperGgmlPath(size));
+    public static string WhisperRepo(string size) => $"csukuangfj/sherpa-onnx-whisper-{WhisperRepoPrefix(size)}";
+
+    public static IReadOnlyList<string> WhisperAllowPatterns(string size)
+    {
+        var p = WhisperRepoPrefix(size);
+        return [$"{p}-encoder.int8.onnx", $"{p}-decoder.int8.onnx", $"{p}-tokens.txt"];
+    }
+
+    public static WhisperModelFiles WhisperFiles(string size)
+    {
+        var dir = AppPaths.WhisperDir(size);
+        var p = WhisperRepoPrefix(size);
+        return new WhisperModelFiles(
+            Path.Combine(dir, $"{p}-encoder.int8.onnx"),
+            Path.Combine(dir, $"{p}-decoder.int8.onnx"),
+            Path.Combine(dir, $"{p}-tokens.txt"));
+    }
+
+    public static bool IsWhisperDownloaded(string size)
+    {
+        var f = WhisperFiles(size);
+        return File.Exists(f.Encoder) && File.Exists(f.Decoder) && File.Exists(f.Tokens);
+    }
+
+    /// <summary>Whisper language code; empty = auto-detect.</summary>
+    public static string WhisperLanguageFor(string? language) =>
+        string.IsNullOrWhiteSpace(language) || language is "auto" or "system" ? string.Empty : language.Trim().ToLowerInvariant();
 
     public static string WhisperSizeFromSpecId(string specId) =>
         specId.StartsWith("whisper-", StringComparison.Ordinal) ? specId["whisper-".Length..] : specId;
@@ -77,8 +102,9 @@ public static class ModelRegistry
         Id: $"whisper-{size}",
         Title: $"Whisper {size}",
         Engine: "whisper",
-        RepoId: string.Empty,
-        LocalDir: AppPaths.WhisperDir(size));
+        RepoId: WhisperRepo(size),
+        LocalDir: AppPaths.WhisperDir(size),
+        AllowPatterns: WhisperAllowPatterns(size));
 
     public const string OmnilingualRepo = "csukuangfj2/sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12";
 
@@ -365,3 +391,5 @@ public sealed record GigaAmBundlePaths(string Encoder, string Decoder, string Jo
 }
 
 public sealed record GigaAmCtcPaths(string Model, string Tokens);
+
+public sealed record WhisperModelFiles(string Encoder, string Decoder, string Tokens);

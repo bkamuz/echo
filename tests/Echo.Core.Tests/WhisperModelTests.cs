@@ -1,118 +1,73 @@
 using echo.Abstractions.Core;
-using echo.Engines.Whisper;
-using Whisper.net.Ggml;
+using echo.Core;
 
 namespace echo.Core.Tests;
 
 public class WhisperModelTests
 {
-    [Fact]
-    public void WhisperGgmlPath_UsesExpectedFileName()
+    [Theory]
+    [InlineData("tiny", "csukuangfj/sherpa-onnx-whisper-tiny", "tiny")]
+    [InlineData("small", "csukuangfj/sherpa-onnx-whisper-small", "small")]
+    [InlineData("large-v3", "csukuangfj/sherpa-onnx-whisper-large-v3", "large-v3")]
+    [InlineData("large-v3-turbo", "csukuangfj/sherpa-onnx-whisper-turbo", "turbo")]
+    public void WhisperSpec_PointsAtSherpaInt8Repo(string size, string repo, string prefix)
     {
-        var path = ModelRegistry.WhisperGgmlPath("small");
-        Assert.EndsWith(Path.Combine("whisper", "small", "ggml-small.bin"), path);
+        var spec = ModelRegistry.SpecForEngine("whisper", size, "e2e")!;
+        Assert.Equal(repo, spec.RepoId);
+        Assert.Equal(
+            [$"{prefix}-encoder.int8.onnx", $"{prefix}-decoder.int8.onnx", $"{prefix}-tokens.txt"],
+            spec.AllowPatterns);
+        Assert.Equal(AppPaths.WhisperDir(size), spec.LocalDir);
     }
 
     [Fact]
-    public void IsWhisperDownloaded_RequiresGgmlFile()
-    {
-        const string size = "small";
-        var ggmlPath = ModelRegistry.WhisperGgmlPath(size);
-        var dir = Path.GetDirectoryName(ggmlPath)!;
-        Directory.CreateDirectory(dir);
-
-        var legacyPath = Path.Combine(dir, "model.bin");
-        var hadGgml = File.Exists(ggmlPath);
-        var hadLegacy = File.Exists(legacyPath);
-        byte[]? ggmlBackup = hadGgml ? File.ReadAllBytes(ggmlPath) : null;
-        byte[]? legacyBackup = hadLegacy ? File.ReadAllBytes(legacyPath) : null;
-
-        try
-        {
-            if (hadGgml)
-            {
-                File.Delete(ggmlPath);
-            }
-
-            File.WriteAllText(legacyPath, "");
-            Assert.False(ModelRegistry.IsWhisperDownloaded(size));
-            Assert.False(ModelRegistry.WhisperSpec(size).IsDownloaded());
-
-            File.WriteAllText(ggmlPath, "");
-            Assert.True(ModelRegistry.IsWhisperDownloaded(size));
-            Assert.True(ModelRegistry.WhisperSpec(size).IsDownloaded());
-        }
-        finally
-        {
-            if (hadGgml && ggmlBackup is not null)
-            {
-                File.WriteAllBytes(ggmlPath, ggmlBackup);
-            }
-            else if (File.Exists(ggmlPath))
-            {
-                File.Delete(ggmlPath);
-            }
-
-            if (hadLegacy && legacyBackup is not null)
-            {
-                File.WriteAllBytes(legacyPath, legacyBackup);
-            }
-            else if (File.Exists(legacyPath))
-            {
-                File.Delete(legacyPath);
-            }
-        }
-    }
-
-    [Fact]
-    public void ResolveGgmlModelPath_ThrowsWhenMissing()
+    public void IsWhisperDownloaded_RequiresAllThreeFiles()
     {
         const string size = "tiny";
-        var ggmlPath = ModelRegistry.WhisperGgmlPath(size);
-        var dir = Path.GetDirectoryName(ggmlPath)!;
+        var files = ModelRegistry.WhisperFiles(size);
+        var dir = AppPaths.WhisperDir(size);
+        var existed = Directory.Exists(dir);
+        if (existed && ModelRegistry.IsWhisperDownloaded(size))
+        {
+            return; // never clobber a real download
+        }
+
         Directory.CreateDirectory(dir);
-
-        var hadGgml = File.Exists(ggmlPath);
-        byte[]? ggmlBackup = hadGgml ? File.ReadAllBytes(ggmlPath) : null;
-
         try
         {
-            if (hadGgml)
-            {
-                File.Delete(ggmlPath);
-            }
-
-            var ex = Assert.Throws<InvalidOperationException>(() => WhisperGgmlHelper.ResolveGgmlModelPath(size));
-            Assert.Contains("Скачайте", ex.Message, StringComparison.Ordinal);
+            File.WriteAllText(files.Encoder, "x");
+            File.WriteAllText(files.Decoder, "x");
+            Assert.False(ModelRegistry.IsWhisperDownloaded(size));
+            File.WriteAllText(files.Tokens, "x");
+            Assert.True(ModelRegistry.IsWhisperDownloaded(size));
         }
         finally
         {
-            if (hadGgml && ggmlBackup is not null)
+            foreach (var f in new[] { files.Encoder, files.Decoder, files.Tokens })
             {
-                File.WriteAllBytes(ggmlPath, ggmlBackup);
+                File.Delete(f);
             }
-            else if (File.Exists(ggmlPath))
+
+            if (!existed)
             {
-                File.Delete(ggmlPath);
+                Directory.Delete(dir, recursive: true);
             }
         }
     }
 
     [Theory]
-    [InlineData("tiny", GgmlType.Tiny)]
-    [InlineData("base", GgmlType.Base)]
-    [InlineData("small", GgmlType.Small)]
-    [InlineData("medium", GgmlType.Medium)]
-    [InlineData("large-v3", GgmlType.LargeV3)]
-    [InlineData("large-v3-turbo", GgmlType.LargeV3Turbo)]
-    public void MapSizeToGgmlType_MapsKnownSizes(string size, GgmlType expected)
-    {
-        Assert.Equal(expected, WhisperGgmlHelper.MapSizeToGgmlType(size));
-    }
+    [InlineData("ru", "ru")]
+    [InlineData("auto", "")]
+    [InlineData(null, "")]
+    public void WhisperLanguageFor(string? lang, string expected) =>
+        Assert.Equal(expected, ModelRegistry.WhisperLanguageFor(lang));
 
     [Fact]
-    public void WhisperSizeFromSpecId_ExtractsSizeWithHyphens()
+    public void AllConfiguredSizesResolve()
     {
-        Assert.Equal("large-v3-turbo", ModelRegistry.WhisperSizeFromSpecId("whisper-large-v3-turbo"));
+        foreach (var size in AppConfig.WhisperSizes)
+        {
+            Assert.StartsWith("csukuangfj/sherpa-onnx-whisper-", ModelRegistry.WhisperRepo(size));
+        }
     }
 }
