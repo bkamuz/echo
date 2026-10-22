@@ -42,10 +42,10 @@ def is_editable(obj) -> bool:
             return False
 
         state = obj.get_state_set()
-        if state.contains(Atspi.StateType.EDITABLE):
-            return Atspi.Text.get_from(obj) is not None
+        if not state.contains(Atspi.StateType.EDITABLE):
+            return False
 
-        return Atspi.Text.get_from(obj) is not None
+        return obj.get_editable_text_iface() is not None and obj.get_text_iface() is not None
     except Exception:
         return False
 
@@ -163,16 +163,28 @@ def parse_delay_ms() -> int:
     return 0
 
 
-def insert_text(text_iface, text: str, delay_ms: int) -> None:
-    offset = text_iface.get_caret_offset()
+def _insert(obj, offset: int, chunk: str) -> None:
+    # AT-SPI's length argument is in bytes (UTF-8), offsets are in characters.
+    if not Atspi.EditableText.insert_text(obj, offset, chunk, len(chunk.encode("utf-8"))):
+        raise RuntimeError("insert_text rejected")
+
+
+def insert_text(obj, text: str, delay_ms: int) -> None:
+    offset = Atspi.Text.get_caret_offset(obj)
+    if offset < 0:
+        offset = Atspi.Text.get_character_count(obj)
     if delay_ms <= 0:
-        text_iface.insert_text(offset, text, len(text))
+        _insert(obj, offset, text)
+        try:
+            Atspi.Text.set_caret_offset(obj, offset + len(text))
+        except Exception:
+            pass
         return
 
     for ch in text:
         if ch == "\r":
             continue
-        text_iface.insert_text(offset, ch, 1)
+        _insert(obj, offset, ch)
         offset += 1
         if delay_ms > 0:
             time.sleep(delay_ms / 1000.0)
@@ -194,8 +206,11 @@ def main() -> int:
     if target is None:
         return 2
 
-    text_iface = Atspi.Text.get_from(target)
-    insert_text(text_iface, text, delay_ms)
+    try:
+        insert_text(target, text, delay_ms)
+    except Exception as exc:
+        print("atspi insert failed: %s" % exc, file=sys.stderr)
+        return 4
     return 0
 
 
