@@ -52,7 +52,8 @@ public abstract class PollingCorrectionObserver : ICorrectionObserver
         lock (_gate)
         {
             _current?.Cancel();
-            _current = cts = new CancellationTokenSource(TimeSpan.FromSeconds(settings.ClampedSeconds));
+            // Ended by the next dictation or the session hard cap; idle timeout is tracked in the loop.
+            _current = cts = new CancellationTokenSource(CorrectionSession.HardCap);
         }
 
         var thread = new Thread(() => Run(injectedText.Trim(), settings, cts.Token))
@@ -121,8 +122,8 @@ public abstract class PollingCorrectionObserver : ICorrectionObserver
             }
 
             Logger.LogDebug("Correction learning: watching {App}", field.App);
-            string? lastSpan = null;
-            while (!ct.WaitHandle.WaitOne(PollInterval))
+            var session = new CorrectionSession(TimeSpan.FromSeconds(settings.ClampedSeconds));
+            while (!ct.WaitHandle.WaitOne(PollInterval) && !session.IsIdle)
             {
                 var now = ReadFocused();
                 if (now is null || now.Id != field.Id)
@@ -131,15 +132,11 @@ public abstract class PollingCorrectionObserver : ICorrectionObserver
                     break;
                 }
 
-                var span = now.Text is null ? null : tracker.CurrentSpan(Normalize(now.Text));
-                if (span is null)
-                {
-                    Logger.LogDebug("Correction learning: inserted span lost in {App}", field.App);
-                    break;
-                }
-
-                lastSpan = span;
+                // A transiently unreadable span (edit outside it, mid-typing state) keeps the last good one.
+                session.Observe(now.Text is null ? null : tracker.CurrentSpan(Normalize(now.Text)));
             }
+
+            var lastSpan = session.LastSpan;
 
             if (lastSpan is null || lastSpan.Trim() == injected)
             {

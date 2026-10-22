@@ -51,7 +51,7 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
         {
             // A new dictation ends the previous watch (its last good span is still evaluated).
             _current?.Cancel();
-            _current = cts = new CancellationTokenSource(TimeSpan.FromSeconds(settings.ClampedSeconds));
+            _current = cts = new CancellationTokenSource(CorrectionSession.HardCap);
         }
 
         var thread = new Thread(() => Run(injectedText.Trim(), settings, cts.Token))
@@ -134,8 +134,8 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
                 "Correction learning: watching {App} ({Type}/{Class}) after {Attempts} attempt(s)",
                 app, info.ControlType, info.ClassName, attempts);
 
-            string? lastSpan = null;
-            while (!ct.WaitHandle.WaitOne(PollInterval))
+            var session = new CorrectionSession(TimeSpan.FromSeconds(settings.ClampedSeconds));
+            while (!ct.WaitHandle.WaitOne(PollInterval) && !session.IsIdle)
             {
                 var focused = automation.GetFocusedElement();
                 if (focused is null || automation.CompareElements(focused, element) == 0)
@@ -145,17 +145,11 @@ public sealed class UiaCorrectionObserver : ICorrectionObserver
                 }
 
                 var text = ReadText(element);
-                var span = text is null ? null : tracker.CurrentSpan(text);
-                if (span is null)
-                {
-                    _logger.LogDebug(
-                        "Correction learning: inserted span lost in {App} (text {Len} chars, readable={Readable})",
-                        app, text?.Length ?? -1, text is not null);
-                    break; // field sent/cleared or edited outside the span
-                }
-
-                lastSpan = span;
+                // A transiently unreadable span (edit outside it, mid-typing state) keeps the last good one.
+                session.Observe(text is null ? null : tracker.CurrentSpan(text));
             }
+
+            var lastSpan = session.LastSpan;
 
             if (lastSpan is null || lastSpan.Trim() == injected)
             {
