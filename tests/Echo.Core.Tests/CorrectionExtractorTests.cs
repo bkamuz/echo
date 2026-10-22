@@ -89,4 +89,60 @@ public class CorrectionExtractorTests
         Assert.True(s.IsExcluded("KeePass"));
         Assert.False(s.IsExcluded("chrome"));
     }
+
+    [Fact]
+    public void ThreeSeparateFixes_ThreeSuggestions()
+    {
+        var r = CorrectionExtractor.Extract(
+            "открой паркет и запусти эхо потом залей на гид",
+            "открой Parakeet и запусти Echo потом залей на GitHub");
+        Assert.Equal(
+            [("паркет", "Parakeet"), ("эхо", "Echo"), ("гид", "GitHub")],
+            r.Select(c => (c.From, c.To)).ToArray());
+    }
+
+    [Fact]
+    public void ManyFixesInShortText_AllKept()
+    {
+        var r = CorrectionExtractor.Extract("паркет и эхо и гид и квин и вин", "Parakeet и Echo и GitHub и Qwen и Win");
+        Assert.Equal(5, r.Count);
+    }
+
+    [Fact]
+    public void AdjacentMultiWordFix_OnePhrase()
+    {
+        var c = Assert.Single(CorrectionExtractor.Extract("я открыл вижу ал студио вчера", "я открыл Visual Studio вчера"));
+        Assert.Equal(("вижу ал студио", "Visual Studio"), (c.From, c.To));
+    }
+
+    [Fact]
+    public void DuplicateFix_Deduped()
+    {
+        var c = Assert.Single(CorrectionExtractor.Extract("паркет лучше чем паркет", "Parakeet лучше чем Parakeet"));
+        Assert.Equal(("паркет", "Parakeet"), (c.From, c.To));
+    }
+
+    [Fact]
+    public void Store_KeepsEarlierSuggestions()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"echo-dict-{Guid.NewGuid():N}.json");
+        try
+        {
+            var store = new DictionaryStore(path);
+            store.AddSuggestions(CorrectionExtractor.Extract("открой паркет", "открой Parakeet"));
+            store.AddSuggestions(CorrectionExtractor.Extract("запусти эхо и гид", "запусти Echo и GitHub"));
+            Assert.Equal(3, store.Snapshot().Suggestions.Count);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void AdjacentTypoFixes_Separate()
+    {
+        var r = CorrectionExtractor.Extract("the qick brwn fox", "the quick brown fox");
+        Assert.Equal([("qick", "quick"), ("brwn", "brown")], r.Select(c => (c.From, c.To)).ToArray());
+    }
 }
